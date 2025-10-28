@@ -30,7 +30,7 @@ Control the robot's emergency stop or resume behavior via the `/stopRobot` topic
 
 The keepout zones correspond to specific regions on the Eurobot 2025 field, used to restrict robot access dynamically via `/keepout_zone`.
 
-![Keepout Zones Index](custom_layer/keepout_layer/Keepout_zones_Index.png)
+![Keepout Zones Index](/src/custom_layer/keepout_layer/Keepout_zones_Index.png)
 
 - Zones are labeled **A** through **J** on the field map.  
 - These zones can be toggled at runtime using the `/keepout_zone` topic.  
