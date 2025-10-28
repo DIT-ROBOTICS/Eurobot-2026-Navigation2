@@ -1,0 +1,73 @@
+services:
+  navigation-build:
+    # build: .  # Use the pre-built image
+    image: &IMG_NAME rabbit025879/eurobot2025-navigation2-envs:machine
+    container_name: &CONTAINER_NAME navigation2
+    command: &CMD_BUILD /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && colcon build"  # TODO: Check for working directories
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: &STOP_GRACE_PERIOD 1s
+    deploy: &DEPLOY_SETTING
+      # resources:
+      #   limits:
+      #     cpus: '2'
+
+    # mount our navigation code & share directory
+    volumes: &VOLUMES
+      - /home/navigation/Eurobot-2025-machine-ws:/home/user/Eurobot-2025-Navigation2-ws # TODO: Check for working directories
+      - /home/share:/home/share
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/home/user/.Xauthority 
+      - /dev:/dev
+
+    working_dir: &WORKING_DIR
+      /home/user/Eurobot-2025-Navigation2-ws  # TODO: Check for working directories
+
+    environment: &ENV
+      # - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+
+  navigation-develop:
+    # build: . # Use the pre-built image
+    image: *IMG_NAME 
+    container_name: *CONTAINER_NAME
+    command: &CMD_DEVELOP /bin/bash
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+    deploy: *DEPLOY_SETTING
+
+    # mount our navigation code
+    volumes: *VOLUMES
+
+    working_dir: *WORKING_DIR
+
+    environment: *ENV
+    
+
+  navigation-run:
+    # build: . # Use the pre-built image
+    image: *IMG_NAME 
+    container_name: *CONTAINER_NAME
+    command: &CMD_RUN /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && source install/local_setup.bash && ros2 launch navigation2_run real_launch.py 2>&1 | tee /home/user/Eurobot-2025-Navigation2-ws/nav2_log.txt"
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+    deploy: *DEPLOY_SETTING
+
+    # mount our navigation code
+    volumes: *VOLUMES
+
+    working_dir: *WORKING_DIR
+
+    environment: *ENV
+    

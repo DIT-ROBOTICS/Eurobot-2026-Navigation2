@@ -1,0 +1,168 @@
+version: '3.8'
+
+services:
+  navigation-rviz-local-11:
+    # build: .  # Use the pre-built image
+    image: &IMG_NAME rabbit025879/eurobot2025-navigation2-envs:latest
+    container_name: &CONTAINER_NAME navigation2
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws &&  source install/local_setup.bash && ros2 launch navigation2_run rviz_launch.py"  # TODO: Check for working directories
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: &STOP_GRACE_PERIOD 1s
+
+    # mount our navigation code
+    volumes: &VOLUMES_LOCAL
+      - ${HOME}/Eurobot-2025/Eurobot-2025-ws:/home/user/Eurobot-2025-Navigation2-ws # TODO: Check for working directories
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/home/user/.Xauthority
+      - /dev:/dev
+
+    working_dir: &WORKING_DIR_LOCAL
+      /home/user/Eurobot-2025-Navigation2-ws
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path\
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=11
+
+  navigation-rviz-local-14:
+    # build: .  # Use the pre-built image
+    image: *IMG_NAME
+    container_name: *CONTAINER_NAME
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && source install/local_setup.bash && ros2 launch navigation2_run rviz_launch.py"  # TODO: Check for working directories
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path\
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=14
+
+  navigation-rqt-local-11:
+    # build: .  # Use the pre-built image
+    image: *IMG_NAME
+    container_name: *CONTAINER_NAME
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && rqt"  # TODO: Check for working directories
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path\
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=11
+
+  navigation-rqt-local-14:
+    # build: .  # Use the pre-built image
+    image: *IMG_NAME
+    container_name: *CONTAINER_NAME
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && rqt"  # TODO: Check for working directories
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path\
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=14
+
+  navigation-develop-local:
+    # build: . # Use the pre-built image
+    image: *IMG_NAME 
+    container_name: *CONTAINER_NAME
+    command: /bin/bash
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=51  # ! Please distinguish the domain ID with other containers
+
+  navigation-build-local:
+    # build: . # Use the pre-built image
+    image: *IMG_NAME 
+    container_name: *CONTAINER_NAME
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && colcon build"
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=51  # ! Please distinguish the domain ID with other containers
+
+  navigation-run-local:
+    # build: . # Use the pre-built image
+    image: *IMG_NAME 
+    container_name: *CONTAINER_NAME
+    command: /bin/bash -c "cd /home/user/Eurobot-2025-Navigation2-ws && source install/local_setup.bash && ros2 launch navigation2_run sim_launch.py 2>&1 | tee /home/user/Eurobot-2025-Navigation2-ws/nav2_log.txt"
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+    # mount our navigation code
+    volumes: *VOLUMES_LOCAL
+
+    working_dir: *WORKING_DIR_LOCAL
+
+    environment:
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=51  # ! Please distinguish the domain ID with other containers
