@@ -20,11 +20,11 @@ docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navi
 
 On Local, rviz mode for machine-11
 ```
-docker compose -f /home/{user}/Eurobot-2025/Eurobot-2025-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-local/docker-bringup.yaml run --rm navigation-rviz-local-11
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-11
 ```
 On Local, rviz mode for machine-12
 ```
-docker compose -f /home/{user}/Eurobot-2025/Eurobot-2025-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-local/docker-bringup.yaml run --rm navigation-rviz-local-12
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-12
 ```
 On local, develop mode
 ```
