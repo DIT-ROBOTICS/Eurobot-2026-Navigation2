@@ -22,9 +22,9 @@ On Local, rviz mode for machine-11
 ```
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-11
 ```
-On Local, rviz mode for machine-12
+On Local, rviz mode for machine-14
 ```
-docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-12
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-14
 ```
 On local, develop mode
 ```
