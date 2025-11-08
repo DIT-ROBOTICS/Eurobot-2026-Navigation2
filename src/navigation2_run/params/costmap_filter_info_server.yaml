@@ -1,0 +1,12 @@
+keepout_filter_mask_server:
+  ros__parameters:
+    topic_name: "keepout_filter_mask"
+    yaml_filename: "/home/user/Eurobot-2026-Navigation2-ws/src/navigation2_run/maps/keepout_mask.yaml"
+
+keepout_costmap_filter_info_server:
+  ros__parameters:
+    type: 0
+    filter_info_topic: "keepout_costmap_filter_info"
+    mask_topic: "keepout_filter_mask"
+    base: 0.0
+    multiplier: 1.0

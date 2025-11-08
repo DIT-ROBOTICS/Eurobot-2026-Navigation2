@@ -3,7 +3,7 @@
 namespace keepout_costmap_plugin {
     // KeepoutLayer class
     void KeepoutLayer::onInitialize() {
-        RCLCPP_INFO(
+        RCLCPP_WARN(
             rclcpp::get_logger("KeepoutLayer"), 
             "Initializing KeepoutLayer");
 
@@ -36,6 +36,8 @@ namespace keepout_costmap_plugin {
 
         node->get_parameter(name_ + "." + "inflation_length", inflation_length_);
         node->get_parameter(name_ + "." + "cost_scaling_factor", cost_scaling_factor_);
+
+        RCLCPP_WARN(logger_, "Frame id: %s", layered_costmap_->getGlobalFrameID().c_str());
 
         keepout_zone_sub_ = node->create_subscription<std_msgs::msg::String>(
             "/keepout_zone", 10, std::bind(&KeepoutLayer::keepoutZoneCallback, this, std::placeholders::_1));
@@ -130,10 +132,10 @@ namespace keepout_costmap_plugin {
                 RCLCPP_WARN(rclcpp::get_logger("KeepoutLayer"), "Too many keepout zones (>26), ignoring extra zones.");
                 break;
             }
-            if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
-                ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
+            // if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
+            ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
                 // RCLCPP_INFO(rclcpp::get_logger("KeepoutLayer"), "Active keepout zone %c", char('A'+i));
-            }   
+            // }   
         }
     }
 

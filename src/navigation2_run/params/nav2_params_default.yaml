@@ -258,19 +258,21 @@ global_costmap:
         plugin: "keepout_costmap_plugin::KeepoutLayer"
         enabled: True
         # keepout_zone_array: [X, Y, lengthX, lengthY]
-        keepout_zone_array: [0.375, 1.775, 0.45, 0.45,  # A
-                             0.225, 0.875, 0.45, 0.45,  # B
-                             0.225, 0.075, 0.45, 0.15,  # C
-                             0.775, 0.075, 0.45, 0.15,  # D
-                             1.225, 0.225, 0.45, 0.45,  # E
+        # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
+        keepout_zone_array: [0.1,  0.8,  0.2,  0.2,  # L1
+                             0.7,  0.1,  0.2,  0.2,  # L2
+                             0.8,  0.8,  0.2,  0.2,  # L3
+                             1.25, 1.45, 0.2,  0.2,  # L4
                              #----------------------------#
-                             1.775, 0.225, 0.45, 0.45,  # F
-                             2.225, 0.075, 0.45, 0.15,  # G
-                             2.775, 0.075, 0.45, 0.15,  # H
-                             2.775, 0.875, 0.45, 0.45,  # I
-                             2.625, 1.775, 0.45, 0.45,] # J 
-        inflation_length: 0.2
-        cost_scaling_factor: 5.0
+                             1.5,  0.1,  0.2,  0.2,  # M1
+                             1.5,  0.8,  0.2,  0.2,  # M2
+                             #----------------------------#
+                             1.75, 1.45, 0.2,  0.2,  # R1
+                             2.2,  0.8,  0.2,  0.2,  # R2
+                             2.3,  0.1,  0.2,  0.2,  # R3
+                             2.9,  0.8,  0.2,  0.2,] # R4
+        inflation_length: 0.1
+        cost_scaling_factor: 9.0
       always_send_full_costmap: True
 
 map_server:
