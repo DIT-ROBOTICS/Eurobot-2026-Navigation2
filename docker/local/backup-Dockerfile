@@ -2,13 +2,7 @@
 # Base Image: ros2-humble
 ##############################################################################
 
-# Multi-architecture support - Docker will automatically select the right platform
-FROM --platform=$BUILDPLATFORM osrf/ros:humble-desktop AS base
-
-# Build arguments for platform detection
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
-ARG TARGETARCH
+FROM osrf/ros:humble-desktop-full-jammy
 
 ##############################################################################
 # Arguments
@@ -18,14 +12,6 @@ ARG USERNAME=user
 ARG USERID=1000
 ARG USERGID=${USERID}
 ARG SHELL=bash
-
-##############################################################################
-# Display build information
-##############################################################################
-
-RUN echo "Building for platform: ${TARGETPLATFORM:-unknown}" && \
-    echo "Architecture: ${TARGETARCH:-unknown}" && \
-    uname -m
 
 ##############################################################################
 # Label
@@ -78,6 +64,7 @@ RUN apt-get update && \
     ros-humble-teleop-twist-keyboard \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
+    ros-humble-gazebo-ros-pkgs \
     ros-humble-geographic-msgs \
     ros-humble-geometry-msgs \
     ros-humble-test-msgs \

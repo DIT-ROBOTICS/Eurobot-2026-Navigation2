@@ -3,7 +3,7 @@ version: '3.8'
 services:
   navigation:
     build: .
-    image: rabbit025879/eurobot2025-navigation2-envs:latest
+    image: rabbit025879/eurobot2025-navigation2-envs:local
     container_name: navigation2
     command: /bin/bash
     tty: true
