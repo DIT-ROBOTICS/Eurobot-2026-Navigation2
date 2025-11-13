@@ -3,7 +3,7 @@
 ##############################################################################
 
 # Multi-architecture support - Docker will automatically select the right platform
-FROM --platform=$BUILDPLATFORM osrf/ros:humble-desktop AS base
+FROM --platform=$BUILDPLATFORM ros:humble-ros-base-jammy
 
 # Build arguments for platform detection
 ARG TARGETPLATFORM
@@ -31,7 +31,7 @@ RUN echo "Building for platform: ${TARGETPLATFORM:-unknown}" && \
 # Label
 ##############################################################################
 
-LABEL org.opencontainers.image.authors="Tu"
+LABEL org.opencontainers.image.authors="JustinShih"
 LABEL shell="${SHELL}"
 
 ##############################################################################
@@ -46,10 +46,25 @@ ENV LANG=en_US.UTF-8
 ENV ROS_DISTRO=humble
 
 ##############################################################################
+# Cache Setting
+##############################################################################
+
+# keep downloaded packages for caching purposes
+RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+# upgrade packages
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+##############################################################################
 # Install packages
 ##############################################################################
 
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
     sudo \
     vim \
@@ -64,10 +79,13 @@ RUN apt-get update && \
     locales \
     build-essential \
     cmake \
-    python3-colcon-common-extensions
+    python3-colcon-common-extensions \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies for ROS and Nav2
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
     libsdl-image1.2-dev \
     libsuitesparse-dev \
@@ -83,7 +101,9 @@ RUN apt-get update && \
     ros-humble-test-msgs \
     ros-humble-bondcpp \
     ros-humble-foxglove-bridge \
-    ros-humble-rmw-cyclonedds-cpp
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-rviz2 \
+    && rm -rf /var/lib/apt/lists/*
 
 ##############################################################################
 # Set Language
@@ -106,7 +126,9 @@ RUN TZ=Asia/Taipei && \
 # Add new user (Passwordless with sudo)
 ##############################################################################
 
-RUN groupadd --gid ${USERGID} ${USERNAME} \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    groupadd --gid ${USERGID} ${USERNAME} \
     && useradd --uid ${USERID} --gid ${USERGID} -m ${USERNAME} -s /bin/bash \
     # passwordless
     && apt-get update \
