@@ -5,9 +5,9 @@ Purpose: To switch specific zones between passable or not.
 
 ### How to use
 Use topic `/keepout_zone` base on `std_msgs/msg/String`
-- format example `ABCDEFKLMN`
-    - one letter represent one zone, total 18 zones. (see the following picture)(I will add it later)
-    - the zones letter within `/keepout_zone` will be not passable, else will be passable.
+- format example `{data: ABCDEFKLMN}`
+    - one letter represent one zone, total 18 zones. (see the following picture) (I will add it later)
+    - the zones letter within `/keepout_zone` will be **not passable**, else will be passable.
 
 
 ### parameter settings
