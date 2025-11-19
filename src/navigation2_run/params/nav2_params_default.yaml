@@ -199,8 +199,8 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.22
-      resolution: 0.01
+      robot_radius: 0.18
+      resolution: 0.005
       track_unknown_space: false
       trinary_costmap: false
       lethal_cost_threshold: 10
@@ -259,20 +259,32 @@ global_costmap:
         enabled: True
         # keepout_zone_array: [X, Y, lengthX, lengthY]
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
-        keepout_zone_array: [0.1,  0.8,  0.2,  0.2,  # L1
-                             0.7,  0.1,  0.2,  0.2,  # L2
-                             0.8,  0.8,  0.2,  0.2,  # L3
-                             1.25, 1.45, 0.2,  0.2,  # L4
-                             #----------------------------#
-                             1.5,  0.1,  0.2,  0.2,  # M1
-                             1.5,  0.8,  0.2,  0.2,  # M2
-                             #----------------------------#
-                             1.75, 1.45, 0.2,  0.2,  # R1
-                             2.2,  0.8,  0.2,  0.2,  # R2
-                             2.3,  0.1,  0.2,  0.2,  # R3
-                             2.9,  0.8,  0.2,  0.2,] # R4
-        inflation_length: 0.1
-        cost_scaling_factor: 9.0
+        # keepout_zone_for_hasonuts: Left(4), Right(4)
+        keepout_zone_array: [0.1,   0.8,   0.2,   0.2,   # A
+                             0.7,   0.1,   0.2,   0.2,   # B
+                             0.8,   0.8,   0.2,   0.2,   # C
+                             1.25,  1.45,  0.2,   0.2,   # D
+                             #-----------------------------#
+                             1.5,   0.1,   0.2,   0.2,   # E
+                             1.5,   0.8,   0.2,   0.2,   # F
+                             #-----------------------------#
+                             1.75,  1.45,  0.2,   0.2,   # G
+                             2.2,   0.8,   0.2,   0.2,   # H
+                             2.3,   0.1,   0.2,   0.2,   # I
+                             2.9,   0.8,   0.2,   0.2,   # J
+                             #-----------------------------#
+                             0.175, 0.4,   0.15,  0.2,   # K
+                             0.175, 1.2,   0.15,  0.2,   # L
+                             1.1,   0.175, 0.2,   0.15,  # M
+                             1.15,  0.8,   0.2,   0.15,  # N
+                             #-----------------------------#
+                             2.825, 0.4,   0.15,  0.2,   # O
+                             2.825, 1.2,   0.15,  0.2,   # P
+                             1.9,   0.175, 0.2,   0.15,  # Q
+                             1.85,  0.8,   0.2,   0.15,] # R
+        inflation_length: 0.15
+        cost_scaling_factor: 5.0
+        keepout_expand_mode: 1
       always_send_full_costmap: True
 
 map_server:
