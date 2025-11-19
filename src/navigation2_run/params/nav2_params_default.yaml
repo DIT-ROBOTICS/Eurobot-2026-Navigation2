@@ -282,9 +282,9 @@ global_costmap:
                              2.825, 1.2,   0.15,  0.2,   # P
                              1.9,   0.175, 0.2,   0.15,  # Q
                              1.85,  0.8,   0.2,   0.15,] # R
-        inflation_length: 0.15
-        cost_scaling_factor: 5.0
-        keepout_expand_mode: 1
+        inflation_length: 0.15   # distance over which cost is inflated
+        cost_scaling_factor: 5.0   # higher value -> steeper cost increase
+        keepout_expand_mode: 1   # 0: Circle, 1: Square
       always_send_full_costmap: True
 
 map_server:
