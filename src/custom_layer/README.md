@@ -6,9 +6,12 @@ Purpose: To switch specific zones between passable or not.
 ### How to use
 Use topic `/keepout_zone` base on `std_msgs/msg/String`
 - format example `{data: ABCDEFKLMN}`
-    - one letter represent one zone, total 18 zones. (see the following picture)
+    - one letter represent one zone, total 18 zones.
     - the zones letter within `/keepout_zone` will be **not passable**, else will be passable.
     - for this example, zone `ABCDEFKLMN` will be **not passable**, zone `GHIJOPQR` will be passable.
+    
+![Keepout Zones Index 1](/src/custom_layer/keepout_layer/pantry_keepout_zone_index.png)
+![Keepout Zones Index 2](/src/custom_layer/keepout_layer/hazelnut_keepout_zone_index.png)
 
 ### parameter settings
 ```yaml
