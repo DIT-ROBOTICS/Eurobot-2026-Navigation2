@@ -38,6 +38,17 @@ The keepout zones correspond to specific regions on the Eurobot 2025 field, used
 - These zones can be toggled at runtime using the `/keepout_zone` topic.  
 - Suitable for strategic behaviors like avoiding opponent areas or obstacle fields.  
 - **Message Type**: `std_msgs/msg/String`
+- parameter settings: 
+```yaml
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      keepout_layer:
+        inflation_length: 0.15   # distance over which cost is inflated
+        cost_scaling_factor: 5.0   # higher value -> steeper cost increase
+        keepout_expand_mode: 1   # 0: Circle, 1: Square
+```
+see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/c15b2d0b84cd5adb5e536313d913c852af9cdcbd/src/navigation2_run/params/nav2_params_default.yaml#L194) 
 
 #### ✅ Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)
