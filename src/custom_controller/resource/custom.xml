@@ -1,7 +1,7 @@
-<library path="custom_controller">
-  <class type="custom_controller::CustomController" base_class_type="nav2_core::Controller">
+<library path="follow_path_controller">
+  <class type="follow_path_controller::FollowPathController" base_class_type="nav2_core::Controller">
     <description>
-      This is a custom controller
+      This is a controller plugin that follows a given path using a pure pursuit algorithm.
     </description>
   </class>
 </library>
