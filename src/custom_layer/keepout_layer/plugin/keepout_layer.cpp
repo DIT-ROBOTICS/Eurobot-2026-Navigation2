@@ -21,6 +21,7 @@ namespace keepout_costmap_plugin {
 
         declareParameter("inflation_length", rclcpp::ParameterValue(0.5));
         declareParameter("cost_scaling_factor", rclcpp::ParameterValue(10.0));
+        declareParameter("keepout_expand_mode", rclcpp::ParameterValue(0));
 
         // Get the parameters
         std::vector<double> keepout_zone_array_raw;
@@ -36,6 +37,9 @@ namespace keepout_costmap_plugin {
 
         node->get_parameter(name_ + "." + "inflation_length", inflation_length_);
         node->get_parameter(name_ + "." + "cost_scaling_factor", cost_scaling_factor_);
+        node->get_parameter(name_ + "." + "keepout_expand_mode", keepout_expand_mode_);
+
+        RCLCPP_WARN(logger_, "Frame id: %s", layered_costmap_->getGlobalFrameID().c_str());
 
         keepout_zone_sub_ = node->create_subscription<std_msgs::msg::String>(
             "/keepout_zone", 10, std::bind(&KeepoutLayer::keepoutZoneCallback, this, std::placeholders::_1));
@@ -121,7 +125,62 @@ namespace keepout_costmap_plugin {
                 }
             }
         }
-    }            
+    }
+    
+    void KeepoutLayer::ExpandPointWithCircle(KeepoutZone zone, double max_cost, double inflation_radius, double cost_scaling_factor)
+    {
+        unsigned int mx, my;
+        if (!worldToMap(zone.x, zone.y, mx, my)) return;
+
+        double step = getResolution();
+
+        double half_x = zone.lengthX / 2.0;
+        double half_y = zone.lengthY / 2.0;
+
+        for (double x = zone.x - half_x - inflation_radius; x <= zone.x + half_x + inflation_radius; x += step) {
+            for (double y = zone.y - half_y - inflation_radius; y <= zone.y + half_y + inflation_radius; y += step) {
+                unsigned int cell_x, cell_y;
+                if (!worldToMap(x, y, cell_x, cell_y)) continue;
+
+                double dx = std::max(0.0, fabs(x - zone.x) - half_x);
+                double dy = std::max(0.0, fabs(y - zone.y) - half_y);
+                double distance = hypot(dx, dy);
+
+                if (distance > inflation_radius) continue;  
+
+                double cost = ceil(252 * exp(-cost_scaling_factor * distance));
+                cost = std::max(std::min(cost, max_cost), 0.0);
+
+                setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
+            }
+        }
+
+        struct Corner {
+            double cx, cy;
+            double start_angle, end_angle;
+        };
+        std::vector<Corner> corners = {
+            {zone.x - half_x, zone.y - half_y, 0, M_PI_2},      
+            {zone.x + half_x, zone.y - half_y, M_PI_2, M_PI},     
+            {zone.x + half_x, zone.y + half_y, M_PI, 3*M_PI_2},   
+            {zone.x - half_x, zone.y + half_y, 3*M_PI_2, 2*M_PI}  
+        };
+
+        for (auto &corner : corners) {
+            for (double r = 0; r <= inflation_radius; r += step) {
+                for (double theta = corner.start_angle; theta <= corner.end_angle; theta += step / inflation_radius) {
+                    double x = corner.cx + r * cos(theta);
+                    double y = corner.cy + r * sin(theta);
+                    unsigned int cell_x, cell_y;
+                    if (!worldToMap(x, y, cell_x, cell_y)) continue;
+
+                    double cost = ceil(252 * exp(-cost_scaling_factor * (inflation_radius - r)));
+                    cost = std::max(std::min(cost, max_cost), 0.0);
+                    setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
+                }
+            }
+        }
+    }
 
     void KeepoutLayer::SetKeepoutZone() {
         // Set the keepout zone based on the active keepout zones
@@ -131,8 +190,9 @@ namespace keepout_costmap_plugin {
                 break;
             }
             if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
-                ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
-                // RCLCPP_INFO(rclcpp::get_logger("KeepoutLayer"), "Active keepout zone %c", char('A'+i));
+                if (keepout_expand_mode_ == 1) ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
+                else ExpandPointWithCircle(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
+                RCLCPP_INFO(rclcpp::get_logger("KeepoutLayer"), "Active keepout zone %c", char('A'+i));
             }   
         }
     }
