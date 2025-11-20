@@ -1,6 +1,0 @@
-image: keepout_mask.pgm
-resolution: 0.010000
-origin: [0.0, 0.0, 0.0]
-negate: 0
-occupied_thresh: 0.1
-free_thresh: 0.1

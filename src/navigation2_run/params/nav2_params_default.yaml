@@ -259,7 +259,7 @@ global_costmap:
         enabled: True
         # keepout_zone_array: [X, Y, lengthX, lengthY]
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
-        # keepout_zone_for_hasonuts: Left(4), Right(4)
+        # keepout_zone_for_hazelnuts: Left(4), Right(4)
         keepout_zone_array: [0.1,   0.8,   0.2,   0.2,   # A
                              0.7,   0.1,   0.2,   0.2,   # B
                              0.8,   0.8,   0.2,   0.2,   # C
