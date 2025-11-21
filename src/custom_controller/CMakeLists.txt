@@ -22,11 +22,11 @@ set(dep_pkgs
 
 include_directories(include)
 
-add_library(follow_path_controller SHARED
-  src/follow_path_controller.cpp
+add_library(custom_controller SHARED
+  src/custom_controller.cpp
 )
 
-ament_target_dependencies(follow_path_controller
+ament_target_dependencies(custom_controller
   rclcpp
   nav2_core
   pluginlib
@@ -34,12 +34,12 @@ ament_target_dependencies(follow_path_controller
   std_msgs
 )
 
-target_include_directories(follow_path_controller PUBLIC
+target_include_directories(custom_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-install(TARGETS follow_path_controller
+install(TARGETS custom_controller
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
