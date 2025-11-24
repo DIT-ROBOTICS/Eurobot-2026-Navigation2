@@ -5,7 +5,7 @@ Purpose: To switch specific zones between passable or not.
 
 ### How to use
 Use topic `/keepout_zone` base on `std_msgs/msg/String`
-- format example `{data: ABCDEFKLMN}`
+- example `ros2 topic pub -1 /keepout_zone std_msgs/msg/String "{data: ABCDEFKLMN}"`
     - one letter represent one zone, total 18 zones.
     - the zones letter within `/keepout_zone` will be **not passable**, else will be passable.
     - for this example, zone `ABCDEFKLMN` will be **not passable**, zone `GHIJOPQR` will be passable.
