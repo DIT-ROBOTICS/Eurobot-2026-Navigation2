@@ -141,6 +141,8 @@ controller_server:
       costmap_tolerance: 95            # rival 是 98
       keep_planning: false
       spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5            
 
     Slow:
       plugin: "follow_path_controller::FollowPathController"
@@ -159,6 +161,8 @@ controller_server:
       costmap_tolerance: 95
       keep_planning: false
       spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5  
+      rival_decay: 0.5
 
     LinearBoost:
       plugin: "follow_path_controller::FollowPathController"
@@ -177,6 +181,8 @@ controller_server:
       costmap_tolerance: 95
       keep_planning: false
       spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5
 
     AngularBoost:
       plugin: "follow_path_controller::FollowPathController"
@@ -195,6 +201,8 @@ controller_server:
       costmap_tolerance: 95
       keep_planning: false
       spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5
 
 local_costmap:
   local_costmap:
