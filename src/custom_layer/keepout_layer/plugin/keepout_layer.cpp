@@ -151,7 +151,11 @@ namespace keepout_costmap_plugin {
                 double cost = ceil(252 * exp(-cost_scaling_factor * distance));
                 cost = std::max(std::min(cost, max_cost), 0.0);
 
-                setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
+                if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
+                    setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
+                } else {
+                    setCost(cell_x, cell_y, cost);
+                }
             }
         }
 
@@ -174,7 +178,8 @@ namespace keepout_costmap_plugin {
                     unsigned int cell_x, cell_y;
                     if (!worldToMap(x, y, cell_x, cell_y)) continue;
 
-                    double cost = ceil(252 * exp(-cost_scaling_factor * (inflation_radius - r)));
+                    double decay_factor = exp(-cost_scaling_factor * r);
+                    double cost = ceil(252 * decay_factor);
                     cost = std::max(std::min(cost, max_cost), 0.0);
                     setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
                 }

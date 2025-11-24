@@ -199,8 +199,8 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.18
-      resolution: 0.005
+      robot_radius: 0.22
+      resolution: 0.01
       track_unknown_space: false
       trinary_costmap: false
       lethal_cost_threshold: 10
@@ -284,7 +284,7 @@ global_costmap:
                              1.85,  0.8,   0.2,   0.15,] # R
         inflation_length: 0.15   # distance over which cost is inflated
         cost_scaling_factor: 5.0   # higher value -> steeper cost increase
-        keepout_expand_mode: 1   # 0: Circle, 1: Square
+        keepout_expand_mode: 0   # 0: Circle, 1: Square
       always_send_full_costmap: True
 
 map_server:

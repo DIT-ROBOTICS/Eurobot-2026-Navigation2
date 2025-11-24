@@ -28,7 +28,7 @@ Control the robot's emergency stop or resume behavior via the `/stopRobot` topic
 
 #### ✅ Keepout Zone Index
 
-The keepout zones correspond to specific regions on the Eurobot 2025 field, used to restrict robot access dynamically via `/keepout_zone`.
+The keepout zones correspond to specific regions on the Eurobot 2026 field, used to restrict robot access dynamically via `/keepout_zone`.
 
 ![Keepout Zones Index 1](/src/custom_layer/keepout_layer/pantry_keepout_zone_index.png)
 ![Keepout Zones Index 2](/src/custom_layer/keepout_layer/hazelnut_keepout_zone_index.png)
@@ -48,7 +48,7 @@ global_costmap:
         cost_scaling_factor: 5.0   # higher value -> steeper cost increase
         keepout_expand_mode: 1   # 0: Circle, 1: Square
 ```
-see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/c15b2d0b84cd5adb5e536313d913c852af9cdcbd/src/navigation2_run/params/nav2_params_default.yaml#L194) 
+see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
 #### ✅ Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)
