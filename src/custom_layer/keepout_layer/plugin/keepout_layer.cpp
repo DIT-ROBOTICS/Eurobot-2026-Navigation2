@@ -142,8 +142,8 @@ namespace keepout_costmap_plugin {
                 unsigned int cell_x, cell_y;
                 if (!worldToMap(x, y, cell_x, cell_y)) continue;
 
-                double dx = std::max(0.0, fabs(x - zone.x) - half_x);
-                double dy = std::max(0.0, fabs(y - zone.y) - half_y);
+                double dx = std::max(0.0, std::abs(x - zone.x) - half_x);
+                double dy = std::max(0.0, std::abs(y - zone.y) - half_y);
                 double distance = hypot(dx, dy);
 
                 if (distance > inflation_radius) continue;  
@@ -155,36 +155,6 @@ namespace keepout_costmap_plugin {
                     setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
                 } else {
                     setCost(cell_x, cell_y, cost);
-                }
-            }
-        }
-
-        struct Corner {
-            double cx, cy;
-            double start_angle, end_angle;
-        };
-        std::vector<Corner> corners = {
-            {zone.x - half_x, zone.y - half_y, 0, M_PI_2},      
-            {zone.x + half_x, zone.y - half_y, M_PI_2, M_PI},     
-            {zone.x + half_x, zone.y + half_y, M_PI, 3*M_PI_2},   
-            {zone.x - half_x, zone.y + half_y, 3*M_PI_2, 2*M_PI}  
-        };
-
-        for (auto &corner : corners) {
-            for (double r = 0; r <= inflation_radius; r += step) {
-                for (double theta = corner.start_angle; theta <= corner.end_angle; theta += step / inflation_radius) {
-                    double x = corner.cx + r * cos(theta);
-                    double y = corner.cy + r * sin(theta);
-                    unsigned int cell_x, cell_y;
-                    if (!worldToMap(x, y, cell_x, cell_y)) continue;
-
-                    double cost = ceil(252 * exp(-cost_scaling_factor * r));
-                    cost = std::max(std::min(cost, max_cost), 0.0);
-                    if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
-                        setCost(cell_x, cell_y, std::max((unsigned char)cost, getCost(cell_x, cell_y)));
-                    } else {
-                        setCost(cell_x, cell_y, cost);
-                    }
                 }
             }
         }
