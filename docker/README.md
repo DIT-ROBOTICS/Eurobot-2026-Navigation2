@@ -43,6 +43,8 @@ docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-brin
 
 On local, using vnc
 ```
+docker volume create ros_x11
+
 # start vnc
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/vnc/docker-compose.yaml up -d
 
@@ -101,6 +103,10 @@ The computation runs inside the Navigation2 container, while rendering is done
 by the VNC/XFCE container.
 
 ---
+### Create shared volume
+```
+docker volume create ros_x11
+```
 
 ### Activate VNC + XFCE (`ros2-vnc` container)
 ```
