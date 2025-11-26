@@ -102,7 +102,7 @@ by the VNC/XFCE container.
 
 ---
 
-### Activate VNC + XFCE 'ros2-vnc' container
+### Activate VNC + XFCE (`ros2-vnc` container)
 ```
 cd /home/{user}/Eurobot-2026-Navigation2/docker/vnc
 docker compose up -d
