@@ -1,5 +1,5 @@
-<library path="follow_path_controller">
-  <class type="follow_path_controller::FollowPathController" base_class_type="nav2_core::Controller">
+<library path="custom_controller">
+  <class type="custom_controller::CustomController" base_class_type="nav2_core::Controller">
     <description>
       This is a new controller plugin called follow path controller.
     </description>

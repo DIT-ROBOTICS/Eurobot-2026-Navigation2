@@ -28,14 +28,27 @@ Control the robot's emergency stop or resume behavior via the `/stopRobot` topic
 
 #### ✅ Keepout Zone Index
 
-The keepout zones correspond to specific regions on the Eurobot 2025 field, used to restrict robot access dynamically via `/keepout_zone`.
+The keepout zones correspond to specific regions on the Eurobot 2026 field, used to restrict robot access dynamically via `/keepout_zone`.
 
-![Keepout Zones Index](/src/custom_layer/keepout_layer/Keepout_zones_Index.png)
+![Keepout Zones Index 1](/src/custom_layer/keepout_layer/pantry_keepout_zone_index.png)
+![Keepout Zones Index 2](/src/custom_layer/keepout_layer/hazelnut_keepout_zone_index.png)
 
-- Zones are labeled **A** through **J** on the field map.  
+- Pantry zones are labeled **A** through **J** on the field map.  
+- Hazelnut zones are labeled **K** through **R** on the field map.  
 - These zones can be toggled at runtime using the `/keepout_zone` topic.  
 - Suitable for strategic behaviors like avoiding opponent areas or obstacle fields.  
 - **Message Type**: `std_msgs/msg/String`
+- parameter settings: 
+```yaml
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      keepout_layer:
+        inflation_length: 0.15   # distance over which cost is inflated
+        cost_scaling_factor: 5.0   # higher value -> steeper cost increase
+        keepout_expand_mode: 1   # 0: Circle, 1: Square
+```
+see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
 #### ✅ Custom Controller: `follow_path_controller`
 

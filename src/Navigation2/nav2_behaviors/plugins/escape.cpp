@@ -9,7 +9,7 @@ namespace nav2_behaviors
                     cmd_yaw(0.0),
                     prev_yaw(0.0),
                     relative_yaw(0.0),
-                    target_update_frequency_(2.0),  // Default to 1Hz updates
+                    target_update_frequency_(5.0),  // Default to 1Hz updates
                     is_active(false)
                     {
                         scan_radius = 20;
@@ -33,6 +33,13 @@ namespace nav2_behaviors
             throw std::runtime_error("Failed to lock node in onConfigure");
         }
         
+        // Declare the scan_radius parameter with default value
+        nav2_util::declare_parameter_if_not_declared(
+            node, "escape.scan_radius", rclcpp::ParameterValue(0.5));
+        
+        // Get the parameter value
+        node->get_parameter("escape.scan_radius", scan_radius);
+        
         // Create the timer for updating target points
         target_update_timer_ = node->create_wall_timer(
             std::chrono::duration<double>(1.0 / target_update_frequency_),
@@ -51,6 +58,7 @@ namespace nav2_behaviors
             "/rival_pose", 
             rclcpp::QoS(10), 
             std::bind(&Escape::rivalCallback, this, std::placeholders::_1));
+        abort_escape = false;
     }
 
     // New timer callback function
@@ -82,9 +90,6 @@ namespace nav2_behaviors
             double new_cost = getOneGridCost(new_target.position.x, new_target.position.y);
             
             if (new_cost < old_cost) {
-                RCLCPP_INFO(logger_, "Updating target from (%f, %f) to (%f, %f)", 
-                    target_point.position.x, target_point.position.y,
-                    new_target.position.x, new_target.position.y);
                 target_point = new_target;
             }
         }
@@ -125,14 +130,12 @@ namespace nav2_behaviors
     }
 
     geometry_msgs::msg::Pose Escape::findTargetPoint() {
-        const double scan_radius = 0.3;  // meters
         const int num_points = 36;  // points per circle
         const double angle_increment = 2 * M_PI / num_points;
         
         double lowest_cost = 100.0;  // Max cost threshold
         geometry_msgs::msg::Pose best_point = robotPose.pose;
         double robot_cost = getOneGridCost(robotPose.pose.position.x, robotPose.pose.position.y);
-        double best_distance = std::numeric_limits<double>::max();  // Initialize with max value
         
         // Scan increasing radius circles
         for (double r = 0.01; r <= scan_radius; r += 0.01) {
@@ -150,23 +153,12 @@ namespace nav2_behaviors
                     map_y >= 0 && map_y < map_height) {
                     
                     double cost = getOneGridCost(world_x, world_y);
-                    double dist = hypot(world_x - robotPose.pose.position.x, 
-                                       world_y - robotPose.pose.position.y);
                     
-                    // Found a point with same cost but closer
-                    if (cost == lowest_cost && dist < best_distance) {
-                        best_point.position.x = world_x;
-                        best_point.position.y = world_y;
-                        best_point.position.z = 0.0;
-                        best_distance = dist;
-                    }
-                    // Found a point with better cost
-                    else if (cost < lowest_cost) {
+                    if (cost < lowest_cost && !outOfBound(world_x, world_y)) {
                         lowest_cost = cost;
                         best_point.position.x = world_x;
                         best_point.position.y = world_y;
                         best_point.position.z = 0.0;
-                        best_distance = dist;
                     }
                 }
             }
@@ -174,17 +166,15 @@ namespace nav2_behaviors
             // If we found a better point than robot position for this radius,
             // return it instead of checking larger radii
             if (lowest_cost < robot_cost) {
-                RCLCPP_INFO(logger_, "Found better point than robot position at radius %f with cost %f, distance %f",
-                           r, lowest_cost, best_distance);
                 return best_point;
             }
         }
         
         if (lowest_cost < 100.0) {
-            RCLCPP_INFO(logger_, "Found target point at (%f, %f) with cost %f, distance %f",
-                        best_point.position.x, best_point.position.y, lowest_cost, best_distance);
+            abort_escape = false;
         } else {
             RCLCPP_INFO(logger_, "No suitable target point found, staying in place");
+            abort_escape = true;
         }
         
         return best_point;
@@ -200,20 +190,41 @@ namespace nav2_behaviors
     std::unique_ptr<geometry_msgs::msg::Twist> Escape::makeMove(double x, double y){
         auto cmd_vel = std::make_unique<geometry_msgs::msg::Twist>();
         double vel_x, vel_y, max_vel;
-        double dist = hypot(this->robotPose.pose.position.x - x, this->robotPose.pose.position.y - y);
-        // double ang_diff;
-        double first_ang_diff = atan2(y - this->robotPose.pose.position.y, x - this->robotPose.pose.position.x);
+
+        double dx = x - this->robotPose.pose.position.x;
+        double dy = y - this->robotPose.pose.position.y;
+        double dist = hypot(dx, dy);
+        double first_ang_diff = atan2(dy, dx);
+        
         double cur_linear_kp = 5;
         double linear_max_vel = 0.4;
-        max_vel = std::min(dist*cur_linear_kp, linear_max_vel);
-        vel_x = max_vel * cos(first_ang_diff);
-        vel_y = max_vel * sin(first_ang_diff);
+        max_vel = std::min(dist * cur_linear_kp, linear_max_vel);
+
+        // Velocity in global frame
+        double vel_x_global = max_vel * cos(first_ang_diff);
+        double vel_y_global = max_vel * sin(first_ang_diff);
+
+        // Get yaw from robot's orientation (quaternion)
+        tf2::Quaternion q(
+            this->robotPose.pose.orientation.x,
+            this->robotPose.pose.orientation.y,
+            this->robotPose.pose.orientation.z,
+            this->robotPose.pose.orientation.w
+        );
+        double roll, pitch, yaw;
+        tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);  // extract yaw angle
+
+        // Rotate global velocity to robot frame
+        vel_x =  cos(yaw) * vel_x_global + sin(yaw) * vel_y_global;
+        vel_y = -sin(yaw) * vel_x_global + cos(yaw) * vel_y_global;
+
         cmd_vel->linear.x = vel_x;
         cmd_vel->linear.y = vel_y;
         cmd_vel->linear.z = 0;
         cmd_vel->angular.x = 0;
         cmd_vel->angular.y = 0;
         cmd_vel->angular.z = 0;
+
         return cmd_vel;
     }
 
@@ -239,26 +250,30 @@ namespace nav2_behaviors
             return Status::FAILED;
         }
 
-        if(isEscape() || outOfBound(robotPose.pose.position.x, robotPose.pose.position.y)){
+        if(outOfBound(robotPose.pose.position.x, robotPose.pose.position.y)){
             stopRobot();
             is_active = false;
-            RCLCPP_INFO(logger_, "Escape successfully");
+            RCLCPP_INFO(logger_, "\033[1;31mEscape Fail, Out of Bound\033[0m");  // Bold red
+            return Status::FAILED;
+        }
+
+        if(isEscape()){
+            stopRobot();
+            is_active = false;
+            RCLCPP_INFO(logger_, "\033[1;32mEscape SUCCESSED\033[0m");  // Bold green
             return Status::SUCCEEDED;
         }
         
-        
-        if (target_point.position.x == 0 && target_point.position.y == 0) {
-            target_point = findTargetPoint();
-        }
-        
-        if(target_point.position.x == robotPose.pose.position.x && target_point.position.y == robotPose.pose.position.y){
+        target_point = findTargetPoint();
+        if(abort_escape){
             stopRobot();
             is_active = false;
+            abort_escape = false;
+            RCLCPP_INFO(logger_, "\033[1;31mEscape Fail, No Target Point\033[0m");  // Bold red
             return Status::FAILED;
         }
         
         auto cmd_vel = makeMove(target_point.position.x, target_point.position.y);
-        RCLCPP_INFO(logger_, "Moving to target point (%f, %f)", target_point.position.x, target_point.position.y);
         vel_pub_->publish(std::move(cmd_vel));
         return Status::RUNNING;
     }
