@@ -1,5 +1,3 @@
-readme要怎麼換行
-
 # Eurobot-2025-Navigation2-envs
 The Docker Environment of ROS2 Humble for Eurobot-2025-Navigation2
 
@@ -113,7 +111,7 @@ docker volume create ros_x11
 cd /home/{user}/Eurobot-2026-Navigation2/docker/vnc
 docker compose up -d
 ```
-You an now connect via any VNC client:
+You can now connect via any VNC client:
 
 Address: localhost:5901
 
