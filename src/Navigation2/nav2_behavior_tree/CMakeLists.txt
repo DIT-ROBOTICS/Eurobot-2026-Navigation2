@@ -191,6 +191,8 @@ list(APPEND plugin_libs nav2_persistent_sequence_bt_node)
 
 add_library(nav2_persistent_sequence_w_cont_on_fail_bt_node SHARED plugins/control/persistent_sequence_w_cont_on_fail.cpp)
 list(APPEND plugin_libs nav2_persistent_sequence_w_cont_on_fail_bt_node)
+add_library(nav2_custom_sequence_node_bt_node SHARED plugins/control/custom_sequence_node.cpp)
+list(APPEND plugin_libs nav2_custom_sequence_node_bt_node)
 
 add_library(nav2_single_trigger_bt_node SHARED plugins/decorator/single_trigger_node.cpp)
 list(APPEND plugin_libs nav2_single_trigger_bt_node)
@@ -218,6 +220,8 @@ list(APPEND plugin_libs nav2_stop_controller_bt_node)
 
 add_library(nav2_reset_recovery_bt_node SHARED plugins/decorator/reset_recovery.cpp)
 list(APPEND plugin_libs nav2_reset_recovery_bt_node)
+add_library(nav2_setup_updater_bt_node SHARED plugins/decorator/setup_updater.cpp)
+list(APPEND plugin_libs nav2_setup_updater_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})

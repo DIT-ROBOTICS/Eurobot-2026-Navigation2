@@ -22,9 +22,9 @@ On Local, rviz mode for machine-11
 ```
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-11
 ```
-On Local, rviz mode for machine-12
+On Local, rviz mode for machine-14
 ```
-docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-12
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-14
 ```
 On local, develop mode
 ```
@@ -43,12 +43,12 @@ docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-brin
 
 ## Pull docker image for container
 ```
-docker pull rabbit025879/eurobot2025-navigation2-envs
+docker pull justinshih0918/eurobot2026-nav2-envs
 ```
 
 ## Build the image from Dockerfile (Under Navigation2-humble-local)
 ```
-docker compose build --no-cache
+docker compose build
 ```
 
 ## Start Container
@@ -65,6 +65,15 @@ docker exec -it navigation2 bash
 ### Simulation On Local Machine - open rviz & navigation with odometry simulation
 ```
 ros2 launch navigation2_run sim_launch.py
+```
+
+#### you can use shorten command as well
+```
+build # colcon build with symlink and parallel-workers 4
+```
+
+```
+sim # sim_launch.py activation
 ```
 ### Run On Real Machine - open navigation with listening to the topic /final_pose from localization
 ```
