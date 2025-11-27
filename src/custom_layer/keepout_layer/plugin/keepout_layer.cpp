@@ -170,7 +170,6 @@ namespace keepout_costmap_plugin {
             if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
                 if (keepout_expand_mode_ == 1) ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
                 else ExpandPointWithCircle(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
-                RCLCPP_INFO(rclcpp::get_logger("KeepoutLayer"), "Active keepout zone %c", char('A'+i));
             }   
         }
     }
