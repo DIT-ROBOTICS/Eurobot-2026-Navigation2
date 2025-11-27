@@ -39,6 +39,16 @@ On local, run mode
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-run-local
 ```
 
+On local, using vnc
+```
+docker volume create ros_x11
+
+# start vnc
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/vnc/docker-compose.yaml up -d
+
+# start navigation
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-compose.vnc.yaml up -d
+```
 ## ------------ Basic commands ------------
 
 ## Pull docker image for container
@@ -82,4 +92,49 @@ ros2 launch navigation2_run real_launch.py
 
 # on local machine
 ros2 launch navigation2_run rviz_launch.py
+```
+## ------------ VNC Mode (for macOS / systems without native X11) ------------
+
+The VNC mode allows running RViz and all GUI-based ROS2 tools even on systems
+that do not have an X11 server (e.g., macOS).  
+The computation runs inside the Navigation2 container, while rendering is done
+by the VNC/XFCE container.
+
+---
+### Create shared volume
+```
+docker volume create ros_x11
+```
+
+### Activate VNC + XFCE (`ros2-vnc` container)
+```
+cd /home/{user}/Eurobot-2026-Navigation2/docker/vnc
+docker compose up -d
+```
+You can now connect via any VNC client:
+
+Address: localhost:5901
+
+Password: ros
+
+You will see an XFCE desktop with ROS environment already sourced.
+
+### Start Navigation2 (GUI output displayed via VNC)
+
+Rebuild container
+```
+cd /home/{user}/Eurobot-2026-Navigation2/docker/local
+docker compose -f docker-compose.vnc.yaml up -d
+```
+
+Attach to the Navigation2 container:
+```
+docker exec -it navigation2 bash
+```
+
+Launch simulation + RViz (RViz will appear on the VNC desktop):
+```
+sim
+# or:
+# ros2 launch navigation2_run sim_launch.py
 ```
