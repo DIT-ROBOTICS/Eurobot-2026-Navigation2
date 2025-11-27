@@ -50,7 +50,7 @@ PS1='\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$ '
 
 alias sim='ros2 launch navigation2_run sim_launch.py'
 alias object='ros2 run object_layer ObjectSim'
-alias rival='ros2 run object_layer ObjectSim'
+alias rival='ros2 run rival_layer RivalSim'
 
 EOF
 
