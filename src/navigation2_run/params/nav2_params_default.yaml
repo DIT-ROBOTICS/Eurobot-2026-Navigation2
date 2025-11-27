@@ -144,7 +144,7 @@ controller_server:
     # Controller parameters
     DidilongController:
       plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/nav_didilong_params.yaml"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_didilong_params.yaml"
       max_linear_vel: 1.5
       max_angular_vel: 1.0
       linear_kp: 2.2
@@ -158,7 +158,7 @@ controller_server:
 
     Fast:
       plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/nav_fast_params.yaml"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_fast_params.yaml"
       max_linear_vel: 1.1
       max_angular_vel: 12.0
       linear_kp: 2.2
@@ -172,7 +172,7 @@ controller_server:
       
     Slow:
       plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/nav_slow_params.yaml"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_slow_params.yaml"
       max_linear_vel: 0.8
       max_angular_vel: 2.0
       linear_kp: 2.2
@@ -186,7 +186,7 @@ controller_server:
     
     LinearBoost:
       plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/nav_linearBoost_params.yaml"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_linearBoost_params.yaml"
       max_linear_vel: 1.1
       max_angular_vel: 2.0
       linear_kp: 2.2
@@ -200,7 +200,7 @@ controller_server:
 
     AngularBoost:
       plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/nav_angularBoost_params.yaml"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_angularBoost_params.yaml"
       max_linear_vel: 0.5
       max_angular_vel: 12.0
       linear_kp: 2.2
@@ -262,7 +262,7 @@ global_costmap:
         R_sq_threshold: 0.85
         reset_timeout_threshold: 70
         robot_inscribed_radius: 0.3
-        external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+        external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
         rival_inscribed_radius: 0.22
         halted_inflation_radius: 0.1
         wandering_inflation_radius: 0.12
@@ -412,7 +412,7 @@ docking_server:
     dock_prestaging_tolerance: 0.01
     enable_stop_robot: false
     velocity_smoother_wait: 0.12
-    external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+    external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
     shrink_nav_rival_radius: 0.05
     shrink_dock_rival_radius: 0.27
     shrink_dock_rival_degree: 60.0  
@@ -452,7 +452,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.05
       reserved_distance: 0.0
-      external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -465,7 +465,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.1
       reserved_distance: 0.0
-      external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -478,7 +478,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.03
       reserved_distance: 0.0
-      external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -490,4 +490,4 @@ final_pose_bridge:
 system_check:
   ros__parameters:
     costmap_tolerance: 90
-    external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/navigation2_run/params/dynamic_params/rival_params.yaml"
+    external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
