@@ -186,6 +186,9 @@ list(APPEND plugin_libs nav2_pipeline_sequence_bt_node)
 add_library(nav2_round_robin_node_bt_node SHARED plugins/control/round_robin_node.cpp)
 list(APPEND plugin_libs nav2_round_robin_node_bt_node)
 
+add_library(nav2_custom_sequence_node_bt_node SHARED plugins/control/custom_sequence_node.cpp)
+list(APPEND plugin_libs nav2_custom_sequence_node_bt_node)
+
 add_library(nav2_single_trigger_bt_node SHARED plugins/decorator/single_trigger_node.cpp)
 list(APPEND plugin_libs nav2_single_trigger_bt_node)
 
@@ -209,6 +212,9 @@ list(APPEND plugin_libs nav2_goal_updated_controller_bt_node)
 
 add_library(nav2_stop_controller_bt_node SHARED plugins/decorator/stop_controller.cpp)
 list(APPEND plugin_libs nav2_stop_controller_bt_node)
+
+add_library(nav2_setup_updater_bt_node SHARED plugins/decorator/setup_updater.cpp)
+list(APPEND plugin_libs nav2_setup_updater_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})

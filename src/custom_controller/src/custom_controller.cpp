@@ -59,7 +59,7 @@ void CustomController::configure(
         });
 
     rival_pose_subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
-        "/rival/final_pose",  // Replace with your actual rival pose topic
+        "/rhino_pose",  // Replace with your actual rival pose topic
         rclcpp::QoS(10),
         [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
             rival_pose_ = *msg;
@@ -74,9 +74,9 @@ void CustomController::configure(
     global_path_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 5);
     check_goal_pub_ = node->create_publisher<geometry_msgs::msg::PoseStamped>("check_goal", 5);
     rival_distance_pub_ = node->create_publisher<std_msgs::msg::Float64>("rival_distance", 5);
-    goal_reach_pub_ = node->create_publisher<std_msgs::msg::Bool>("goal_reached", 5);
 
     // Declare parameters if not declared
+    declare_parameter_if_not_declared(node, plugin_name_ + ".external_velocity_data_path", rclcpp::ParameterValue(""));
     declare_parameter_if_not_declared(node, plugin_name_ + ".max_linear_vel", rclcpp::ParameterValue(0.7));
     declare_parameter_if_not_declared(node, plugin_name_ + ".min_linear_vel", rclcpp::ParameterValue(0.0));
     declare_parameter_if_not_declared(node, plugin_name_ + ".max_angular_vel", rclcpp::ParameterValue(3.0));
@@ -92,13 +92,18 @@ void CustomController::configure(
     declare_parameter_if_not_declared(node, plugin_name_ + ".speed_decade", rclcpp::ParameterValue(0.7));
     declare_parameter_if_not_declared(node, plugin_name_ + ".keep_planning", rclcpp::ParameterValue(true));
     declare_parameter_if_not_declared(node, plugin_name_ + ".spin_delay_threshold", rclcpp::ParameterValue(0.5));
+    declare_parameter_if_not_declared(node, plugin_name_ + ".non_stop_min_vel", rclcpp::ParameterValue(0.3));
     
     //declare_parameter_if_not_declared(node, plugin_name_ + ".keepPlan", rclcpp::ParameterValue(ture));
     // Get parameters from the config file
+    node->get_parameter(plugin_name_ + ".external_velocity_data_path", external_velocity_data_path_);
     node->get_parameter(plugin_name_ + ".max_linear_vel", max_linear_vel_);
     node->get_parameter(plugin_name_ + ".min_linear_vel", min_linear_vel_);
     node->get_parameter(plugin_name_ + ".max_angular_vel", max_angular_vel_);
     node->get_parameter(plugin_name_ + ".min_angular_vel", min_angular_vel_);
+    
+    updateMaxSpeed();
+
     node->get_parameter(plugin_name_ + ".max_linear_acc", max_linear_acc_);
     node->get_parameter(plugin_name_ + ".max_angular_acc", max_angular_acc_);
     node->get_parameter(plugin_name_ + ".yaw_goal_tolerance", yaw_goal_tolerance_);
@@ -109,6 +114,7 @@ void CustomController::configure(
     node->get_parameter(plugin_name_ + ".speed_decade", speed_decade_);
     node->get_parameter(plugin_name_ + ".keep_planning", keep_planning_);
     node->get_parameter(plugin_name_ + ".spin_delay_threshold", spin_delay_threshold_);
+    node->get_parameter(plugin_name_ + ".non_stop_min_vel", non_stop_min_vel_);
     double transform_tolerance;
     
     node->get_parameter(plugin_name_ + ".transform_tolerance", transform_tolerance);
@@ -120,7 +126,7 @@ void CustomController::configure(
         rclcpp::QoS(10).reliable().transient_local(),
         [this](const std_msgs::msg::String::SharedPtr msg) {
             controller_function_ = msg->data;
-        });
+    });
 }
 
 // Lifecycle methods
@@ -128,20 +134,17 @@ void CustomController::cleanup(){
     RCLCPP_INFO(logger_, "[%s] Cleaning up controller", plugin_name_.c_str());
     global_path_pub_.reset();
     check_goal_pub_.reset();
-    rival_distance_pub_.reset();
 }
 void CustomController::activate(){
     RCLCPP_INFO(logger_, "[%s] Activating controller", plugin_name_.c_str());
     global_path_pub_->on_activate();
     check_goal_pub_->on_activate();
-    // rival_distance_pub_->on_activate();
 
 }
 void CustomController::deactivate(){
     RCLCPP_INFO(logger_, "[%s] Deactivating controller", plugin_name_.c_str());
     global_path_pub_->on_deactivate();
     check_goal_pub_->on_deactivate();
-    // rival_distance_pub_->on_deactivate();
 }
 
 // void CustomController::setSpeedLimit(double speed_limit, double speed_limit_yaw){
@@ -398,6 +401,7 @@ bool CustomController::checkObstacle(int current_index, int check_index){
         check_goal_.pose.orientation.w = q.w();
         check_goal_pub_->publish(std::move(msg));
         for(int i = current_index; i < check_index; i++){
+            //desktop test
             // check_goal_.header.frame_id = global_plan_.header.frame_id;
             // check_goal_.header.stamp = global_plan_.header.stamp;
             // check_goal_.pose.position.x = vector_global_path_[i].x_;
@@ -431,6 +435,8 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
   const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * goal_checker)
 {
+    updateMaxSpeed();
+
     vector_global_path_.clear();
     posetoRobotState(pose.pose, cur_pose_);
     pathToVector(global_plan_, vector_global_path_);
@@ -438,7 +444,7 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
     geometry_msgs::msg::TwistStamped cmd_vel;
     cmd_vel.header.frame_id = pose.header.frame_id;
     cmd_vel.header.stamp = clock_->now();
-
+    //test
     // if(!goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity)){
         
         
@@ -469,10 +475,20 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
 
     double local_distance = sqrt(pow(local_goal_.x_ - cur_pose_.x_, 2) + pow(local_goal_.y_ - cur_pose_.y_, 2));
     
-    cmd_vel.twist.linear.x = std::min(global_distance * linear_kp_, max_linear_vel_) * cos(local_angle);
-    cmd_vel.twist.linear.y = std::min(global_distance * linear_kp_, max_linear_vel_) * sin(local_angle);
+    if(controller_function_ == "Didilong") {
+        cmd_vel.twist.linear.x = std::min(global_distance * 10.0, max_linear_vel_) * cos(local_angle);
+        cmd_vel.twist.linear.y = std::min(global_distance * 10.0, max_linear_vel_) * sin(local_angle);
+        cmd_vel.twist.angular.z = 0.0;
+    } else if(controller_function_ == "NonStop") {
+        cmd_vel.twist.linear.x = std::max(non_stop_min_vel_, std::min(global_distance * linear_kp_, max_linear_vel_)) * cos(local_angle);
+        cmd_vel.twist.linear.y = std::max(non_stop_min_vel_, std::min(global_distance * linear_kp_, max_linear_vel_)) * sin(local_angle);
+        cmd_vel.twist.angular.z = getGoalAngle(cur_pose_.theta_, final_goal_angle_);
+    } else {
+        cmd_vel.twist.linear.x = std::min(global_distance * linear_kp_, max_linear_vel_) * cos(local_angle);
+        cmd_vel.twist.linear.y = std::min(global_distance * linear_kp_, max_linear_vel_) * sin(local_angle);
+        cmd_vel.twist.angular.z = getGoalAngle(cur_pose_.theta_, final_goal_angle_);
+    }
 
-    cmd_vel.twist.angular.z = getGoalAngle(cur_pose_.theta_, final_goal_angle_);
     double vel_ = sqrt(pow(cmd_vel.twist.linear.x, 2) + pow(cmd_vel.twist.linear.y, 2));
     check_distance_ = std::max(vel_ * 1.0,look_ahead_distance_);
     check_index_ = getIndex(cur_pose_, vector_global_path_, check_distance_);
@@ -480,13 +496,6 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
     last_vel_x_ = cmd_vel.twist.linear.x;
     last_vel_y_ = cmd_vel.twist.linear.y;
     isObstacleExist_ = checkObstacle(current_index_, check_index_);
-  
-    if(goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity)){
-            std_msgs::msg::Bool goal_reach;
-            goal_reach.data = true;
-            goal_reach_pub_->publish(goal_reach);
-            RCLCPP_INFO(logger_, "Goal reached sented");
-    }
   
     if(isObstacleExist_){
         cmd_vel.twist.linear.x = last_vel_x_ * speed_decade_;
@@ -501,6 +510,36 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
     
     return cmd_vel;
 }
+
+void CustomController::updateMaxSpeed() {
+    if(!external_velocity_data_path_.empty()) {
+        try {
+            YAML::Node config = YAML::LoadFile(external_velocity_data_path_);
+            if(config["robot_parameters"] && config["robot_parameters"]["max_linear_velocity"]) {
+                max_linear_vel_ = config["robot_parameters"]["max_linear_velocity"].as<double>();
+                if(max_linear_vel_prev != max_linear_vel_) {
+                    RCLCPP_INFO(rclcpp::get_logger("CustomController"), "\033[1;35m max_linear_velocity updated to %f \033[0m", max_linear_vel_);
+                }
+            } else {
+                RCLCPP_WARN(rclcpp::get_logger("CustomController"), "max_linear_velocity not found in YAML file, using default value");
+            }
+
+            if(config["robot_parameters"] && config["robot_parameters"]["max_angular_velocity"]) {
+                max_angular_vel_ = config["robot_parameters"]["max_angular_velocity"].as<double>();
+                if(max_angular_vel_prev != max_angular_vel_) {
+                    RCLCPP_INFO(rclcpp::get_logger("CustomController"), "\033[1;35m max_angular_velocity updated to %f \033[0m", max_angular_vel_);
+                }
+            } else {
+                RCLCPP_WARN(rclcpp::get_logger("CustomController"), "max_angular_velocity not found in YAML file, using default value");
+            }
+        } catch (const std::exception &e) {
+            RCLCPP_ERROR(rclcpp::get_logger("CustomController"), "Failed to load YAML file: %s, using default value", e.what());
+        }
+    }
+    max_linear_vel_prev = max_linear_vel_;
+    max_angular_vel_prev = max_angular_vel_;
+}
+
 //test
 void CustomController::setSpeedLimit(
   const double & /*speed_limit*/,
