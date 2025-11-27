@@ -29,11 +29,11 @@ namespace nav2_behaviors
     protected:
         rclcpp::TimerBase::SharedPtr target_update_timer_;
         void targetUpdateCallback();
-
+        bool abort_escape = false;
+        double scan_radius;
         double map_x, map_y;
         int map_width, map_height;
         double rival_x, rival_y;
-        int scan_radius;
         double getOneGridCost(double x, double y);
         bool isEscape();
         bool outOfBound(double x, double map_y);
