@@ -261,6 +261,15 @@
 
     <Control ID="RoundRobin"/>
 
+    <Control ID="PersistentSequence">
+      <input_port name="current_child_idx">current child idx to execute</input_port>
+    </Control>
+
+    <Control ID="PersistentSequenceWContOnFail">
+      <input_port name="current_child_idx">current child idx to execute</input_port>
+    </Control>
+    
+
     <Control ID="CustomSequence">
       <input_port name="goalUpdated"></input_port>
     </Control>
@@ -306,6 +315,10 @@
     </Decorator>
 
     <Decorator ID="GoalUpdatedController">
+    </Decorator>
+
+    <Decorator ID="ResetRecovery">
+      <output_port name="current_child_idx">Initialized child index for persistent sequences</output_port>
     </Decorator>
 
   </TreeNodesModel>
