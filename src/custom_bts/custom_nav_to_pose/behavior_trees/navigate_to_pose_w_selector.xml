@@ -2,7 +2,7 @@
   <BehaviorTree ID="MainTree">
     <StopController>
       <SetupUpdater>
-          <ResetRecovery current_child_idx="{current_child_idx}">
+        <ResetRecovery current_child_idx="{current_child_idx}">
           <RecoveryNode number_of_retries="3" name="NavigateRecovery">
             <RetryUntilSuccessful num_attempts="3">
               <PipelineSequence name="NavigateWithReplanning">
