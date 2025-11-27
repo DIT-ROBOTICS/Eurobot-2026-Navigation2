@@ -13,7 +13,7 @@ RUN apt-get update && \
       xfce4 \
       xfce4-terminal \
       ros-humble-rmw-cyclonedds-cpp \
-      x11-xserver-utils \ 
+      x11-xserver-utils \
       sudo \
       ros-humble-navigation2 \
       ros-humble-nav2-bringup \
