@@ -42,8 +42,8 @@ if [ -f /opt/ros/humble/setup.bash ]; then
   . /opt/ros/humble/setup.bash
 fi
 
-if [ -f "$HOME/Eurobot-2026-Navigation/Eurobot-2026-Navigation2/install/setup.bash" ]; then
-  . "$HOME/Eurobot-2026-Navigation/Eurobot-2026-Navigation2/install/setup.bash"
+if [ -f "$HOME/Eurobot-2026-Navigation2-ws/install/setup.bash" ]; then
+  . "$HOME/Eurobot-2026-Navigation2-ws/install/setup.bash"
 fi
 
 PS1='\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$ '
