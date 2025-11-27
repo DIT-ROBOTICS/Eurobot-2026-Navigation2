@@ -50,6 +50,44 @@ global_costmap:
 ```
 see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
+#### ✅ Custom Controller: `follow_path_controller`
+
+Main features:
+
+- **Look-ahead path following**  
+  Uses a configurable `look_ahead_distance` to pick a look-ahead target on the
+  global path and generate smooth velocity commands.
+
+- **Costmap-aware slowdown and replanning**  
+  Checks cost values along the segment from current pose to a point ahead on the path.  
+  If any cell exceeds `costmap_tolerance`:
+  - Scales linear velocity by `speed_decade` (slowdown).  
+  - Sets angular velocity to zero temporarily.  
+  - Sets `update_plan_ = true` to request replanning.  
+  - If the robot is almost stopped, throws `PlannerException("Obstacle detected")`
+    so the BT can enter recovery.
+
+- **Goal yaw alignment**  
+  Tracks the final goal yaw (`final_goal_angle_`).  
+  Uses `angular_kp` to scale the yaw error and clamps it with `max_angular_vel_`.  
+  Uses `yaw_goal_tolerance_` to decide when the orientation is aligned.
+
+- **Rival-aware slowdown (optional)**  
+  Computes the distance between the robot and the rival.  
+  When the distance is smaller than `rival_slowdown_radius_`, scales linear speed
+  by `rival_decay_`.  
+  Publishes the current distance on the `rival_distance` topic.
+
+- **DelaySpin behavior**  
+  When `controller_function` is set to `"DelaySpin"`, in-place spinning is
+  disabled near the start of the path.  
+  Spinning is only allowed after the robot moves beyond `spin_delay_threshold_`,
+  then the mode automatically switches back to `"None"`.
+
+- **Dynamic speed limiting**  
+  Supports `setSpeedLimit()` to apply dynamic speed limits, either as a
+  percentage of a base speed or as an absolute value.
+
 #### ✅ Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)
 

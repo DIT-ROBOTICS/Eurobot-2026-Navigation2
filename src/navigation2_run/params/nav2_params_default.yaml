@@ -170,6 +170,9 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5            
       non_stop_min_vel: 0.3
       
     Slow:
@@ -184,6 +187,9 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5  
+      rival_decay: 0.5
       non_stop_min_vel: 0.3
     
     LinearBoost:
@@ -198,6 +204,9 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5
       non_stop_min_vel: 0.3
 
     AngularBoost:
@@ -212,6 +221,9 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      spin_delay_threshold: 0.5
+      rival_slowdown_radius: 0.5   
+      rival_decay: 0.5
       non_stop_min_vel: 0.3
 
 local_costmap:
