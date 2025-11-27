@@ -15,6 +15,8 @@ bt_navigator:
     default_nav_to_pose_bt_xml: "$(find-pkg-share custom_nav_to_pose)/behavior_trees/navigate_to_pose_w_selector.xml"
     plugin_lib_names:
       - nav2_stop_controller_bt_node
+      - nav2_reset_recovery_bt_node
+      - nav2_setup_updater_bt_node
       - nav2_compute_path_to_pose_action_bt_node
       - nav2_compute_path_through_poses_action_bt_node
       - nav2_smooth_path_action_bt_node
@@ -43,6 +45,8 @@ bt_navigator:
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
+      - nav2_persistent_sequence_bt_node
+      - nav2_persistent_sequence_w_cont_on_fail_bt_node
       - nav2_transform_available_condition_bt_node
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
@@ -89,8 +93,8 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugins: ["Precise", "Unerring", "Loose"]
-    controller_plugins: ["Fast", "Slow", "LinearBoost", "AngularBoost"]
+    goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
+    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
 
     # Progress checker parameters
     progress_checker:
@@ -123,9 +127,40 @@ controller_server:
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
 
+    DidilongGoalChecker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 6.28
+      xy_debounce_threshold: 1
+      yaw_debounce_threshold: 1
+      
+    NonStopGoalChecker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.02
+      yaw_goal_tolerance: 6.28
+      xy_debounce_threshold: 1
+      yaw_debounce_threshold: 1
+
     # Controller parameters
+    DidilongController:
+      plugin: "custom_controller::CustomController"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_didilong_params.yaml"
+      max_linear_vel: 1.5
+      max_angular_vel: 1.0
+      linear_kp: 2.2
+      angular_kp: 3.7
+      transform_tolerance: 0.1
+      look_ahead_distance: 0.2
+      speed_decade: 0.125
+      costmap_tolerance: 95 # rival is 98
+      keep_planning: false
+      non_stop_min_vel: 0.3
+
     Fast:
       plugin: "custom_controller::CustomController"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_fast_params.yaml"
       max_linear_vel: 1.1
       max_angular_vel: 12.0
       linear_kp: 2.2
@@ -135,9 +170,11 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      non_stop_min_vel: 0.3
       
     Slow:
       plugin: "custom_controller::CustomController"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_slow_params.yaml"
       max_linear_vel: 0.8
       max_angular_vel: 2.0
       linear_kp: 2.2
@@ -147,9 +184,11 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      non_stop_min_vel: 0.3
     
     LinearBoost:
       plugin: "custom_controller::CustomController"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_linearBoost_params.yaml"
       max_linear_vel: 1.1
       max_angular_vel: 2.0
       linear_kp: 2.2
@@ -159,9 +198,11 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      non_stop_min_vel: 0.3
 
     AngularBoost:
       plugin: "custom_controller::CustomController"
+      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_angularBoost_params.yaml"
       max_linear_vel: 0.5
       max_angular_vel: 12.0
       linear_kp: 2.2
@@ -171,6 +212,7 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      non_stop_min_vel: 0.3
 
 local_costmap:
   local_costmap:
@@ -212,7 +254,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.2
+        inflation_radius: 0.22
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -222,7 +264,7 @@ global_costmap:
         R_sq_threshold: 0.85
         reset_timeout_threshold: 70
         robot_inscribed_radius: 0.3
-        # external_rival_data_path: "/home/user/Eurobot-2025-Navigation2-ws/src/Eurobot-2025-Navigation2/custom_layer/rival_layer/params/rival_param.yaml"
+        external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
         rival_inscribed_radius: 0.22
         halted_inflation_radius: 0.1
         wandering_inflation_radius: 0.12
@@ -249,11 +291,14 @@ global_costmap:
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: True
+        robot_inscribed_radius: 0.22
         column_inscribed_radius: 0.075
         board_inscribed_radius: 0.01
-        column_inflation_radius: 0.22
-        board_inflation_radius: 0.22
-        cost_scaling_factor: 3.0
+        obstacle_inscribed_radius: 0.2
+        column_inflation_radius: 0.1
+        board_inflation_radius: 0.1
+        obstacle_inflation_radius: 0.1
+        cost_scaling_factor: 10.0
       keepout_layer:
         plugin: "keepout_costmap_plugin::KeepoutLayer"
         enabled: True
@@ -324,10 +369,13 @@ behavior_server:
     behavior_plugins: ["wait", "escape", "shrink"]
     escape:
       plugin: "nav2_behaviors/Escape"
+      scan_radius: 0.5
     wait:
       plugin: "nav2_behaviors/Wait"
     shrink:
       plugin: "nav2_behaviors/Shrink"
+      costmap_tolerance: 95
+      timer_duration: 20
     global_frame: map
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
@@ -358,10 +406,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.1, 1.1, 12.0]
-    min_velocity: [-1.1, -1.1, -12.0]
+    max_velocity: [1.5, 1.5, 12.0]
+    min_velocity: [-1.5, -1.5, -12.0]
     max_accel: [3.3, 3.3, 120.0]
-    max_decel: [-4.4, -4.4, -120.0]  
+    max_decel: [-11.0, -11.0, -120.0]  
     odom_topic: "/final_pose_nav"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
@@ -378,7 +426,12 @@ docking_server:
     fixed_frame: "map"
     dock_backwards: false
     dock_prestaging_tolerance: 0.01
+    enable_stop_robot: false
     velocity_smoother_wait: 0.12
+    external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+    shrink_nav_rival_radius: 0.05
+    shrink_dock_rival_radius: 0.27
+    shrink_dock_rival_degree: 60.0  
 
     # Types of docks
     dock_plugins: ["dock"]
@@ -415,6 +468,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.05
       reserved_distance: 0.0
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -427,6 +481,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.1
       reserved_distance: 0.0
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -439,6 +494,7 @@ docking_server:
       angular_kp: 4.0
       deceleration_distance: 0.03
       reserved_distance: 0.0
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
@@ -446,3 +502,8 @@ final_pose_bridge:
   ros__parameters:
     # twist_topic: "/driving_duaiduaiduai"
     twist_topic: "/odoo_googoogoo"
+
+system_check:
+  ros__parameters:
+    costmap_tolerance: 90
+    external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   navigation:
     build: .
-    image: rabbit025879/eurobot2025-navigation2-envs:latest
+    image: justinshih0918/eurobot2026-nav2-envs:latest
     container_name: navigation2
     command: /bin/bash
     tty: true
@@ -14,7 +14,7 @@ services:
 
     # mount our navigation code
     volumes:
-      - ${HOME}/Eurobot-2026-Navigation2:/home/user/Eurobot-2026-Navigation2-ws # TODO: Check for working directories
+      - ../..:/home/user/Eurobot-2026-Navigation2-ws # TODO: Check for working directories
       - /tmp/.X11-unix:/tmp/.X11-unix
       - $HOME/.Xauthority:/home/user/.Xauthority
       - /dev:/dev

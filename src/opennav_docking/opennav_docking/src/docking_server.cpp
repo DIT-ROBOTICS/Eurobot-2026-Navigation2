@@ -41,6 +41,7 @@ DockingServer::DockingServer(const rclcpp::NodeOptions & options)
   declare_parameter("dock_backwards", false);
   declare_parameter("dock_prestaging_tolerance", 0.5);
   declare_parameter("backward_projection", 0.00);
+  declare_parameter("enable_stop_robot", true);
 }
 
 nav2_util::CallbackReturn
@@ -61,14 +62,22 @@ DockingServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   get_parameter("dock_backwards", dock_backwards_);
   get_parameter("dock_prestaging_tolerance", dock_prestaging_tolerance_);
   get_parameter("backward_projection", backward_projection_);
+  get_parameter("enable_stop_robot", enable_stop_robot_);
   RCLCPP_INFO(get_logger(), "Controller frequency set to %.4fHz", controller_frequency_);
 
   vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 1);
 
   stop_robot_sub_ = create_subscription<std_msgs::msg::Bool>(
-    "/stopRobot", rclcpp::QoS(10).reliable().transient_local(),
+    "/stopRobot", rclcpp::QoS(1).reliable().transient_local(),
     [this](const std_msgs::msg::Bool::SharedPtr msg) {
         stop_robot_ = msg->data;
+    });
+
+  controller_function_sub_ = create_subscription<std_msgs::msg::String>(
+    "/controller_function",
+    rclcpp::QoS(1).reliable().transient_local(),
+    [this](const std_msgs::msg::String::SharedPtr msg) {
+        controller_function_ = msg->data;
     });
 
   tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
@@ -404,14 +413,14 @@ bool DockingServer::approachDock(Dock * dock, geometry_msgs::msg::PoseStamped & 
     publishDockingFeedback(DockRobot::Feedback::CONTROLLING);
 
     // Determine if we want to stop
-    if(stop_robot_) {
+    if(stop_robot_ && enable_stop_robot_) {
       publishZeroVelocity();
       throw opennav_docking_core::StopRobot(
         "StopRobot activate, stop the robot");
     }
 
     // Stop and report success if connected to dock
-    if (dock->plugin->isDocked() || dock->plugin->isCharging()) {
+    if (dock->plugin->isDocked() || dock->plugin->isCharging() || controller_function_ == "Didilong") {
       publishZeroVelocity();
       return true;
     }
@@ -467,7 +476,7 @@ bool DockingServer::waitForCharge(Dock * dock)
   while (rclcpp::ok()) {
     publishDockingFeedback(DockRobot::Feedback::WAIT_FOR_CHARGE);
 
-    if (dock->plugin->isCharging()) {
+    if (dock->plugin->isCharging() || controller_function_ == "Didilong") {
       return true;
     }
 
