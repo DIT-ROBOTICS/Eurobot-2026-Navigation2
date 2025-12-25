@@ -35,6 +35,8 @@ fi
 export XAUTHORITY="$HOME/.Xauthority"
 
 # 5. 啟動 VNC / X server :1
+DNUM="${DISPLAY#:}"
+sudo rm -f "/tmp/.X11-unix/X${DNUM}" "/tmp/.X${DNUM}-lock" "/tmp/.X11-unix/X${DNUM}-lock"
 vncserver "$DISPLAY" -geometry 1600x900 -localhost no
 
 # 6. 放寬 access control，允許 local client（包含 navigation2）透過 UNIX socket 連過來
