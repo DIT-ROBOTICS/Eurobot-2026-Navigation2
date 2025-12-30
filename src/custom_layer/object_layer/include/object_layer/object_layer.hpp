@@ -85,6 +85,8 @@ namespace Object_costmap_plugin {
             double board_width = 0.4, board_height = 0.1;
             double overturn_width = 0.11, overturn_height = 0.075;
             geometry_msgs::msg::PoseStamped latest_object_;
+            int reset_timeout_threshold_;
+            int reset_timeout_ = 0;
 
     };
 } // namespace Object_costmap_plgin

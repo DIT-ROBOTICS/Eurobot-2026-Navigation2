@@ -265,7 +265,7 @@ global_costmap:
         x_cov_threshold: 0.02
         y_cov_threshold: 0.02
         R_sq_threshold: 0.85
-        reset_timeout_threshold: 70
+        reset_timeout_threshold: 40
         robot_inscribed_radius: 0.3
         external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
         rival_inscribed_radius: 0.22
@@ -294,6 +294,7 @@ global_costmap:
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: True
+        reset_timeout_threshold: 25
         robot_inscribed_radius: 0.22
         column_inscribed_radius: 0.075
         board_inscribed_radius: 0.01
