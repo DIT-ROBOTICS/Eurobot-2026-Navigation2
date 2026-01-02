@@ -40,6 +40,7 @@ namespace Object_costmap_plugin {
                 int min_i, int min_j, int max_i, int max_j) override;
             bool isClearable() override;
             void reset() override;
+            bool NoObject();
             
             void ExpandPointWithRectangle(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius, geometry_msgs::msg::PoseStamped object, int mode);
             void ExpandPointWithCircle(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius);
