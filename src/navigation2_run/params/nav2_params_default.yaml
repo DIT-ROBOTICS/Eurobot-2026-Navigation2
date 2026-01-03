@@ -73,6 +73,8 @@ ControllerSelector:
   ros__parameters:
     Fast_controller: "Fast"
     Slow_controller: "Slow"
+    MPPI_controller: "MPPI"
+    TEB_controller : "TEB"
 
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
@@ -94,7 +96,7 @@ controller_server:
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
+    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost", "MPPI", "TEB"]
 
     # Progress checker parameters
     progress_checker:
@@ -143,7 +145,7 @@ controller_server:
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
 
-    # Controller parameters
+    # Controller parameters: Custom, MPPI, TEB
     DidilongController:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_didilong_params.yaml"
@@ -217,6 +219,73 @@ controller_server:
       keep_planning: false
       non_stop_min_vel: 0.3
 
+    MPPI:
+      plugin: "nav2_mppi_controller::MPPIController"
+      publish_critics_stats: true
+      iteration_count: 2       
+      time_steps: 50           
+      model_dt: 0.05
+      batch_size: 1500
+      v_max: 1.0
+      v_std: [0.8, 0.8, 1.5]      
+      constrained_v_std: [0.5, 0.5, 0.8]
+      visualize: true
+      motion_model: "Omni"
+      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PreferForwardCritic"]
+
+      ConstraintCritic:
+        weight: 4.0
+        final_v_scale: 0.9
+      ObstaclesCritic:
+        weight: 40.0           
+        consider_footprint: false
+        collision_cost: 1000.0
+      GoalCritic:
+        cost_power: 1
+        weight: 20.0
+        xy_goal_tolerance: 0.01
+        yaw_goal_tolerance: 0.02
+      GoalAngleCritic:
+        cost_power: 2
+        cost_weight: 5.0
+        threshold_to_consider: 2.0
+      PathAlignCritic:
+        weight: 3.0
+        offset_from_main_path: 0.05
+      PathFollowCritic:
+        weight: 15.0
+        lookahead_dist: 0.3
+      PreferForwardCritic:
+        cost_weight: 0.0
+
+    TEB:
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.1
+      resample_ds: 0.05
+      iterations: 2
+
+      min_obstacle_dist: 0.25
+      w_smooth: 1.0
+      w_obst: 2.0
+      step_size: 0.05
+
+      lookahead_dist: 0.25
+      k_xy: 2.5
+      k_w: 4.0
+      goal_xy_stop_dist: 0.02
+      goal_heading_switch_dist: 5.0
+
+      max_v: 1.5
+      min_v: 0.0
+      max_w: 1.0
+      max_acc_v: 3.3
+      max_acc_w: 50.0
+
+      max_cost_threshold: 100.0
+      treat_no_info_as_obstacle: false
+      cost_check_stride: 1
+      stop_v_eps: 0.05
+
 local_costmap:
   local_costmap:
     ros__parameters:
@@ -229,7 +298,6 @@ local_costmap:
       height: 2
       resolution: 0.01
       robot_radius: 0.22
-      # plugins: ["static_layer", "inflation_layer"]
       plugins: ["static_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -384,7 +452,7 @@ behavior_server:
     transform_tolerance: 0.1
     use_sim_time: False
     simulate_ahead_time: 2.0
-    max_rotational_vel: 1.0
+    max_rotational_vel: 1.8
     min_rotational_vel: 0.4
     rotational_acc_lim: 3.2
 
@@ -409,9 +477,9 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.5, 1.5, 12.0]
-    min_velocity: [-1.5, -1.5, -12.0]
-    max_accel: [3.3, 3.3, 120.0]
+    max_velocity: [2.5, 2.5, 12.0]
+    min_velocity: [-2.5, -2.5, -12.0]
+    max_accel: [4.0, 4.0, 120.0]
     max_decel: [-11.0, -11.0, -120.0]  
     odom_topic: "/final_pose_nav"
     odom_duration: 0.1
