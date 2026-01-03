@@ -1,0 +1,130 @@
+// Copyright (c) 2026
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <chrono>
+#include <memory>
+#include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+
+using namespace std::chrono_literals;
+
+class CameraOffsetPublisher : public rclcpp::Node
+{
+public:
+  CameraOffsetPublisher()
+  : Node("camera_offset_publisher")
+  {
+    // Declare parameters
+    this->declare_parameter("goal_x", 1.5);
+    this->declare_parameter("goal_y", 1.0);
+    this->declare_parameter("publish_rate", 100.0);  // Hz
+    
+    // Get parameters
+    this->get_parameter("goal_x", goal_x_);
+    this->get_parameter("goal_y", goal_y_);
+    double publish_rate;
+    this->get_parameter("publish_rate", publish_rate);
+    
+    // Initialize current robot pose
+    current_robot_x_ = 0.0;
+    current_robot_y_ = 0.0;
+    pose_received_ = false;
+    
+    // Create publisher for detected dock pose
+    publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
+      "/detected_dock_pose", 
+      rclcpp::QoS(10).durability_volatile()
+    );
+    
+    // Subscribe to robot pose
+    pose_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
+      "/final_pose_nav",
+      rclcpp::QoS(10),
+      std::bind(&CameraOffsetPublisher::pose_callback, this, std::placeholders::_1)
+    );
+    
+    // Create timer
+    auto period = std::chrono::duration<double>(1.0 / publish_rate);
+    timer_ = this->create_wall_timer(
+      std::chrono::duration_cast<std::chrono::milliseconds>(period),
+      std::bind(&CameraOffsetPublisher::timer_callback, this)
+    );
+    
+    RCLCPP_INFO(this->get_logger(), "Camera Offset Publisher started");
+    RCLCPP_INFO(this->get_logger(), "Goal position: (%.3f, %.3f)", goal_x_, goal_y_);
+    RCLCPP_INFO(this->get_logger(), "Publishing at %.1f Hz", publish_rate);
+  }
+
+private:
+  void pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+  {
+    current_robot_x_ = msg->pose.pose.position.x;
+    current_robot_y_ = msg->pose.pose.position.y;
+    pose_received_ = true;
+  }
+
+  void timer_callback()
+  {
+    auto message = geometry_msgs::msg::PoseStamped();
+    message.header.frame_id = "base_footprint";  // Dock position relative to robot
+    message.header.stamp = this->now();
+    
+    if (!pose_received_) {
+      // No pose received yet, don't publish anything
+      return;
+    } else {
+      // Publish dock position relative to robot (offset from current position to goal)
+      message.pose.position.x = goal_x_ - current_robot_x_;
+      message.pose.position.y = goal_y_ - current_robot_y_;
+      message.pose.position.z = 0.0;
+      message.pose.orientation.w = 1.0;
+      message.pose.orientation.x = 0.0;
+      message.pose.orientation.y = 0.0;
+      message.pose.orientation.z = 0.0;
+    }
+    
+    publisher_->publish(message);
+    
+    // Log every 100 messages (reduce spam)
+    if (++count_ % 100 == 0) {
+      RCLCPP_INFO(
+        this->get_logger(), 
+        "Robot: (%.3f, %.3f) | Goal: (%.3f, %.3f) | Dock offset: (%.3f, %.3f) | Distance: %.3f", 
+        current_robot_x_, current_robot_y_,
+        goal_x_, goal_y_,
+        message.pose.position.x, message.pose.position.y,
+        std::sqrt(std::pow(goal_x_ - current_robot_x_, 2) + std::pow(goal_y_ - current_robot_y_, 2))
+      );
+    }
+  }
+
+  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_subscriber_;
+  double goal_x_;
+  double goal_y_;
+  double current_robot_x_;
+  double current_robot_y_;
+  bool pose_received_;
+  size_t count_ = 0;
+};
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<CameraOffsetPublisher>());
+  rclcpp::shutdown();
+  return 0;
+}
