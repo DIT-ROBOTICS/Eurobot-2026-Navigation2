@@ -7,7 +7,7 @@
 
 std::atomic_bool g_request_clear{false};
 
-void sigintHandler(int)
+void sigintHandler(int /*sig*/)
 {
     g_request_clear.store(true);
 }

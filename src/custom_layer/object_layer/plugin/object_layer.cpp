@@ -240,7 +240,6 @@ namespace Object_costmap_plugin {
         return columnList.empty() && boardList.empty() && obstacleList.empty() && overturnList.empty();
     }
     void ObjectLayer::reset(){
-        // enabled_ = true;
         current_ = true;
         columnList.clear();
         boardList.clear();

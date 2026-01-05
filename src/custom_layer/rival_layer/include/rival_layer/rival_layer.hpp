@@ -147,7 +147,7 @@ namespace custom_path_costmap_plugin {
                 UNKNOWN
             };
             RivalState rival_state_ = RivalState::UNKNOWN;
-            bool no_rival;
+            bool no_rival_;
             // Function for rival state and path prediction
             double GetRegressionPrediction(double x);
             void PredictRivalPath();
