@@ -17,6 +17,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
 
 #include "tf2_ros/buffer.h"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -80,6 +81,22 @@ private:
     // cost terms
     Eigen::Vector2d obstacleRepulsion(
         const nav2_costmap_2d::Costmap2D & cm, double x, double y) const;
+    unsigned char costAt(
+        const nav2_costmap_2d::Costmap2D & cm, double x, double y) const;
+    double minObstacleDistance(
+        const nav2_costmap_2d::Costmap2D & cm, double x, double y,
+        double search_radius) const;
+    double minObstacleDistanceOnBand(
+        const nav2_costmap_2d::Costmap2D & cm, size_t start_idx,
+        double arc_len, double search_radius) const;
+    // global occupancy grid helpers
+    bool worldToMap(
+        const nav_msgs::msg::OccupancyGrid & grid, double wx, double wy,
+        unsigned int & mx, unsigned int & my) const;
+    unsigned char costAtGlobal(double x, double y) const;
+    double minObstacleDistanceGlobal(double x, double y, double search_radius) const;
+    double minObstacleDistanceOnBandGlobal(size_t start_idx, double arc_len, double search_radius) const;
+    unsigned char maxCostOnBandGlobal() const;
 
     // tracking helpers
     bool findClosestIndex(const geometry_msgs::msg::PoseStamped & pose, size_t & out_idx) const;
@@ -98,12 +115,14 @@ private:
     std::shared_ptr<tf2_ros::Buffer> tf_;
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
     std::string name_;
+    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr global_costmap_sub_;
 
     std::mutex mtx_;
 
   nav_msgs::msg::Path global_plan_;
   std::vector<TebState> teb_band_;
   bool has_plan_{false};
+  nav_msgs::msg::OccupancyGrid::SharedPtr latest_global_costmap_;
 
     // pubs
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr teb_path_pub_;
@@ -118,6 +137,11 @@ private:
     double w_smooth_{1.0};
     double w_obst_{2.0};
     double step_size_{0.05};
+    double slowdown_obstacle_dist_{0.3};
+    double stop_obstacle_dist_{0.15};
+    double obstacle_check_lookahead_{0.5};
+    double obstacle_check_time_horizon_{1.0};
+    double obstacle_cost_threshold_{nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE};
 
     // tracking (holonomic)
     double lookahead_dist_{0.25};
