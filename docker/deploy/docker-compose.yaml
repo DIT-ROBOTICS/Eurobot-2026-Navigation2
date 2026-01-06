@@ -1,3 +1,5 @@
+name: eurobot-2026-navigation2
+
 services:
   navigation-build:
     # build: .  # Use the pre-built image
