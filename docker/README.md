@@ -1,21 +1,22 @@
-# Eurobot-2025-Navigation2-envs
-The Docker Environment of ROS2 Humble for Eurobot-2025-Navigation2
+# Eurobot-2026-Navigation2-envs
+The Docker Environment of ROS2 Humble for Eurobot-2026-Navigation2
 
 ## One-Line Command To Run
 
 On machine, run mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-run
+# under Eurobot-2026-Navigation2/docker/deploy
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-run
 ```
 
 On machine, develop mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-develop
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-develop
 ```
 
 On machine, build mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-build
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-build
 ```
 
 On Local, rviz mode for machine-11
@@ -43,17 +44,21 @@ docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-brin
 
 ## Pull docker image for container
 ```
-docker pull justinshih0918/eurobot2026-nav2-envs
+docker pull justinshih0918/eurobot2026-nav2-envs:machine-amd64
 ```
 
-## Build the image from Dockerfile (Under Navigation2-humble-local)
+## Build the image from Dockerfile (Under docker/deploy)
 ```
-docker compose build
+# Navigate to docker/deploy directory
+cd docker/deploy
+
+# Build the image
+docker build -t justinshih0918/eurobot2026-nav2-envs:machine-amd64 .
 ```
 
 ## Start Container
 ```
-docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-compose.yaml up -d
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml up -d
 ```
 
 ## Attach Container
