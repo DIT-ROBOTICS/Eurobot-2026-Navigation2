@@ -77,6 +77,9 @@ void CustomController::configure(
 
     // Declare parameters if not declared
     declare_parameter_if_not_declared(node, plugin_name_ + ".external_velocity_data_path", rclcpp::ParameterValue(""));
+    goal_reach_pub_ = node->create_publisher<std_msgs::msg::Bool>("goal_reached", 5);
+
+    // Declare parameters if not declared
     declare_parameter_if_not_declared(node, plugin_name_ + ".max_linear_vel", rclcpp::ParameterValue(0.7));
     declare_parameter_if_not_declared(node, plugin_name_ + ".min_linear_vel", rclcpp::ParameterValue(0.0));
     declare_parameter_if_not_declared(node, plugin_name_ + ".max_angular_vel", rclcpp::ParameterValue(3.0));
@@ -97,6 +100,9 @@ void CustomController::configure(
     //declare_parameter_if_not_declared(node, plugin_name_ + ".keepPlan", rclcpp::ParameterValue(ture));
     // Get parameters from the config file
     node->get_parameter(plugin_name_ + ".external_velocity_data_path", external_velocity_data_path_);
+    
+    //declare_parameter_if_not_declared(node, plugin_name_ + ".keepPlan", rclcpp::ParameterValue(ture));
+    // Get parameters from the config file
     node->get_parameter(plugin_name_ + ".max_linear_vel", max_linear_vel_);
     node->get_parameter(plugin_name_ + ".min_linear_vel", min_linear_vel_);
     node->get_parameter(plugin_name_ + ".max_angular_vel", max_angular_vel_);
@@ -134,17 +140,20 @@ void CustomController::cleanup(){
     RCLCPP_INFO(logger_, "[%s] Cleaning up controller", plugin_name_.c_str());
     global_path_pub_.reset();
     check_goal_pub_.reset();
+    rival_distance_pub_.reset();
 }
 void CustomController::activate(){
     RCLCPP_INFO(logger_, "[%s] Activating controller", plugin_name_.c_str());
     global_path_pub_->on_activate();
     check_goal_pub_->on_activate();
+    // rival_distance_pub_->on_activate();
 
 }
 void CustomController::deactivate(){
     RCLCPP_INFO(logger_, "[%s] Deactivating controller", plugin_name_.c_str());
     global_path_pub_->on_deactivate();
     check_goal_pub_->on_deactivate();
+    // rival_distance_pub_->on_deactivate();
 }
 
 // void CustomController::setSpeedLimit(double speed_limit, double speed_limit_yaw){
@@ -445,6 +454,7 @@ geometry_msgs::msg::TwistStamped CustomController::computeVelocityCommands(
     cmd_vel.header.frame_id = pose.header.frame_id;
     cmd_vel.header.stamp = clock_->now();
     //test
+
     // if(!goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity)){
         
         

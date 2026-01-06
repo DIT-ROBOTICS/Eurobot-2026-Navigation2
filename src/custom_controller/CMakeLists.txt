@@ -27,8 +27,6 @@ add_library(custom_controller SHARED
   src/custom_controller.cpp
 )
 
-target_link_libraries(custom_controller yaml-cpp)
-
 ament_target_dependencies(custom_controller
   rclcpp
   nav2_core
