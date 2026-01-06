@@ -175,6 +175,7 @@ private:
     int cost_check_stride_{1};            
 
     double stop_v_eps_{0.05};             
+    double blocked_stop_clearance_{0.35}; 
     unsigned char maxCostOnBand(const nav2_costmap_2d::Costmap2D & cm) const;
 };
 

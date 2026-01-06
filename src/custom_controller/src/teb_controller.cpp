@@ -76,6 +76,7 @@ void TebController::configure(
     node->declare_parameter(name_ + ".treat_no_info_as_obstacle", treat_no_info_as_obstacle_);
     node->declare_parameter(name_ + ".cost_check_stride", cost_check_stride_);
     node->declare_parameter(name_ + ".stop_v_eps", stop_v_eps_);
+    node->declare_parameter(name_ + ".blocked_stop_clearance", blocked_stop_clearance_);
 
     // Get
     node->get_parameter(name_ + ".dt_ref", dt_ref_);
@@ -109,6 +110,7 @@ void TebController::configure(
     node->get_parameter(name_ + ".treat_no_info_as_obstacle", treat_no_info_as_obstacle_);
     node->get_parameter(name_ + ".cost_check_stride", cost_check_stride_);
     node->get_parameter(name_ + ".stop_v_eps", stop_v_eps_);
+    node->get_parameter(name_ + ".blocked_stop_clearance", blocked_stop_clearance_);
 
     // Safety clamp
     dt_ref_ = std::max(0.01, dt_ref_);
@@ -125,6 +127,7 @@ void TebController::configure(
     max_cost_threshold_ = clamp(max_cost_threshold_, 0.0, 255.0);
     cost_check_stride_ = std::max(1, cost_check_stride_);
     stop_v_eps_ = std::max(0.0, stop_v_eps_);
+    blocked_stop_clearance_ = std::max(0.0, blocked_stop_clearance_);
 
     // Lifecycle publisher (RViz debug)
     teb_path_pub_ = node->create_publisher<nav_msgs::msg::Path>(name_ + "/teb_path", rclcpp::SystemDefaultsQoS());
@@ -676,11 +679,16 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     const unsigned char mc = use_global_costmap ? maxCostOnBandGlobal()
                                                 : maxCostOnBand(*cm);
     const bool cost_bad = (mc >= (unsigned char)std::lround(max_cost_threshold_));
+    size_t closest = 0;
+    findClosestIndex(pose, closest);
+    const double arc_window = std::max(lookahead_dist_, blocked_stop_clearance_ * 2.0);
+    const double clearance = minClearanceAhead(*cm, closest, arc_window, blocked_stop_clearance_);
+    const bool blocked_and_close = cost_bad && (clearance <= blocked_stop_clearance_);
 
     const double v_cur = std::hypot(velocity.linear.x, velocity.linear.y);
     const bool slow_enough = (v_cur <= stop_v_eps_);
 
-    if (cost_bad) {
+    if (blocked_and_close) {
         if (slow_enough) {
             throw nav2_core::PlannerException("TEB: max_cost exceeded and speed low -> replan");
         }
@@ -693,17 +701,11 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         return cmd;
     }
 
-    // closest index on band
-    size_t closest = 0;
-    findClosestIndex(pose, closest);
-
     // lookahead target along arc
     double tx = teb_band_.back().x;
     double ty = teb_band_.back().y;
     sampleLookaheadTargetArc(closest, lookahead_dist_, tx, ty);
 
-    const double px = pose.pose.position.x;
-    const double py = pose.pose.position.y;
     const double yaw = yawFromQuat(pose.pose.orientation);
 
     const double dx_w = tx - px;
