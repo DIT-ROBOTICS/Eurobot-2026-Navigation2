@@ -1,21 +1,22 @@
-# Eurobot-2025-Navigation2-envs
-The Docker Environment of ROS2 Humble for Eurobot-2025-Navigation2
+# Eurobot-2026-Navigation2-envs
+The Docker Environment of ROS2 Humble for Eurobot-2026-Navigation2
 
 ## One-Line Command To Run
 
 On machine, run mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-run
+# under Eurobot-2026-Navigation2/docker/deploy
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-run
 ```
 
 On machine, develop mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-develop
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-develop
 ```
 
 On machine, build mode
 ```
-docker compose -f /home/navigation/Eurobot-2025-machine-ws/src/Eurobot-2025-Navigation2-envs/Navigation2-humble-deploy/docker-compose.yaml run --rm navigation-build
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-build
 ```
 
 On Local, rviz mode for machine-11
@@ -39,21 +40,35 @@ On local, run mode
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-run-local
 ```
 
+On local, using vnc
+```
+docker volume create ros_x11
+
+# start vnc
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/vnc/docker-compose.yaml up -d
+
+# start navigation
+docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-compose.vnc.yaml up -d
+```
 ## ------------ Basic commands ------------
 
 ## Pull docker image for container
 ```
-docker pull justinshih0918/eurobot2026-nav2-envs
+docker pull justinshih0918/eurobot2026-nav2-envs:machine-amd64
 ```
 
-## Build the image from Dockerfile (Under Navigation2-humble-local)
+## Build the image from Dockerfile (Under docker/deploy)
 ```
-docker compose build
+# Navigate to docker/deploy directory
+cd docker/deploy
+
+# Build the image
+docker build -t justinshih0918/eurobot2026-nav2-envs:machine-amd64 .
 ```
 
 ## Start Container
 ```
-docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-compose.yaml up -d
+docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml up -d
 ```
 
 ## Attach Container
@@ -82,4 +97,49 @@ ros2 launch navigation2_run real_launch.py
 
 # on local machine
 ros2 launch navigation2_run rviz_launch.py
+```
+## ------------ VNC Mode (for macOS / systems without native X11) ------------
+
+The VNC mode allows running RViz and all GUI-based ROS2 tools even on systems
+that do not have an X11 server (e.g., macOS).  
+The computation runs inside the Navigation2 container, while rendering is done
+by the VNC/XFCE container.
+
+---
+### Create shared volume
+```
+docker volume create ros_x11
+```
+
+### Activate VNC + XFCE (`ros2-vnc` container)
+```
+cd /home/{user}/Eurobot-2026-Navigation2/docker/vnc
+docker compose up -d
+```
+You can now connect via any VNC client:
+
+Address: localhost:5901
+
+Password: ros
+
+You will see an XFCE desktop with ROS environment already sourced.
+
+### Start Navigation2 (GUI output displayed via VNC)
+
+Rebuild container
+```
+cd /home/{user}/Eurobot-2026-Navigation2/docker/local
+docker compose -f docker-compose.vnc.yaml up -d
+```
+
+Attach to the Navigation2 container:
+```
+docker exec -it navigation2 bash
+```
+
+Launch simulation + RViz (RViz will appear on the VNC desktop):
+```
+sim
+# or:
+# ros2 launch navigation2_run sim_launch.py
 ```

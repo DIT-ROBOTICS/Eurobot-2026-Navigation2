@@ -261,6 +261,19 @@
 
     <Control ID="RoundRobin"/>
 
+    <Control ID="PersistentSequence">
+      <input_port name="current_child_idx">current child idx to execute</input_port>
+    </Control>
+
+    <Control ID="PersistentSequenceWContOnFail">
+      <input_port name="current_child_idx">current child idx to execute</input_port>
+    </Control>
+    
+
+    <Control ID="CustomSequence">
+      <input_port name="goalUpdated"></input_port>
+    </Control>
+
     <!-- ############################### DECORATOR NODES ############################## -->
     <Decorator ID="RateController">
       <input_port name="hz">Rate</input_port>
@@ -268,6 +281,10 @@
 
     <Decorator ID="StopController">
       <input_port name="stop">stop the robot</input_port>
+    </Decorator>
+
+    <Decorator ID="SetupUpdater">
+      <output_port name="goalUpdated"></output_port>
     </Decorator>
 
     <Decorator ID="DistanceController">
@@ -298,6 +315,10 @@
     </Decorator>
 
     <Decorator ID="GoalUpdatedController">
+    </Decorator>
+
+    <Decorator ID="ResetRecovery">
+      <output_port name="current_child_idx">Initialized child index for persistent sequences</output_port>
     </Decorator>
 
   </TreeNodesModel>

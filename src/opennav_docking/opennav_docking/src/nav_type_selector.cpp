@@ -8,6 +8,15 @@ NavTypeSelector::NavTypeSelector(std::shared_ptr<rclcpp_lifecycle::LifecycleNode
     goal_checker_selector_pub_ = node_->create_publisher<std_msgs::msg::String>("/goal_checker_type", rclcpp::QoS(10).reliable().transient_local());
     controller_function_pub_ = node_->create_publisher<std_msgs::msg::String>("/controller_function", rclcpp::QoS(10).reliable().transient_local());
     dock_controller_selector_pub_ = node_->create_publisher<std_msgs::msg::String>("/dock_controller_type", rclcpp::QoS(10).reliable().transient_local());
+
+    node_->declare_parameter("external_rival_data_path", "");
+    node_->get_parameter("external_rival_data_path", external_rival_data_path_);
+    node_->declare_parameter("shrink_nav_rival_radius", 0.05);
+    node_->get_parameter("shrink_nav_rival_radius", shrink_nav_rival_radius_);
+    node_->declare_parameter("shrink_dock_rival_radius", 0.27);
+    node_->get_parameter("shrink_dock_rival_radius", shrink_dock_rival_radius_);
+    node_->declare_parameter("shrink_dock_rival_degree", 60.0);
+    node_->get_parameter("shrink_dock_rival_degree", shrink_dock_rival_degree_);
 }
 
 void NavTypeSelector::setType(std::string const & mode, char & offset_direction, geometry_msgs::msg::PoseStamped & original_staging_pose, double const & offset) {
@@ -19,14 +28,18 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
         goal_checker_selector_msg_.data = "Loose";
     } else if(strstr(mode.c_str(), "unerring") != nullptr) {
         goal_checker_selector_msg_.data = "Unerring";
+    } else if(strstr(mode.c_str(), "didilong") != nullptr) {
+        goal_checker_selector_msg_.data = "DidilongGoalChecker";
+    } else if(strstr(mode.c_str(), "nonStop") != nullptr) {
+        goal_checker_selector_msg_.data = "NonStopGoalChecker";
     } else {
         goal_checker_selector_msg_.data = "Loose";
     }
-    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Goal checker has set to \"%s\" \033[0m", goal_checker_selector_msg_.data.c_str());
-    goal_checker_selector_pub_->publish(goal_checker_selector_msg_);    // Publish the goal checker type
 
     // Determine the controller type
-    if(strstr(mode.c_str(), "fast") != nullptr) {
+    if(strstr(mode.c_str(), "didilong") != nullptr) {
+        controller_selector_msg_.data = "DidilongController";
+    } else if(strstr(mode.c_str(), "fast") != nullptr) {
         controller_selector_msg_.data = "Fast";
     } else if(strstr(mode.c_str(), "slow") != nullptr) {
         controller_selector_msg_.data = "Slow";
@@ -37,17 +50,26 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
     } else {
         controller_selector_msg_.data = "Slow";
     }
-    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Controller has set to \"%s\" \033[0m", controller_selector_msg_.data.c_str());
-    controller_selector_pub_->publish(controller_selector_msg_);    // Publish the controller type
 
     // Determine the controller function
     if(strstr(mode.c_str(), "delaySpin") != nullptr) {
         controller_function_msg_.data = "DelaySpin";
-        RCLCPP_INFO(node_->get_logger(), "\033[1;36m \"%s\" is activated \033[0m", controller_function_msg_.data.c_str());
+    } else if(strstr(mode.c_str(), "didilong") != nullptr) { 
+        controller_function_msg_.data = "Didilong";
+    } else if(strstr(mode.c_str(), "nonStop") != nullptr) {
+        controller_function_msg_.data = "NonStop";
     } else {
         controller_function_msg_.data = "None";
     }
-    controller_function_pub_->publish(controller_function_msg_);    // Publish the controller function
+
+    // Determine special robot status
+    if(strstr(mode.c_str(), "constructing") != nullptr) {
+        setRivalParams(shrink_nav_rival_radius_, shrink_dock_rival_radius_, shrink_dock_rival_degree_);
+        RCLCPP_INFO(node_->get_logger(), "\033[1;35m Constructing... \033[0m");
+    } else {
+        setRivalParams(initial_nav_rival_radius_, initial_dock_rival_radius_, initial_dock_rival_degree_);
+        is_initial_rival_params_set_ = false;  // Reset the flag for next construction
+    }
 
     // Determine the dock controller type
     if(strstr(mode.c_str(), "ordinary") != nullptr) {
@@ -59,8 +81,9 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
     } else {
         dock_controller_selector_msg_.data = "Ordinary";
     }
-    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Dock controller has set to \"%s\" \033[0m", dock_controller_selector_msg_.data.c_str());
-    dock_controller_selector_pub_->publish(dock_controller_selector_msg_);    // Publish the dock controller type
+
+    // Publish the selected types
+    publishAll();
 
     // Determine the offset direction & value
     if(strchr(mode.c_str(), 'x') != nullptr) {
@@ -76,4 +99,59 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
         RCLCPP_INFO(node_->get_logger(), "\033[1;36m Applying offset to both \"x\" and \"y\" \033[0m");
     }
     RCLCPP_INFO(node_->get_logger(), "\033[1;36m -------------------------------------- \033[0m");
+}
+
+void NavTypeSelector::publishAll() {
+    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Goal checker has set to \"%s\" \033[0m", goal_checker_selector_msg_.data.c_str());
+    goal_checker_selector_pub_->publish(goal_checker_selector_msg_);    // Publish the goal checker type
+
+    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Controller has set to \"%s\" \033[0m", controller_selector_msg_.data.c_str());
+    controller_selector_pub_->publish(controller_selector_msg_);    // Publish the controller type
+
+    if(controller_function_msg_.data != "None")
+        RCLCPP_INFO(node_->get_logger(), "\033[1;36m \"%s\" is activated \033[0m", controller_function_msg_.data.c_str());
+    controller_function_pub_->publish(controller_function_msg_);    // Publish the controller function
+
+    RCLCPP_INFO(node_->get_logger(), "\033[1;36m Dock controller has set to \"%s\" \033[0m", dock_controller_selector_msg_.data.c_str());
+    dock_controller_selector_pub_->publish(dock_controller_selector_msg_);    // Publish the dock controller type
+}
+
+void NavTypeSelector::setRivalParams(double & navRadius, double & dockRadius, double & dockDegree) {
+    try {
+        YAML::Node config = YAML::LoadFile(external_rival_data_path_);
+        if (config["nav_rival_parameters"] && config["nav_rival_parameters"]["rival_inscribed_radius"]) {
+            if(!is_initial_rival_params_set_) initial_nav_rival_radius_ = config["nav_rival_parameters"]["rival_inscribed_radius"].as<double>();
+            double rival_inscribed_radius = std::round(navRadius * 100.0) / 100.0;
+            config["nav_rival_parameters"]["rival_inscribed_radius"] = rival_inscribed_radius;
+        } else {
+            RCLCPP_WARN(node_->get_logger(), "Required params not found in YAML file, cannot set params");
+            return;
+        }
+        if (config["dock_rival_parameters"] && config["dock_rival_parameters"]["dock_rival_radius"]) {
+            if(!is_initial_rival_params_set_) initial_dock_rival_radius_ = config["dock_rival_parameters"]["dock_rival_radius"].as<double>();
+            double dock_rival_radius = std::round(dockRadius * 100.0) / 100.0;
+            config["dock_rival_parameters"]["dock_rival_radius"] = dock_rival_radius;
+        } else {
+            RCLCPP_WARN(node_->get_logger(), "Required params not found in YAML file, cannot set params");
+            return;
+        }
+        if (config["dock_rival_parameters"] && config["dock_rival_parameters"]["dock_rival_degree"]) {
+            if(!is_initial_rival_params_set_) initial_dock_rival_degree_ = config["dock_rival_parameters"]["dock_rival_degree"].as<double>();
+            double dock_rival_degree = std::round(dockDegree * 100.0) / 100.0;
+            config["dock_rival_parameters"]["dock_rival_degree"] = dock_rival_degree;
+        } else {
+            RCLCPP_WARN(node_->get_logger(), "Required params not found in YAML file, cannot set params");
+            return;
+        }
+        std::ofstream fout(external_rival_data_path_);
+        fout << config;
+        fout.close();
+
+        if(!is_initial_rival_params_set_) {
+            is_initial_rival_params_set_ = true;
+        }
+    } catch (const std::exception &e) {
+        RCLCPP_ERROR(node_->get_logger(), "%s %s -> Failed to update rival YAML file", e.what(), external_rival_data_path_.c_str());
+        return;
+    }
 }

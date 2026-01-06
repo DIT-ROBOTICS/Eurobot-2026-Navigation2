@@ -38,6 +38,7 @@ namespace keepout_costmap_plugin {
         private:  
             // Functions for costmap expansion
             void ExpandPointWithSquare(KeepoutZone Zone, double MaxCost, double InflationRadius, double CostScalingFactor);
+            void ExpandPointWithCircle(KeepoutZone Zone, double MaxCost, double InflationRadius, double CostScalingFactor);
 
             // Determine the keepout zone
             void SetKeepoutZone();
@@ -51,6 +52,7 @@ namespace keepout_costmap_plugin {
 
             double inflation_length_;
             double cost_scaling_factor_;
+            int keepout_expand_mode_;
 
             // Variables
             std::string active_keepout_zones_;

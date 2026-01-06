@@ -46,6 +46,7 @@ namespace Object_costmap_plugin {
             // data processes
             void columnPoseArrayCallback(const geometry_msgs::msg::PoseArray::SharedPtr object_poseArray);
             void boardPoseArrayCallback(const geometry_msgs::msg::PoseArray::SharedPtr object_poseArray);
+            void obstaclePoseArrayCallback(const geometry_msgs::msg::PoseArray::SharedPtr object_poseArray);
             void overturnPoseArrayCallback(const geometry_msgs::msg::PoseArray::SharedPtr object_poseArray);
             void robotPoseCallback(const nav_msgs::msg::Odometry::SharedPtr object_pose);
             void checkClear();    
@@ -55,9 +56,11 @@ namespace Object_costmap_plugin {
         private:
             std::deque<geometry_msgs::msg::PoseStamped> columnList;
             std::deque<geometry_msgs::msg::PoseStamped> boardList;
+            std::deque<geometry_msgs::msg::PoseStamped> obstacleList;
             std::deque<geometry_msgs::msg::PoseStamped> overturnList;
             rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr column_poseArray_sub;
             rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr board_poseArray_sub;
+            rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr obstacle_sub;
             rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr overturn_sub;
             rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr robot_pose_sub;
             geometry_msgs::msg::PoseStamped robot_pose;
@@ -73,12 +76,15 @@ namespace Object_costmap_plugin {
             double y_range;
             std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;   
             std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+            double robot_inscribed_radius;
             double column_inscribed_radius, board_inscribed_radius;
             double column_inflation_radius, board_inflation_radius;
+            double obstacle_inflation_radius, obstacle_inscribed_radius;
             double cost_scaling_factor;
             double min_x_ = 0.0, min_y_ = 0.0, max_x_ = 3.0, max_y_ = 2.0;
             double board_width = 0.4, board_height = 0.1;
             double overturn_width = 0.11, overturn_height = 0.075;
+            geometry_msgs::msg::PoseStamped latest_object_;
 
     };
 } // namespace Object_costmap_plgin

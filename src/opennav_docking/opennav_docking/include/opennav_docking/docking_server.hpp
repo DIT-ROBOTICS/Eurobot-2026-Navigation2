@@ -31,6 +31,7 @@
 #include "opennav_docking_core/charging_dock.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/string.hpp"
 
 namespace opennav_docking
 {
@@ -244,11 +245,16 @@ protected:
   double dock_prestaging_tolerance_;
   // The adjustment for graceful controller
   double backward_projection_;
+  // If true, the robot will stop when stop_robot_ is set to true
+  bool enable_stop_robot_;
 
   // This is a class member so it can be accessed in publish feedback
   rclcpp::Time action_start_time_;
 
   rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::Twist>::SharedPtr vel_publisher_;
+
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr controller_function_sub_;
+  std::string controller_function_;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_robot_sub_;
   bool stop_robot_ = false;
