@@ -320,9 +320,9 @@ controller_server:
       max_acc_v: 3.3
       max_acc_w: 50.0
 
-      max_cost_threshold: 50.0
-      blocked_stop_clearance: 0.5
-      treat_no_info_as_obstacle: true
+      max_cost_threshold: 97.0
+      blocked_stop_clearance: 0.3
+      treat_no_info_as_obstacle: false
       cost_check_stride: 1
       stop_v_eps: 0.05
 

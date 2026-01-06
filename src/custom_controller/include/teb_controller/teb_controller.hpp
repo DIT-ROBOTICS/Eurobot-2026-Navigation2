@@ -7,6 +7,7 @@
 #include <mutex>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <Eigen/Core>
 
@@ -175,7 +176,7 @@ private:
     int cost_check_stride_{1};            
 
     double stop_v_eps_{0.05};             
-    double blocked_stop_clearance_{0.35}; 
+    double blocked_stop_clearance_{0.5};
     unsigned char maxCostOnBand(const nav2_costmap_2d::Costmap2D & cm) const;
 };
 

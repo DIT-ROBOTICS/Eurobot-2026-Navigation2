@@ -679,10 +679,17 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     const unsigned char mc = use_global_costmap ? maxCostOnBandGlobal()
                                                 : maxCostOnBand(*cm);
     const bool cost_bad = (mc >= (unsigned char)std::lround(max_cost_threshold_));
+
+    // closest index on band
     size_t closest = 0;
     findClosestIndex(pose, closest);
     const double arc_window = std::max(lookahead_dist_, blocked_stop_clearance_ * 2.0);
-    const double clearance = minClearanceAhead(*cm, closest, arc_window, blocked_stop_clearance_);
+    double clearance = std::numeric_limits<double>::infinity();
+    if (cm) {
+        clearance = minObstacleDistanceOnBand(*cm, closest, arc_window, blocked_stop_clearance_);
+    } else if (use_global_costmap) {
+        clearance = minObstacleDistanceOnBandGlobal(closest, arc_window, blocked_stop_clearance_);
+    }
     const bool blocked_and_close = cost_bad && (clearance <= blocked_stop_clearance_);
 
     const double v_cur = std::hypot(velocity.linear.x, velocity.linear.y);
@@ -706,6 +713,8 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     double ty = teb_band_.back().y;
     sampleLookaheadTargetArc(closest, lookahead_dist_, tx, ty);
 
+    const double px = pose.pose.position.x;
+    const double py = pose.pose.position.y;
     const double yaw = yawFromQuat(pose.pose.orientation);
 
     const double dx_w = tx - px;
