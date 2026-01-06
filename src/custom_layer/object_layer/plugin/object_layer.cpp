@@ -17,6 +17,7 @@ namespace Object_costmap_plugin {
         }
 
         declareParameter("enabled", rclcpp::ParameterValue(true));
+        declareParameter("auto_reset_with_timeout", rclcpp::ParameterValue(true));
         declareParameter("reset_timeout_threshold", rclcpp::ParameterValue(40));
         declareParameter("robot_inscribed_radius", rclcpp::ParameterValue(0.22));
         declareParameter("column_inscribed_radius", rclcpp::ParameterValue(0.75));
@@ -34,6 +35,7 @@ namespace Object_costmap_plugin {
         
         node->get_parameter(name_ + "." + "base_frame", base_frame);
         node->get_parameter(name_ + "." + "enabled", enabled_);
+        node->get_parameter(name_ + "." + "auto_reset_with_timeout", auto_reset_with_timeout_);
         node->get_parameter(name_ + "." + "reset_timeout_threshold", reset_timeout_threshold_);
         node->get_parameter(name_ + "." + "robot_inscribed_radius", robot_inscribed_radius);
         node->get_parameter(name_ + "." + "column_inscribed_radius", column_inscribed_radius);
@@ -135,7 +137,7 @@ namespace Object_costmap_plugin {
         reset_timeout_++;
         if(reset_timeout_ == reset_timeout_threshold_) 
         {
-            if (NoObject())  reset();
+            if (NoObject() || auto_reset_with_timeout_)  reset();
             else reset_timeout_ = 0;
         }
         updateWithMax(master_grid, 0, 0, getSizeInCellsX(), getSizeInCellsY());

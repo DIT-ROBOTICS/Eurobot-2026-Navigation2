@@ -95,6 +95,7 @@ namespace custom_path_costmap_plugin {
             double x_cov_threshold_, y_cov_threshold_;
             double R_sq_threshold_;
             // Timeout for reset the costmap
+            bool auto_reset_with_timeout_;
             int reset_timeout_threshold_;
             // Parameters for expansion
             double rival_inscribed_radius_, robot_inscribed_radius_;
