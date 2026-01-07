@@ -106,6 +106,7 @@ private:
         double & tx, double & ty) const;
 
     void publishTebPath();
+    bool shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now);
 
 private:
     // ros
@@ -178,6 +179,11 @@ private:
     double stop_v_eps_{0.05};             
     double blocked_stop_clearance_{0.5};
     unsigned char maxCostOnBand(const nav2_costmap_2d::Costmap2D & cm) const;
+
+    double replan_min_blocked_time_{0.3};
+    double replan_cooldown_{0.6};
+    rclcpp::Time blocked_since_;
+    rclcpp::Time last_replan_time_;
 };
 
 }  // namespace teb_controller

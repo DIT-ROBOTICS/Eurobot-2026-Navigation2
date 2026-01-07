@@ -77,6 +77,8 @@ void TebController::configure(
     node->declare_parameter(name_ + ".cost_check_stride", cost_check_stride_);
     node->declare_parameter(name_ + ".stop_v_eps", stop_v_eps_);
     node->declare_parameter(name_ + ".blocked_stop_clearance", blocked_stop_clearance_);
+    node->declare_parameter(name_ + ".replan_min_blocked_time", replan_min_blocked_time_);
+    node->declare_parameter(name_ + ".replan_cooldown", replan_cooldown_);
 
     // Get
     node->get_parameter(name_ + ".dt_ref", dt_ref_);
@@ -111,6 +113,8 @@ void TebController::configure(
     node->get_parameter(name_ + ".cost_check_stride", cost_check_stride_);
     node->get_parameter(name_ + ".stop_v_eps", stop_v_eps_);
     node->get_parameter(name_ + ".blocked_stop_clearance", blocked_stop_clearance_);
+    node->get_parameter(name_ + ".replan_min_blocked_time", replan_min_blocked_time_);
+    node->get_parameter(name_ + ".replan_cooldown", replan_cooldown_);
 
     // Safety clamp
     dt_ref_ = std::max(0.01, dt_ref_);
@@ -128,6 +132,8 @@ void TebController::configure(
     cost_check_stride_ = std::max(1, cost_check_stride_);
     stop_v_eps_ = std::max(0.0, stop_v_eps_);
     blocked_stop_clearance_ = std::max(0.0, blocked_stop_clearance_);
+    replan_min_blocked_time_ = std::max(0.0, replan_min_blocked_time_);
+    replan_cooldown_ = std::max(0.0, replan_cooldown_);
 
     // Lifecycle publisher (RViz debug)
     teb_path_pub_ = node->create_publisher<nav_msgs::msg::Path>(name_ + "/teb_path", rclcpp::SystemDefaultsQoS());
@@ -152,6 +158,8 @@ void TebController::cleanup()
     global_path_pub_.reset();
 
     last_stamp_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
+    blocked_since_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
+    last_replan_time_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
     last_vx_ = last_vy_ = last_w_ = 0.0;
 }
 
@@ -630,6 +638,31 @@ void TebController::publishTebPath()
     }
 }
 
+bool TebController::shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now)
+{
+    if (!raw_blocked) {
+        blocked_since_ = rclcpp::Time(0, 0, now.get_clock_type());
+        return false;
+    }
+
+    if (blocked_since_.nanoseconds() == 0) {
+        blocked_since_ = now;
+    }
+    const double blocked_sec = (now - blocked_since_).seconds();
+    if (blocked_sec < replan_min_blocked_time_) {
+        return false;
+    }
+    if (last_replan_time_.nanoseconds() != 0) {
+        const double cooldown_sec = (now - last_replan_time_).seconds();
+        if (cooldown_sec < replan_cooldown_) {
+            return false;
+        }
+    }
+
+    last_replan_time_ = now;
+    return true;
+}
+
 geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     const geometry_msgs::msg::PoseStamped & pose,
     const geometry_msgs::msg::Twist & velocity,
@@ -696,15 +729,14 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     const bool slow_enough = (v_cur <= stop_v_eps_);
 
     if (blocked_and_close) {
-        if (slow_enough) {
-            throw nav2_core::PlannerException("TEB: max_cost exceeded and speed low -> replan");
-        }
-
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
 
         publishTebPath();
+        if (slow_enough && shouldTriggerReplan(true, now)) {
+            throw nav2_core::PlannerException("TEB: max_cost exceeded and speed low -> replan");
+        }
         return cmd;
     }
 
@@ -855,12 +887,16 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     last_vy_ = vy;
     last_w_ = w;
 
+    const bool replan_ready = shouldTriggerReplan(request_replan, now);
     if (request_replan) {
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
         publishTebPath();
-        throw nav2_core::PlannerException("TEB: path blocked or obstacle too close -> replan");
+        if (replan_ready) {
+            throw nav2_core::PlannerException("TEB: path blocked or obstacle too close -> replan");
+        }
+        return cmd;
     }
 
     cmd.twist.linear.x = vx;
