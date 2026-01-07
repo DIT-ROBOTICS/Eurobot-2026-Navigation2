@@ -30,7 +30,7 @@ class ObjectSimPub : public rclcpp::Node {
         std::vector<double> board_pos_x {1.8};
         std::vector<double> board_pos_y {1};
         std::vector<double> obstacle_pos_x {1.5, 1.7};
-        std::vector<double> obstacle_pos_y {0.5, 0.8};
+        std::vector<double> obstacle_pos_y {0.4, 0.8};
         std::vector<double> board_orientation { /* fill with desired values */ };
         
         // New vectors for overturn positions
