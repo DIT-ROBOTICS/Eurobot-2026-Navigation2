@@ -78,6 +78,8 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
         dock_controller_selector_msg_.data = "Gentle";
     } else if(strstr(mode.c_str(), "rush") != nullptr) {
         dock_controller_selector_msg_.data = "Rush";
+    } else if(strstr(mode.c_str(), "cam") != nullptr) {
+        dock_controller_selector_msg_.data = "Cam";
     } else {
         dock_controller_selector_msg_.data = "Ordinary";
     }

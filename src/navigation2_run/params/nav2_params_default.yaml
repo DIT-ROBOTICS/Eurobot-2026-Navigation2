@@ -458,7 +458,7 @@ docking_server:
       external_detection_rotation_yaw: 0.0
       external_detection_rotation_pitch: 0.0
       external_detection_rotation_roll: 0.0
-      filter_coef: 0.8
+      filter_coef: 0.1 # small->no filter. if filer_coef too large, cause dragging since this filter is not very good
 
     docks: ['home_dock']
     home_dock:
@@ -468,7 +468,7 @@ docking_server:
     
     # dock_database: /my/path/to/dock_database.yaml
 
-    controllers: ["Ordinary", "Gentle", "Rush"]
+    controllers: ["Ordinary", "Gentle", "Rush", "Cam"]
 
     Ordinary:
       max_linear_vel: 0.3
@@ -504,6 +504,19 @@ docking_server:
       linear_kp_decel_dis: 3.0
       angular_kp: 4.0
       deceleration_distance: 0.03
+      reserved_distance: 0.0
+      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      stop_degree: 120.0
+      rival_radius: 0.44
+
+    Cam:
+      max_linear_vel: 0.25
+      min_linear_vel: 0.0
+      linear_kp_accel_vel: 0.5
+      linear_ki_accel_vel: 0.1
+      linear_kp_decel_dis: 3.0
+      angular_kp: 4.0
+      deceleration_distance: 0.1
       reserved_distance: 0.0
       external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
