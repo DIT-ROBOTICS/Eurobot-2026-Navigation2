@@ -169,6 +169,10 @@ protected:
   bool dock_positive_;
   bool dock_w_cam_;
 
+  bool reset_flag_;
+  bool reset_timer_flag_;
+  rclcpp::Time last_reset_time_;
+
   // this is only set here, there is no param for this
   // Flag to ignore orientation from detected_dock_pose
   const bool ignore_detected_orientation_ = true;

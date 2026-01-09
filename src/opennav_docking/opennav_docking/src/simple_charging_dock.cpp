@@ -129,6 +129,7 @@ void SimpleChargingDock::configure(
   dock_positive_ = true;
   dock_w_cam_ = false;
   dock_offset_z_ = 0.0;
+  reset_flag_ = false;
 
   if (use_battery_status_) {
     battery_sub_ = node_->create_subscription<sensor_msgs::msg::BatteryState>(
@@ -148,15 +149,16 @@ void SimpleChargingDock::configure(
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
     [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
+      use_external_detection_pose_ = true;
       if ( dock_w_cam_ ) {
         detected_dock_pose_ = *pose;
         detected_dock_pose_prev_ = detected_dock_pose_;
-        use_external_detection_pose_ = true;
+        // use_external_detection_pose_ = true;
         RCLCPP_INFO(node_->get_logger(), "Dock pose received - dock_w_cam_: %s, use_external_detection_pose_: %s",
           dock_w_cam_ ? "true" : "false", use_external_detection_pose_ ? "true" : "false");
       }
       else {
-        use_external_detection_pose_ = false;
+        // use_external_detection_pose_ = false;
         RCLCPP_INFO(node_->get_logger(), "Dock pose ignored - dock_w_cam_: %s, use_external_detection_pose_: %s",
           dock_w_cam_ ? "true" : "false", use_external_detection_pose_ ? "true" : "false");
       }
@@ -215,13 +217,14 @@ void SimpleChargingDock::resetDockPoseSubscription()
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
     [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
+      use_external_detection_pose_ = true;
       if ( dock_w_cam_ ) {
         detected_dock_pose_ = *pose;
         detected_dock_pose_prev_ = detected_dock_pose_;
-        use_external_detection_pose_ = true;
+        // use_external_detection_pose_ = true;
       }
       else {
-        use_external_detection_pose_ = false;
+        // use_external_detection_pose_ = false;
       }
   });
   
@@ -231,9 +234,12 @@ void SimpleChargingDock::resetDockPoseSubscription()
 geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
 {
+  reset_flag_ = false;
+  reset_timer_flag_ = false;
   if (dock_type.find("cam") != std::string::npos) {
     dock_w_cam_ = true;
-    use_external_detection_pose_ = true;
+    // use_external_detection_pose_ = true;
+    resetDockPoseSubscription();
   } else {
     dock_w_cam_ = false;
     use_external_detection_pose_ = false;
@@ -242,7 +248,7 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   RCLCPP_INFO(node_->get_logger(), "getStagingPose - dock_w_cam_: %s, use_external_detection_pose_: %s",
     dock_w_cam_ ? "true" : "false", use_external_detection_pose_ ? "true" : "false");
   // ** If not using detection, set the dock pose as the given dock pose estimate
-  if (!use_external_detection_pose_ ) {
+  if (!use_external_detection_pose_ || !dock_w_cam_ ) {
     // This gets called at the start of docking
     // Reset our internally tracked dock pose
     // dock_pose_.header.frame_id = frame;
@@ -264,7 +270,7 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
 
   //** Apply x and y offsets
   if(use_dynamic_offset_) {
-    if ( use_external_detection_pose_ ) {
+    if ( dock_w_cam_ ) {
       nav_type_selector_->setType(dock_type, offset_direction_, staging_pose, computeExternalDockingDist(pose.position.z) );
     }
     else {
@@ -291,6 +297,33 @@ return staging_pose;
 
 bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
 {
+  if ( dock_w_cam_ ) {
+    if ( !reset_flag_ ) {
+      if ( !reset_timer_flag_ ) {
+        last_reset_time_ = node_->now();
+        reset_timer_flag_ = true;
+      }
+      use_external_detection_pose_ = false;
+      resetDockPoseSubscription();
+      reset_flag_ = true;
+
+      // Non-blocking wait: check if enough time has passed since subscription reset
+      auto elapsed = node_->now() - last_reset_time_;
+      if (elapsed.seconds() < 0.08) {
+        // Not enough time passed, use previous pose
+        if(detected_dock_pose_prev_.header.frame_id.empty()) {
+          RCLCPP_WARN(node_->get_logger(), "Waiting for fresh detections after reset");
+        }
+        detected_dock_pose_prev_ = pose;
+        dock_pose_pub_->publish(detected_dock_pose_prev_);
+        // dock_pose_ = detected_dock_pose_prev_;
+        return true;
+      }
+    }
+  }
+  else {
+    use_external_detection_pose_ = false;
+  }
   RCLCPP_INFO(node_->get_logger(), "getRefinedPose - dock_w_cam_: %s, use_external_detection_pose_: %s",
     dock_w_cam_ ? "true" : "false", use_external_detection_pose_ ? "true" : "false");
   
@@ -299,6 +332,7 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     if(detected_dock_pose_prev_.header.frame_id.empty()) {
       RCLCPP_WARN(node_->get_logger(), "No frame for detected dock pose");
     }
+      // RCLCPP_WARN(node_->get_logger(), "No f");
     dock_pose_pub_->publish(detected_dock_pose_prev_);
     dock_pose_ = detected_dock_pose_prev_;
     return true;
@@ -491,15 +525,26 @@ void SimpleChargingDock::jointStateCallback(const sensor_msgs::msg::JointState::
   is_stalled_ = (velocity < stall_velocity_threshold_) && (effort > stall_effort_threshold_);
 }
 
-}  // namespace opennav_docking
-
 double SimpleChargingDock::computeExternalDockingDist(const double z)
 {
-  // transform z(could be small) to docking dist (maybe 0.1~0.2)
-  // function should be linearly decreasing
-  double a = z; // currently commit first and fix other logic for docking
-  return 0.02;
+  // Transform camera z-distance to docking distance
+  // Linearly decreasing: closer marker (smaller z) -> larger staging distance for safety
+  // Further marker (larger z) -> smaller staging distance
+  
+  const double min_staging_dist = 0.02;  // Minimum staging distance (when marker is far)
+  const double max_staging_dist = 0.15;  // Maximum staging distance (when marker is very close)
+  const double z_far = 0.5;              // Z distance considered "far"
+  const double z_close = 0.05;           // Z distance considered "close"
+  
+  // Linear mapping: staging_dist = max when z = z_close, min when z = z_far
+  double slope = (min_staging_dist - max_staging_dist) / (z_far - z_close);
+  double staging_dist = max_staging_dist + slope * (z - z_close);
+  
+  // Clamp to safe range
+  return std::clamp(staging_dist, min_staging_dist, max_staging_dist);
 }
+
+}  // namespace opennav_docking
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(opennav_docking::SimpleChargingDock, opennav_docking_core::ChargingDock)
