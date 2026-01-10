@@ -73,8 +73,7 @@ ControllerSelector:
   ros__parameters:
     Fast_controller: "Fast"
     Slow_controller: "Slow"
-    MPPI_controller: "MPPI"
-    TEB_controller : "TEB"
+    TEB_controller: "TEB"
 
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
@@ -95,8 +94,23 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost", "MPPI", "TEB"]
+    goal_checker_plugins:
+      [
+        "Precise",
+        "Unerring",
+        "Loose",
+        "DidilongGoalChecker",
+        "NonStopGoalChecker",
+      ]
+    controller_plugins:
+      [
+        "DidilongController",
+        "Fast",
+        "Slow",
+        "LinearBoost",
+        "AngularBoost",
+        "TEB",
+      ]
 
     # Progress checker parameters
     progress_checker:
@@ -136,7 +150,7 @@ controller_server:
       yaw_goal_tolerance: 6.28
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
-      
+
     NonStopGoalChecker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -145,7 +159,7 @@ controller_server:
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
 
-    # Controller parameters: Custom, MPPI, TEB
+    # Controller parameters: Custom, TEB
     DidilongController:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_didilong_params.yaml"
@@ -173,10 +187,10 @@ controller_server:
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
       spin_delay_threshold: 0.5
-      rival_slowdown_radius: 0.5   
-      rival_decay: 0.5            
+      rival_slowdown_radius: 0.5
+      rival_decay: 0.5
       non_stop_min_vel: 0.3
-      
+
     Slow:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_slow_params.yaml"
@@ -190,7 +204,7 @@ controller_server:
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
       non_stop_min_vel: 0.3
-    
+
     LinearBoost:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_linearBoost_params.yaml"
@@ -218,84 +232,6 @@ controller_server:
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
       non_stop_min_vel: 0.3
-    MPPI:
-      plugin: "nav2_mppi_controller::MPPIController"
-      motion_model: "Omni"           
-      time_steps: 15          
-      model_dt: 0.1
-      batch_size: 5000
-      vx_max: 1.2                 
-      vx_min: -0.5
-      vy_max: 1.2                
-      wz_max: 2.0
-      vx_std: 1.0                 
-      vy_std: 1.0                     
-      wz_std: 1.0
-      iteration_count: 1
-      prune_distance: 3.2
-      transform_tolerance: 0.1
-      temperature: 0.8
-      gamma: 0.015
-      visualize: true
-      regenerate_noises: false
-      critics: [
-        "ConstraintCritic", "CostCritic", "ObstaclesCritic", "GoalCritic", 
-        "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", 
-        "PathAngleCritic", "TwirlingCritic"]
-
-      ConstraintCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 4.0
-      CostCritic:
-        enabled: false
-        cost_power: 1
-        cost_weight: 8.0             
-        critical_cost: 300.0
-        near_collision_cost: 100      
-        collision_cost: 1000.0
-      ObstaclesCritic:
-        enabled: false
-        cost_power: 1
-        repulsion_weight: 0.4
-        critical_weight: 20.0
-        consider_footprint: false
-        collision_margin_distance: 0.08
-        near_goal_distance: 0.4
-        inflation_radius: 0.35
-        cost_scaling_factor: 10.0
-      TwirlingCritic:
-        enabled: false
-        twirling_cost_weight: 5.0
-        twirling_cost_power: 1
-      GoalCritic:
-        enabled: true
-        cost_weight: 10.0
-        threshold_to_consider: 0.8
-      GoalAngleCritic:
-        enabled: true
-        cost_weight: 5.0             
-        threshold_to_consider: 5.0
-      PathAlignCritic:
-        enabled: true
-        cost_weight: 10.0             
-        max_path_occupancy_ratio: 0.05
-        trajectory_point_step: 4
-        threshold_to_consider: 0.5
-        offset_from_furthest: 20
-        use_path_orientations: false
-      PathFollowCritic:
-        enabled: true
-        cost_weight: 15.0
-        offset_from_furthest: 5
-        threshold_to_consider: 1.5
-      PathAngleCritic:
-        enabled: true
-        cost_weight: 2.0
-        offset_from_furthest: 4
-        threshold_to_consider: 0.5
-        max_angle_to_furthest: 1.0
-        mode: 1
 
     TEB:
       plugin: "teb_controller::TebController"
@@ -358,7 +294,14 @@ global_costmap:
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
+      plugins:
+        [
+          "static_layer",
+          "inflation_layer",
+          "rival_layer",
+          "object_layer",
+          "keepout_layer",
+        ]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -386,13 +329,13 @@ global_costmap:
         moving_cost_scaling_factor: 0.9
         unknown_cost_scaling_factor: 10.0
         max_extend_length: 0.6
-        cov_range_max: 0.05385164807134504  # sqrt(0.0029)
-        cov_range_min: 0.01414213562373095  # sqrt(0.0002)
+        cov_range_max: 0.05385164807134504 # sqrt(0.0029)
+        cov_range_min: 0.01414213562373095 # sqrt(0.0002)
         vel_range_max: 1.0
         vel_range_min: 0.0
         inscribed_radius_rate: 0.99
         inflation_radius_rate: 1.005
-        debug_mode: 0                       # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
+        debug_mode: 0 # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
         use_statistic_method: False
         offset_vel_factor_weight_statistic: 0.42
         expand_vel_factor_weight_statistic: 0.42
@@ -416,31 +359,87 @@ global_costmap:
         # keepout_zone_array: [X, Y, lengthX, lengthY]
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
         # keepout_zone_for_hazelnuts: Left(4), Right(4)
-        keepout_zone_array: [0.1,   0.8,   0.2,   0.2,   # A
-                             0.7,   0.1,   0.2,   0.2,   # B
-                             0.8,   0.8,   0.2,   0.2,   # C
-                             1.25,  1.45,  0.2,   0.2,   # D
-                             #-----------------------------#
-                             1.5,   0.1,   0.2,   0.2,   # E
-                             1.5,   0.8,   0.2,   0.2,   # F
-                             #-----------------------------#
-                             1.75,  1.45,  0.2,   0.2,   # G
-                             2.2,   0.8,   0.2,   0.2,   # H
-                             2.3,   0.1,   0.2,   0.2,   # I
-                             2.9,   0.8,   0.2,   0.2,   # J
-                             #-----------------------------#
-                             0.175, 0.4,   0.15,  0.2,   # K
-                             0.175, 1.2,   0.15,  0.2,   # L
-                             1.1,   0.175, 0.2,   0.15,  # M
-                             1.15,  0.8,   0.2,   0.15,  # N
-                             #-----------------------------#
-                             2.825, 0.4,   0.15,  0.2,   # O
-                             2.825, 1.2,   0.15,  0.2,   # P
-                             1.9,   0.175, 0.2,   0.15,  # Q
-                             1.85,  0.8,   0.2,   0.15]  # R
-        inflation_length: 0.15   # distance over which cost is inflated
-        cost_scaling_factor: 5.0   # higher value -> steeper cost increase
-        keepout_expand_mode: 0   # 0: Circle, 1: Square
+        keepout_zone_array: [
+            0.1,
+            0.8,
+            0.2,
+            0.2, # A
+            0.7,
+            0.1,
+            0.2,
+            0.2, # B
+            0.8,
+            0.8,
+            0.2,
+            0.2, # C
+            1.25,
+            1.45,
+            0.2,
+            0.2, # D
+            #-----------------------------#
+            1.5,
+            0.1,
+            0.2,
+            0.2, # E
+            1.5,
+            0.8,
+            0.2,
+            0.2, # F
+            #-----------------------------#
+            1.75,
+            1.45,
+            0.2,
+            0.2, # G
+            2.2,
+            0.8,
+            0.2,
+            0.2, # H
+            2.3,
+            0.1,
+            0.2,
+            0.2, # I
+            2.9,
+            0.8,
+            0.2,
+            0.2, # J
+            #-----------------------------#
+            0.175,
+            0.4,
+            0.15,
+            0.2, # K
+            0.175,
+            1.2,
+            0.15,
+            0.2, # L
+            1.1,
+            0.175,
+            0.2,
+            0.15, # M
+            1.15,
+            0.8,
+            0.2,
+            0.15, # N
+            #-----------------------------#
+            2.825,
+            0.4,
+            0.15,
+            0.2, # O
+            2.825,
+            1.2,
+            0.15,
+            0.2, # P
+            1.9,
+            0.175,
+            0.2,
+            0.15, # Q
+            1.85,
+            0.8,
+            0.2,
+            0.15,
+          ] # R
+        inflation_length: 0.15 # distance over which cost is inflated
+        cost_scaling_factor: 5.0 # higher value -> steeper cost increase
+        keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
 
 map_server:
@@ -520,7 +519,7 @@ velocity_smoother:
     max_velocity: [2.5, 2.5, 12.0]
     min_velocity: [-2.5, -2.5, -12.0]
     max_accel: [4.0, 4.0, 120.0]
-    max_decel: [-11.0, -11.0, -120.0]  
+    max_decel: [-11.0, -11.0, -120.0]
     odom_topic: "/final_pose_nav"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
@@ -542,12 +541,12 @@ docking_server:
     external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
     shrink_nav_rival_radius: 0.05
     shrink_dock_rival_radius: 0.27
-    shrink_dock_rival_degree: 60.0  
+    shrink_dock_rival_degree: 60.0
 
     # Types of docks
     dock_plugins: ["dock"]
     dock:
-      plugin: 'opennav_docking::SimpleChargingDock'
+      plugin: "opennav_docking::SimpleChargingDock"
       docking_threshold: 0.005
       use_debounce: true
       xy_debounce_threshold: 2
@@ -560,12 +559,12 @@ docking_server:
       use_stall_detection: false
       base_frame: "base_footprint"
 
-    docks: ['home_dock']
+    docks: ["home_dock"]
     home_dock:
-      type: 'dock'
+      type: "dock"
       frame: map
       pose: [0.0, 0.0, 0.0]
-    
+
     # dock_database: /my/path/to/dock_database.yaml
 
     controllers: ["Ordinary", "Gentle", "Rush"]
