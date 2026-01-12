@@ -181,7 +181,10 @@ void TebController::setPlan(const nav_msgs::msg::Path & path)
     global_plan_ = path;
 
     if (global_path_pub_ && global_path_pub_->is_activated()) {
-        global_path_pub_->publish(std::move(global_plan_));
+        auto msg = std::make_unique<nav_msgs::msg::Path>(global_plan_);
+        global_plan_.header.stamp = path.header.stamp;
+        global_plan_.header.frame_id = path.header.frame_id;
+        global_path_pub_->publish(std::move(msg));
     }
 
     initTimedElasticBand(global_plan_);
