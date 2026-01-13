@@ -116,6 +116,16 @@ if ! shopt -oq posix; then
   fi
 fi
 
+sim_all() {  
+    ros2 launch navigation2_run sim_launch.py & 
+    SIM_PID=$!  
+    ros2 run object_layer ObjectSim & 
+    OBJECT_PID=$!  
+    ros2 run rival_layer RivalSim & 
+    RIVAL_PID=$!  
+    echo "Started sim (PID: $SIM_PID), object (PID: $OBJECT_PID), rival (PID: $RIVAL_PID)"  
+}  
+
 # ROS settings.
 # ** No MASTER in ROS2 
 
@@ -124,5 +134,10 @@ source /home/user/Eurobot-2026-Navigation2-ws/install/local_setup.bash
 
 alias build='colcon build --symlink-install --parallel-workers 4'
 alias sim='ros2 launch navigation2_run sim_launch.py'
+alias object='ros2 run object_layer ObjectSim'
+alias rival='ros2 run rival_layer RivalSim'
+alias sim_object='sim & object'
+alias sim_rival='sim & rival'
+alias sim_all='sim_all'
 alias docking_sim1='ros2 action send_goal /dock_robot opennav_docking_msgs/action/DockRobot "{use_dock_id: true, dock_id: 'flex_dock1'}"'
 alias docking_sim2='ros2 action send_goal /dock_robot opennav_docking_msgs/action/DockRobot "{use_dock_id: true, dock_id: 'flex_dock2'}"'

@@ -40,6 +40,7 @@ namespace Object_costmap_plugin {
                 int min_i, int min_j, int max_i, int max_j) override;
             bool isClearable() override;
             void reset() override;
+            bool NoObject();
             
             void ExpandPointWithRectangle(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius, geometry_msgs::msg::PoseStamped object, int mode);
             void ExpandPointWithCircle(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius);
@@ -85,6 +86,9 @@ namespace Object_costmap_plugin {
             double board_width = 0.4, board_height = 0.1;
             double overturn_width = 0.11, overturn_height = 0.075;
             geometry_msgs::msg::PoseStamped latest_object_;
+            bool auto_reset_with_timeout_;
+            int reset_timeout_threshold_;
+            int reset_timeout_ = 0;
 
     };
 } // namespace Object_costmap_plgin

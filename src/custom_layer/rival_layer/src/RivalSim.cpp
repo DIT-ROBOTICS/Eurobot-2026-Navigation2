@@ -2,6 +2,15 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include <atomic>
+#include <csignal>
+
+std::atomic_bool g_request_clear{false};
+
+void sigintHandler(int /*sig*/)
+{
+    g_request_clear.store(true);
+}
 
 class RivalSimPub : public rclcpp::Node {
     public:
@@ -13,6 +22,26 @@ class RivalSimPub : public rclcpp::Node {
             declare_parameter("Rival_mode", rclcpp::ParameterValue(2));
             this->get_parameter("Rival_mode", rival_mode_);
         }   
+        void clearAll() {
+            nav_msgs::msg::Odometry msg;
+
+            msg.header.stamp = this->now();
+            msg.header.frame_id = "";        
+            msg.child_frame_id = "";
+
+            msg.pose.pose.position.x = 0.0;
+            msg.pose.pose.position.y = 0.0;
+            msg.pose.pose.position.z = 0.0;
+
+            msg.pose.pose.orientation.x = 0.0;
+            msg.pose.pose.orientation.y = 0.0;
+            msg.pose.pose.orientation.z = 0.0;
+            msg.pose.pose.orientation.w = 1.0;
+
+            rival_pub_->publish(msg);
+            
+            RCLCPP_INFO(this->get_logger(), "Clearing all RivalSimPub data.");
+        }
 
     private:
         void timer_callback() {
@@ -113,7 +142,23 @@ class RivalSimPub : public rclcpp::Node {
 
 int main(int argc, char * argv[]) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<RivalSimPub>());
+
+    signal(SIGINT, sigintHandler);
+
+    auto node = std::make_shared<RivalSimPub>();
+
+    rclcpp::Rate rate(50);
+
+    while (rclcpp::ok()) {
+        rclcpp::spin_some(node);
+
+        if (g_request_clear.load()) {
+            node->clearAll();      
+            break;                 
+        }
+        rate.sleep();
+    }
+
     rclcpp::shutdown();
     return 0;
 }

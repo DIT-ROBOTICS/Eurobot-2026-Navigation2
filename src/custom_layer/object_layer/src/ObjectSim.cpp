@@ -4,6 +4,15 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include <random>
 #include <vector>
+#include <atomic>
+#include <csignal>
+
+std::atomic_bool g_request_clear{false};
+
+void sigintHandler(int /*sig*/)
+{
+    g_request_clear.store(true);
+}
 
 class ObjectSimPub : public rclcpp::Node {
     public:
@@ -48,6 +57,30 @@ class ObjectSimPub : public rclcpp::Node {
             board_timer_ = this->create_wall_timer(std::chrono::milliseconds(1000), std::bind(&ObjectSimPub::board_timer_callback, this));
             obstacle_timer_ = this->create_wall_timer(std::chrono::milliseconds(1000), std::bind(&ObjectSimPub::obstacle_timer_callback, this));
             overturn_timer_ = this->create_wall_timer(std::chrono::milliseconds(500), std::bind(&ObjectSimPub::overturn_timer_callback, this)); // New timer
+        }
+        void clearAll() {
+            column_message = geometry_msgs::msg::PoseArray();
+            column_message.header.stamp = this->now();
+            column_message.header.frame_id = "column";
+            column_message.poses.clear();
+            column_pub_->publish(column_message);
+            board_message = geometry_msgs::msg::PoseArray();
+            board_message.header.stamp = this->now();
+            board_message.header.frame_id = "board";
+            board_message.poses.clear();
+            board_pub_->publish(board_message);
+            obstacle_message = geometry_msgs::msg::PoseArray();
+            obstacle_message.header.stamp = this->now();
+            obstacle_message.header.frame_id = "map";
+            obstacle_message.poses.clear();
+            obstacle_pub_->publish(obstacle_message);
+            overturn_message = geometry_msgs::msg::PoseArray();
+            overturn_message.header.stamp = this->now();
+            overturn_message.header.frame_id = "map";
+            overturn_message.poses.clear();
+            overturn_pub_->publish(overturn_message);
+
+            RCLCPP_INFO(this->get_logger(), "Shutting down ObjectSimPub node.");
         }
     private:
         void column_timer_callback() {
@@ -224,7 +257,23 @@ class ObjectSimPub : public rclcpp::Node {
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ObjectSimPub>());
+
+    signal(SIGINT, sigintHandler);
+
+    auto node = std::make_shared<ObjectSimPub>();
+
+    rclcpp::Rate rate(50);
+
+    while (rclcpp::ok()) {
+        rclcpp::spin_some(node);
+
+        if (g_request_clear.load()) {
+            node->clearAll();      
+            break;                 
+        }
+        rate.sleep();
+    }
+
     rclcpp::shutdown();
     return 0;
 }
