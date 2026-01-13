@@ -10,6 +10,8 @@ namespace custom_path_costmap_plugin {
         // Initialize the layer
         enabled_ = true;
         current_ = true;
+        no_rival_ = true;
+
         resetMapToValue(0, 0, getSizeInCellsX(), getSizeInCellsY(), nav2_costmap_2d::FREE_SPACE);
 
         // Get the node
@@ -27,6 +29,7 @@ namespace custom_path_costmap_plugin {
         declareParameter("y_cov_threshold", rclcpp::ParameterValue(0.01));
         declareParameter("R_sq_threshold", rclcpp::ParameterValue(0.85));
 
+        declareParameter("auto_reset_with_timeout", rclcpp::ParameterValue(true));
         declareParameter("reset_timeout_threshold", rclcpp::ParameterValue(40));
 
         declareParameter("robot_inscribed_radius", rclcpp::ParameterValue(0.22));
@@ -73,6 +76,7 @@ namespace custom_path_costmap_plugin {
         node->get_parameter(name_ + "." + "y_cov_threshold", y_cov_threshold_);
         node->get_parameter(name_ + "." + "R_sq_threshold", R_sq_threshold_);
 
+        node->get_parameter(name_ + "." + "auto_reset_with_timeout", auto_reset_with_timeout_);
         node->get_parameter(name_ + "." + "reset_timeout_threshold", reset_timeout_threshold_);
 
         node->get_parameter(name_ + "." + "robot_inscribed_radius", robot_inscribed_radius_);
@@ -144,6 +148,10 @@ namespace custom_path_costmap_plugin {
             "/rival_layer/set_mode", std::bind(&RivalLayer::handleSetMode, this, std::placeholders::_1, std::placeholders::_2));
         mode_param = 0;
 
+        // Just for refreshing the costmap at the beginning
+        constexpr int RESET_TIMEOUT_SAFETY_OFFSET = 5;  // Trigger reset slightly before the configured threshold
+        reset_timeout_ = reset_timeout_threshold_ - RESET_TIMEOUT_SAFETY_OFFSET;
+
         // Initialize the queue
         rival_path_.init(model_size_);
     }
@@ -174,15 +182,17 @@ namespace custom_path_costmap_plugin {
         if(rival_pose_received_) {
             resetMapToValue(0, 0, getSizeInCellsX(), getSizeInCellsY(), nav2_costmap_2d::FREE_SPACE);
             FieldExpansion(rival_x_, rival_y_);
-
             rival_pose_received_ = false;
             reset_timeout_ = 0;
         } else {
             reset_timeout_++;
         }
-
-        if(reset_timeout_ >= reset_timeout_threshold_)  reset();
-
+    
+        if(reset_timeout_ == reset_timeout_threshold_) 
+        {
+            if (no_rival_ == true || auto_reset_with_timeout_) reset();
+            else reset_timeout_ = 0;
+        }
         updateWithMax(master_grid, 0, 0, getSizeInCellsX(), getSizeInCellsY());
     }
 
@@ -205,8 +215,8 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::reset() {
-        enabled_ = true;
         current_ = true;
+        no_rival_ = false;
 
         rival_x_ = 0.0;
         rival_y_ = 0.0;
@@ -524,6 +534,10 @@ namespace custom_path_costmap_plugin {
             
     // Subscribe to the rival's pose
     void RivalLayer::rivalPoseCallback(const nav_msgs::msg::Odometry::SharedPtr rival_pose) {
+        if(rival_pose->header.frame_id.empty()) {
+            no_rival_ = true;
+            return;
+        }
         // Store the rival's pose
         rival_x_ = rival_pose->pose.pose.position.x;
         rival_y_ = rival_pose->pose.pose.position.y;

@@ -312,6 +312,7 @@ global_costmap:
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
+        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
         model_size: 22
         x_cov_threshold: 0.02
         y_cov_threshold: 0.02
@@ -345,6 +346,8 @@ global_costmap:
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: True
+        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
+        reset_timeout_threshold: 70
         robot_inscribed_radius: 0.22
         column_inscribed_radius: 0.075
         board_inscribed_radius: 0.01
