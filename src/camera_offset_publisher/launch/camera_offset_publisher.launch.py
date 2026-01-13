@@ -36,7 +36,7 @@ def generate_launch_description():
     
     publish_rate_arg = DeclareLaunchArgument(
         'publish_rate',
-        default_value='100.0',
+        default_value='25.0',
         description='Publishing rate in Hz'
     )
     

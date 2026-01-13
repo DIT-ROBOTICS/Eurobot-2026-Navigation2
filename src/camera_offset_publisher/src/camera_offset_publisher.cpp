@@ -89,10 +89,10 @@ private:
       message.pose.position.x = goal_x_ - current_robot_x_;
       message.pose.position.y = goal_y_ - current_robot_y_;
       message.pose.position.z = 0.0;
-      message.pose.orientation.w = 1.0;
+      message.pose.orientation.w = 0.71;
       message.pose.orientation.x = 0.0;
       message.pose.orientation.y = 0.0;
-      message.pose.orientation.z = 0.0;
+      message.pose.orientation.z = 0.704;
     }
     
     publisher_->publish(message);
