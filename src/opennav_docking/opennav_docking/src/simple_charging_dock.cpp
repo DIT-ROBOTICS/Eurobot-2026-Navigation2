@@ -350,6 +350,24 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     return true;
   }
 
+  // Apply z-offset to move dock_pose away from detected pose before transform
+  // Use stored dock_offset_z_ value from original goal
+  if ( offset_direction_ == 'x' &&  dock_positive_ ) {
+    detected.pose.position.x -= fabs(dock_offset_z_);
+  }
+  else if ( offset_direction_ == 'x' && !dock_positive_ ) {
+    detected.pose.position.x += fabs(dock_offset_z_);
+  }
+  else if ( offset_direction_ == 'y' && dock_positive_ ) {
+    detected.pose.position.y -= fabs(dock_offset_z_);
+  }
+  else if ( offset_direction_ == 'y' && !dock_positive_ ) {
+    detected.pose.position.y += fabs(dock_offset_z_);
+  }
+  else {
+    // do nothing
+  }
+
   // Transform detected pose into fixed frame. Note that the argument pose
   // is the output of detection, but also acts as the initial estimate
   // and contains the frame_id of docking
@@ -419,23 +437,6 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
   }
 
 
-  // Apply z-offset to move dock_pose away from detected pose
-  // Use stored dock_offset_z_ value from original goal
-  if ( offset_direction_ == 'x' &&  dock_positive_ ) {
-    dock_pose_.pose.position.x -= dock_offset_z_;
-  }
-  else if ( offset_direction_ == 'x' && !dock_positive_ ) {
-    dock_pose_.pose.position.x += dock_offset_z_;
-  }
-  else if ( offset_direction_ == 'y' && dock_positive_ ) {
-    dock_pose_.pose.position.y -= dock_offset_z_;
-  }
-  else if ( offset_direction_ == 'y' && !dock_positive_ ) {
-    dock_pose_.pose.position.y += dock_offset_z_;
-  }
-  else {
-    // do nothing
-  }
 
   // Publish & return dock pose for debugging purposes
   dock_pose_pub_->publish(dock_pose_);
@@ -531,17 +532,19 @@ double SimpleChargingDock::computeExternalDockingDist(const double z)
   // Linearly decreasing: closer marker (smaller z) -> larger staging distance for safety
   // Further marker (larger z) -> smaller staging distance
   
-  const double min_staging_dist = 0.02;  // Minimum staging distance (when marker is far)
-  const double max_staging_dist = 0.15;  // Maximum staging distance (when marker is very close)
-  const double z_far = 0.5;              // Z distance considered "far"
-  const double z_close = 0.05;           // Z distance considered "close"
+  const double min_staging_dist = 0.5;  // Minimum staging distance (when marker is far)
+  const double max_staging_dist = 0.7;  // Maximum staging distance (when marker is very close)
+  const double z_far = 0.2;              // Z distance considered "far"
+  const double z_close = 0.1;           // Z distance considered "close"
   
   // Linear mapping: staging_dist = max when z = z_close, min when z = z_far
   double slope = (min_staging_dist - max_staging_dist) / (z_far - z_close);
   double staging_dist = max_staging_dist + slope * (z - z_close);
   
   // Clamp to safe range
-  return std::clamp(staging_dist, min_staging_dist, max_staging_dist);
+  double  abs_result = std::clamp(staging_dist, min_staging_dist, max_staging_dist);
+  if ( z > 0 ) return abs_result;
+  else return -1.0*abs_result;
 }
 
 }  // namespace opennav_docking
