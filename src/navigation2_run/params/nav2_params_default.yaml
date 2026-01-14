@@ -350,8 +350,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_smac_planner/SmacPlanner2D"
-      tolerance: 0.2
-      goal_tolerance: 0.25
+      tolerance: 0.02
       allow_unknown: false
       # useful parameters
       cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
