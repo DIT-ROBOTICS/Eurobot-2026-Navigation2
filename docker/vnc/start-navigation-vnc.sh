@@ -2,20 +2,20 @@
 
 # Combined VNC + Navigation startup script
 
-# 確保 DISPLAY 有值
+# Ensure DISPLAY has a value
 : "${DISPLAY:=:1}"
 
-# 設定 /tmp/.X11-unix 權限
+# Set /tmp/.X11-unix permissions
 sudo mkdir -p /tmp/.X11-unix
 sudo chmod 1777 /tmp/.X11-unix
 
-# 1. 設定 VNC 密碼
+# 1. Set VNC password
 mkdir -p "$HOME/.vnc"
 : "${VNC_PASSWORD:=ros}"
 echo "$VNC_PASSWORD" | vncpasswd -f > "$HOME/.vnc/passwd"
 chmod 600 "$HOME/.vnc/passwd"
 
-# 2. 創建 xstartup：啟動 XFCE
+# 2. Create xstartup: start XFCE
 cat > "$HOME/.vnc/xstartup" << 'EOF'
 #!/bin/sh
 xrdb "$HOME/.Xresources" 2>/dev/null || true
@@ -33,10 +33,10 @@ EOF
 
 chmod +x "$HOME/.vnc/xstartup"
 
-# 2.1 禁用 XFCE 螢幕保護和電源管理
+# 2.1 Disable XFCE screensaver and power management
 mkdir -p "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
 
-# 禁用電源管理
+# Disable power management
 cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-power-manager" version="1.0">
@@ -48,7 +48,7 @@ cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml" <
 </channel>
 EOF
 
-# 禁用螢幕保護和鎖定
+# Disable screensaver and screen lock
 cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-screensaver" version="1.0">
@@ -62,20 +62,20 @@ cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml" << 
 </channel>
 EOF
 
-# 3. 清理舊的 X server 文件
+# 3. Clean up old X server files
 DNUM="${DISPLAY#:}"
 sudo rm -f "/tmp/.X11-unix/X${DNUM}" "/tmp/.X${DNUM}-lock"
 
-# 4. 啟動 VNC server
+# 4. Start VNC server
 vncserver "$DISPLAY" -geometry 1600x900 -localhost no
 
-# 5. 等待 VNC 啟動
+# 5. Wait for VNC to start
 sleep 5
 
-# 6. 保持容器運行，同時允許交互式 shell
+# 6. Keep container running and allow interactive shell
 echo "VNC Server started on display $DISPLAY"
 echo "Connect via VNC to port 5901"
 echo "You can now run navigation commands in this container"
 
-# 保持容器活著
+# Keep container alive
 sleep infinity
