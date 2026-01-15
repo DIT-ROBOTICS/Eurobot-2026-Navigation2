@@ -45,8 +45,6 @@ bt_navigator:
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
-      - nav2_persistent_sequence_bt_node
-      - nav2_persistent_sequence_w_cont_on_fail_bt_node
       - nav2_transform_available_condition_bt_node
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
@@ -73,6 +71,7 @@ ControllerSelector:
   ros__parameters:
     Fast_controller: "Fast"
     Slow_controller: "Slow"
+    TEB_controller: "TEB"
 
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
@@ -87,14 +86,14 @@ controller_server:
     use_sim_time: False
     holonomic: true
     use_omnidirectional_robot: true
-    controller_frequency: 20.0
+    controller_frequency: 30.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
+    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost", "TEB"]
 
     # Progress checker parameters
     progress_checker:
@@ -134,7 +133,7 @@ controller_server:
       yaw_goal_tolerance: 6.28
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
-      
+
     NonStopGoalChecker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -143,7 +142,7 @@ controller_server:
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
 
-    # Controller parameters
+    # Controller parameters: Custom, TEB
     DidilongController:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_didilong_params.yaml"
@@ -156,6 +155,7 @@ controller_server:
       speed_decade: 0.125
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
+      spin_delay_threshold: 0.5
       non_stop_min_vel: 0.3
 
     Fast:
@@ -171,10 +171,10 @@ controller_server:
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
       spin_delay_threshold: 0.5
-      rival_slowdown_radius: 0.5   
-      rival_decay: 0.5            
+      rival_slowdown_radius: 0.5
+      rival_decay: 0.5
       non_stop_min_vel: 0.3
-      
+
     Slow:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_slow_params.yaml"
@@ -188,7 +188,7 @@ controller_server:
       costmap_tolerance: 95 # rival is 98
       keep_planning: false
       non_stop_min_vel: 0.3
-    
+
     LinearBoost:
       plugin: "custom_controller::CustomController"
       external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_linearBoost_params.yaml"
@@ -217,6 +217,31 @@ controller_server:
       keep_planning: false
       non_stop_min_vel: 0.3
 
+    TEB:
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.1
+      resample_ds: 0.05
+      iterations: 1
+      min_obstacle_dist: 0.25
+      w_smooth: 1.0
+      w_obst: 2.0
+      step_size: 0.05
+      lookahead_dist: 0.25
+      k_xy: 2.5
+      k_w: 4.0
+      goal_xy_stop_dist: 0.02
+      goal_heading_switch_dist: 5.0
+      max_v: 1.5
+      min_v: 0.0
+      max_w: 2.0
+      max_acc_v: 5.0
+      max_acc_w: 50.0
+      max_cost_threshold: 97.0
+      blocked_stop_clearance: 0.3
+      treat_no_info_as_obstacle: false
+      cost_check_stride: 1
+      stop_v_eps: 0.05
+
 local_costmap:
   local_costmap:
     ros__parameters:
@@ -229,7 +254,6 @@ local_costmap:
       height: 2
       resolution: 0.01
       robot_radius: 0.22
-      # plugins: ["static_layer", "inflation_layer"]
       plugins: ["static_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -250,7 +274,8 @@ global_costmap:
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
+      plugins:
+        ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -261,6 +286,7 @@ global_costmap:
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
+        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
         model_size: 22
         x_cov_threshold: 0.02
         y_cov_threshold: 0.02
@@ -278,13 +304,13 @@ global_costmap:
         moving_cost_scaling_factor: 0.9
         unknown_cost_scaling_factor: 10.0
         max_extend_length: 0.6
-        cov_range_max: 0.05385164807134504  # sqrt(0.0029)
-        cov_range_min: 0.01414213562373095  # sqrt(0.0002)
+        cov_range_max: 0.05385164807134504 # sqrt(0.0029)
+        cov_range_min: 0.01414213562373095 # sqrt(0.0002)
         vel_range_max: 1.0
         vel_range_min: 0.0
         inscribed_radius_rate: 0.99
         inflation_radius_rate: 1.005
-        debug_mode: 0                       # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
+        debug_mode: 0 # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
         use_statistic_method: False
         offset_vel_factor_weight_statistic: 0.42
         expand_vel_factor_weight_statistic: 0.42
@@ -294,6 +320,8 @@ global_costmap:
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: True
+        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
+        reset_timeout_threshold: 70
         robot_inscribed_radius: 0.22
         column_inscribed_radius: 0.075
         board_inscribed_radius: 0.01
@@ -308,31 +336,33 @@ global_costmap:
         # keepout_zone_array: [X, Y, lengthX, lengthY]
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
         # keepout_zone_for_hazelnuts: Left(4), Right(4)
-        keepout_zone_array: [0.1,   0.8,   0.2,   0.2,   # A
-                             0.7,   0.1,   0.2,   0.2,   # B
-                             0.8,   0.8,   0.2,   0.2,   # C
-                             1.25,  1.45,  0.2,   0.2,   # D
-                             #-----------------------------#
-                             1.5,   0.1,   0.2,   0.2,   # E
-                             1.5,   0.8,   0.2,   0.2,   # F
-                             #-----------------------------#
-                             1.75,  1.45,  0.2,   0.2,   # G
-                             2.2,   0.8,   0.2,   0.2,   # H
-                             2.3,   0.1,   0.2,   0.2,   # I
-                             2.9,   0.8,   0.2,   0.2,   # J
-                             #-----------------------------#
-                             0.175, 0.4,   0.15,  0.2,   # K
-                             0.175, 1.2,   0.15,  0.2,   # L
-                             1.1,   0.175, 0.2,   0.15,  # M
-                             1.15,  0.8,   0.2,   0.15,  # N
-                             #-----------------------------#
-                             2.825, 0.4,   0.15,  0.2,   # O
-                             2.825, 1.2,   0.15,  0.2,   # P
-                             1.9,   0.175, 0.2,   0.15,  # Q
-                             1.85,  0.8,   0.2,   0.15,] # R
-        inflation_length: 0.15   # distance over which cost is inflated
-        cost_scaling_factor: 5.0   # higher value -> steeper cost increase
-        keepout_expand_mode: 0   # 0: Circle, 1: Square
+        keepout_zone_array: [
+            0.1, 0.8, 0.2, 0.2, # A
+            0.7, 0.1, 0.2, 0.2, # B
+            0.8, 0.8, 0.2, 0.2, # C
+            1.25, 1.45, 0.2, 0.2, # D
+            #-----------------------------#
+            1.5, 0.1, 0.2, 0.2, # E
+            1.5, 0.8, 0.2, 0.2, # F
+            #-----------------------------#
+            1.75, 1.45, 0.2, 0.2, # G
+            2.2, 0.8, 0.2, 0.2, # H
+            2.3, 0.1, 0.2, 0.2, # I
+            2.9, 0.8, 0.2, 0.2, # J
+            #-----------------------------#
+            0.175, 0.4, 0.15, 0.2, # K
+            0.175, 1.2, 0.15, 0.2, # L
+            1.1, 0.175, 0.2, 0.15, # M
+            1.15, 0.8, 0.2, 0.15, # N
+            #-----------------------------#
+            2.825, 0.4, 0.15, 0.2, # O
+            2.825, 1.2, 0.15, 0.2, # P
+            1.9, 0.175, 0.2, 0.15, # Q
+            1.85, 0.8, 0.2, 0.15, # R
+          ] 
+        inflation_length: 0.15 # distance over which cost is inflated
+        cost_scaling_factor: 5.0 # higher value -> steeper cost increase
+        keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
 
 map_server:
@@ -349,10 +379,19 @@ planner_server:
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_smac_planner/SmacPlanner2D"
       tolerance: 0.02
-      use_astar: True
       allow_unknown: false
+      # useful parameters
+      cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
+      distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
+      cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
+      # no need to change
+      downsample_costmap: false    # set to true to downsample costmap for planning
+      downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
+      smooth_path: True     # we prefer doing this by smoother
+      max_iterations: 200000
+      max_on_approach_iterations: 1000
 
 smoother_server:
   ros__parameters:
@@ -384,7 +423,7 @@ behavior_server:
     transform_tolerance: 0.1
     use_sim_time: False
     simulate_ahead_time: 2.0
-    max_rotational_vel: 1.0
+    max_rotational_vel: 1.8
     min_rotational_vel: 0.4
     rotational_acc_lim: 3.2
 
@@ -409,10 +448,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.5, 1.5, 12.0]
-    min_velocity: [-1.5, -1.5, -12.0]
-    max_accel: [3.3, 3.3, 120.0]
-    max_decel: [-11.0, -11.0, -120.0]  
+    max_velocity: [2.5, 2.5, 12.0]
+    min_velocity: [-2.5, -2.5, -12.0]
+    max_accel: [4.0, 4.0, 120.0]
+    max_decel: [-11.0, -11.0, -120.0]
     odom_topic: "/final_pose_nav"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
@@ -434,12 +473,12 @@ docking_server:
     external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
     shrink_nav_rival_radius: 0.05
     shrink_dock_rival_radius: 0.27
-    shrink_dock_rival_degree: 60.0  
+    shrink_dock_rival_degree: 60.0
 
     # Types of docks
     dock_plugins: ["dock"]
     dock:
-      plugin: 'opennav_docking::SimpleChargingDock'
+      plugin: "opennav_docking::SimpleChargingDock"
       docking_threshold: 0.005
       use_debounce: true
       xy_debounce_threshold: 2
@@ -452,12 +491,12 @@ docking_server:
       use_stall_detection: false
       base_frame: "base_footprint"
 
-    docks: ['home_dock']
+    docks: ["home_dock"]
     home_dock:
-      type: 'dock'
+      type: "dock"
       frame: map
       pose: [0.0, 0.0, 0.0]
-    
+
     # dock_database: /my/path/to/dock_database.yaml
 
     controllers: ["Ordinary", "Gentle", "Rush"]

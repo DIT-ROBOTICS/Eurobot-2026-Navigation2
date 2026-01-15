@@ -14,6 +14,8 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 
+#include <yaml-cpp/yaml.h>
+
 namespace custom_controller{
 class RobotState {
    public:
@@ -81,7 +83,6 @@ class CustomController : public nav2_core::Controller{
         dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
         void updateMaxSpeed();
         double max_linear_vel_prev = -1.0, max_angular_vel_prev = -1.0;
-        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr goal_reach_pub_;
 
         // Parameters from the config file
         double control_frequency_;

@@ -19,10 +19,6 @@ On machine, build mode
 docker compose -f /home/user/Eurobot-2026-Navigation2/docker/deploy/docker-compose.yaml run --rm navigation-build
 ```
 
-On Local, rviz mode for machine-11
-```
-docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-11
-```
 On Local, rviz mode for machine-14
 ```
 docker compose -f /home/{user}/Eurobot-2026-Navigation2/docker/local/docker-bringup.yaml run --rm navigation-rviz-local-14
@@ -98,48 +94,58 @@ ros2 launch navigation2_run real_launch.py
 # on local machine
 ros2 launch navigation2_run rviz_launch.py
 ```
-## ------------ VNC Mode (for macOS / systems without native X11) ------------
+## ------------ VNC Mode (for Remote Access / macOS / systems without native X11) ------------
 
-The VNC mode allows running RViz and all GUI-based ROS2 tools even on systems
-that do not have an X11 server (e.g., macOS).  
-The computation runs inside the Navigation2 container, while rendering is done
-by the VNC/XFCE container.
+The VNC mode provides a complete desktop environment with RViz and all GUI-based ROS2 tools.
+Everything (VNC server + Navigation2 + XFCE desktop) runs in a single combined container,
+eliminating X11 authentication issues.
+
+**Use cases:**
+- Remote development and visualization
+- macOS or systems without native X11
+- Running RViz on headless servers
 
 ---
-### Create shared volume
+
+### Start the Combined VNC + Navigation Container
+
+On deploy (machine):
+```bash
+cd /home/user/Eurobot-2026-Navigation2/docker/deploy
+docker compose up -d navigation-dev-vnc
 ```
-docker volume create ros_x11
-```
 
-### Activate VNC + XFCE (`ros2-vnc` container)
-```
-cd /home/{user}/Eurobot-2026-Navigation2/docker/vnc
-docker compose up -d
-```
-You can now connect via any VNC client:
-
-Address: localhost:5901
-
-Password: ros
-
-You will see an XFCE desktop with ROS environment already sourced.
-
-### Start Navigation2 (GUI output displayed via VNC)
-
-Rebuild container
-```
+On local:
+```bash
 cd /home/{user}/Eurobot-2026-Navigation2/docker/local
 docker compose -f docker-compose.vnc.yaml up -d
 ```
 
-Attach to the Navigation2 container:
-```
-docker exec -it navigation2 bash
+### Connect to VNC Desktop
+
+Use any VNC client to connect:
+
+**VNC Connection:**
+- **Address**: `<machine-ip>:5901` (black machine is 192.168.50.14)
+- **Password**: `ros`
+
+**Screen Lock (if appears):**
+- **Username**: `user`
+- **Password**: `user`
+
+You will see an XFCE desktop with full ROS2 environment.
+
+### Using Navigation2 with VNC
+
+**Attach to Container**
+```bash
+docker exec -it navigation2-vnc bash
+rviz2  # Will display in VNC
 ```
 
-Launch simulation + RViz (RViz will appear on the VNC desktop):
-```
-sim
-# or:
-# ros2 launch navigation2_run sim_launch.py
+### Rebuild VNC Container (if needed)
+```bash
+cd /home/user/Eurobot-2026-Navigation2/docker/deploy
+docker compose down navigation-dev-vnc
+docker compose up -d --build navigation-dev-vnc
 ```
