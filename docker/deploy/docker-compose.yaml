@@ -83,3 +83,38 @@ services:
     working_dir: *WORKING_DIR
 
     environment: *ENV
+
+  navigation-dev-vnc:
+    build:
+      context: ../vnc
+      dockerfile: Dockerfile.navigation-vnc
+      args:
+        USERID: "${USER_UID:-1000}"
+        USERGID: "${USER_UID:-1000}"
+    image: justinshih0918/eurobot2026-nav2-envs:navigation-vnc
+    container_name: navigation2-vnc
+    hostname: docker-desktop
+    ports:
+      - "5901:5901"
+    environment:
+      - VNC_PASSWORD=ros
+      - DISPLAY=:1
+      - QT_X11_NO_MITSHM=1
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+    volumes:
+      - /home/share:/home/share
+      - ../..:/home/user/Eurobot-2026-Navigation2-ws
+      - /dev:/dev
+    working_dir: /home/user/Eurobot-2026-Navigation2-ws
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+
+volumes:
+  ros_x11:
+    external: true
+    name: ros_x11

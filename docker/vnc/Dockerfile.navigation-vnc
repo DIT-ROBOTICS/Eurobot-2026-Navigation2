@@ -1,0 +1,46 @@
+##############################################################################
+# Combined VNC + Navigation Container
+##############################################################################
+
+FROM justinshih0918/eurobot2026-nav2-envs:machine-amd64
+
+ARG USERID=1000
+ARG USERGID=1000
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Switch to root to install packages
+USER root
+
+# Install VNC and XFCE
+RUN apt-get update && \
+    apt-get install -y \
+      tigervnc-standalone-server \
+      xterm \
+      dbus-x11 \
+      xfce4 \
+      xfce4-terminal \
+      x11-xserver-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy VNC startup script
+COPY start-navigation-vnc.sh /home/user/start-vnc.sh
+RUN chown user:user /home/user/start-vnc.sh && \
+    chmod +x /home/user/start-vnc.sh
+
+# Switch back to user
+USER user
+WORKDIR /home/user
+
+# Set user password to 'user' for unlocking screen
+USER root
+RUN echo 'user:user' | chpasswd
+USER user
+
+ENV DISPLAY=:1
+
+EXPOSE 5901
+
+ENTRYPOINT ["/home/user/start-vnc.sh"]
+CMD [""]
