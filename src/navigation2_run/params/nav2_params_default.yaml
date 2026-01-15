@@ -459,10 +459,20 @@ planner_server:
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_smac_planner/SmacPlanner2D"
       tolerance: 0.02
-      use_astar: True
       allow_unknown: false
+      # useful parameters
+      cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
+      distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
+      cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
+      # no need to change
+      downsample_costmap: false    # set to true to downsample costmap for planning
+      downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
+      smooth_path: True     # we prefer doing this by smoother
+      max_iterations: 200000
+      max_on_approach_iterations: 1000
+
 
 smoother_server:
   ros__parameters:
