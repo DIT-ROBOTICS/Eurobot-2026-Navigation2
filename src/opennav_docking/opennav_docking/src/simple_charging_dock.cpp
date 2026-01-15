@@ -470,9 +470,9 @@ bool SimpleChargingDock::isDocked()
 
   // If we are close enough, pretend we are charging
   double d = 0.0;
-  if(offset_direction_ == 'x') {
+  if(offset_direction_ == 'x' && !dock_w_cam_ ) {
     d = fabs(base_pose.pose.position.x - dock_pose_.pose.position.x);
-  } else if(offset_direction_ == 'y') {
+  } else if(offset_direction_ == 'y' && !dock_w_cam_ ) {
     d = fabs(base_pose.pose.position.y - dock_pose_.pose.position.y);
   } else {
     d = hypot(

@@ -14,9 +14,12 @@
 
 #include <chrono>
 #include <memory>
+#include <cmath>
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 using namespace std::chrono_literals;
 
@@ -48,11 +51,24 @@ public:
       rclcpp::QoS(10).durability_volatile()
     );
     
+    // Create publisher for absolute velocity
+    velocity_publisher_ = this->create_publisher<std_msgs::msg::Float64>(
+      "/absolute_velocity",
+      rclcpp::QoS(10)
+    );
+    
     // Subscribe to robot pose
     pose_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/final_pose_nav",
       rclcpp::QoS(10),
       std::bind(&CameraOffsetPublisher::pose_callback, this, std::placeholders::_1)
+    );
+    
+    // Subscribe to cmd_vel
+    cmd_vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>(
+      "/cmd_vel",
+      rclcpp::QoS(10),
+      std::bind(&CameraOffsetPublisher::cmd_vel_callback, this, std::placeholders::_1)
     );
     
     // Create timer
@@ -73,6 +89,21 @@ private:
     current_robot_x_ = msg->pose.pose.position.x;
     current_robot_y_ = msg->pose.pose.position.y;
     pose_received_ = true;
+  }
+  
+  void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+  {
+    // Calculate absolute velocity (magnitude of linear velocity vector)
+    double abs_velocity = std::sqrt(
+      std::pow(msg->linear.x, 2) + 
+      std::pow(msg->linear.y, 2) + 
+      std::pow(msg->linear.z, 2)
+    );
+    
+    // Publish absolute velocity
+    auto velocity_msg = std_msgs::msg::Float64();
+    velocity_msg.data = abs_velocity;
+    velocity_publisher_->publish(velocity_msg);
   }
 
   void timer_callback()
@@ -112,7 +143,9 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr velocity_publisher_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber_;
   double goal_x_;
   double goal_y_;
   double current_robot_x_;

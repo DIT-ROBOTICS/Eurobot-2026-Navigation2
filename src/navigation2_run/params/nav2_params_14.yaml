@@ -501,9 +501,9 @@ docking_server:
       min_linear_vel: 0.0
       linear_kp_accel_vel: 0.5
       linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
+      linear_kp_decel_dis: 6.0
       angular_kp: 4.0
-      deceleration_distance: 0.1
+      deceleration_distance: 0.3
       reserved_distance: 0.0
       external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
