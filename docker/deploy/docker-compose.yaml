@@ -7,8 +7,10 @@ services:
       dockerfile: Dockerfile
       args:
         USERID: "${USER_UID:-1000}"
+        USERGID: "${USER_UID:-1000}"
+        ENABLE_VNC: "false"
     image: &IMG_NAME justinshih0918/eurobot2026-nav2-envs:machine-amd64
-    container_name: &CONTAINER_NAME navigation2
+    container_name: navigation2-build-${USER}
     command: &CMD_BUILD /bin/bash -c "cd /home/user/Eurobot-2026-Navigation2-ws && colcon build"
     tty: true
     network_mode: host
@@ -39,6 +41,7 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
       - USERID=${USER_UID:-1000}
       - USERGID=${USER_UID:-1000}
+      - USERNAME=user
 
   navigation-develop:
     build:
@@ -46,8 +49,10 @@ services:
       dockerfile: Dockerfile
       args:
         USERID: "${USER_UID:-1000}"
+        USERGID: "${USER_UID:-1000}"
+        ENABLE_VNC: "false"
     image: *IMG_NAME 
-    container_name: *CONTAINER_NAME
+    container_name: navigation2-dev-${USER}
     command: &CMD_DEVELOP /bin/bash
     tty: true
     network_mode: host
@@ -65,10 +70,15 @@ services:
     
 
   navigation-run:
-    build: . # Use the pre-built image
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USERID: "${USER_UID:-1000}"
+        USERGID: "${USER_UID:-1000}"
+        ENABLE_VNC: "false"
     image: *IMG_NAME 
-    container_name: *CONTAINER_NAME
-    user: "${USER_UID:-1000}"
+    container_name: navigation2-run-${USER}
     command: &CMD_RUN /bin/bash -c "cd /home/user/Eurobot-2026-Navigation2-ws && source install/local_setup.bash && ros2 launch navigation2_run real_launch.py 2>&1 | tee /home/user/Eurobot-2026-Navigation2-ws/nav2_log.txt"
     tty: true
     network_mode: host
@@ -87,22 +97,28 @@ services:
   navigation-dev-vnc:
     build:
       context: .
-      dockerfile: vnc/Dockerfile.navigation-vnc
+      dockerfile: Dockerfile
       args:
         USERID: "${USER_UID:-1000}"
         USERGID: "${USER_UID:-1000}"
+        ENABLE_VNC: "true"
     image: justinshih0918/eurobot2026-nav2-envs:vnc
-    container_name: navigation2-vnc
-    hostname: docker-desktop
+    container_name: navigation2-vnc-${USER}
+    hostname: navigation2-vnc-${USER}
+    command: /usr/local/bin/start-vnc.sh
+    tty: true
     ports:
-      - "5901:5901"
+      - "${VNC_PORT:-5901}:5901"
     environment:
-      - VNC_PASSWORD=ros
+      - VNC_PASSWORD=${VNC_PASSWORD:-ros}
       - DISPLAY=:1
       - QT_X11_NO_MITSHM=1
       - RCUTILS_COLORIZED_OUTPUT=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - USERID=${USER_UID:-1000}
+      - USERGID=${USER_UID:-1000}
+      - USERNAME=user
     volumes:
       - /home/share:/home/share
       - ../..:/home/user/Eurobot-2026-Navigation2-ws
@@ -111,7 +127,6 @@ services:
     ipc: host
     privileged: true
     stdin_open: true
-    tty: true
     stop_grace_period: *STOP_GRACE_PERIOD
 
 volumes:
