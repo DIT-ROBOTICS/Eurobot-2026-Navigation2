@@ -86,12 +86,12 @@ services:
 
   navigation-dev-vnc:
     build:
-      context: ../vnc
-      dockerfile: Dockerfile.navigation-vnc
+      context: .
+      dockerfile: vnc/Dockerfile.navigation-vnc
       args:
         USERID: "${USER_UID:-1000}"
         USERGID: "${USER_UID:-1000}"
-    image: justinshih0918/eurobot2026-nav2-envs:navigation-vnc
+    image: justinshih0918/eurobot2026-nav2-envs:vnc
     container_name: navigation2-vnc
     hostname: docker-desktop
     ports:
