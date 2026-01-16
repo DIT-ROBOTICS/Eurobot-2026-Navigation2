@@ -8,7 +8,7 @@ services:
       args:
         USERID: "${USER_UID:-1000}"
     image: &IMG_NAME justinshih0918/eurobot2026-nav2-envs:machine-amd64
-    container_name: &CONTAINER_NAME navigation2
+    container_name: &CONTAINER_NAME navigation2-dit
     command: &CMD_BUILD /bin/bash -c "cd /home/user/Eurobot-2026-Navigation2-ws && colcon build"
     tty: true
     network_mode: host
