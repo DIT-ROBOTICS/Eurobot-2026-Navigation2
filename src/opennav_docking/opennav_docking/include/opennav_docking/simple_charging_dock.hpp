@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -120,6 +121,10 @@ protected:
   // subscribe to dock controller, to enable cam or not
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr dock_controller_selector_sub_;
 
+  // Subscribe to final pose from navigation
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr final_pose_nav_sub_;
+  nav_msgs::msg::Odometry final_pose_nav_;
+
   // If subscribed to a detected pose topic, will contain latest message
   geometry_msgs::msg::PoseStamped detected_dock_pose_;
   geometry_msgs::msg::PoseStamped detected_dock_pose_prev_;
@@ -179,6 +184,10 @@ protected:
 
 
   double dock_offset_z_; // Stores the z-offset value from the original dock goal
+
+  // Camera ArUco detection distance thresholds
+  double camera_aruco_max_;  // The farthest dist the camera can see ArUco
+  double camera_aruco_min_;  // The closest dist
 
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;
