@@ -112,8 +112,93 @@ rival_parameters:
 
 ---
 
+## Environment Setup
+
+### Quick Start
+
+This repository includes a convenient `nav2.sh` script for managing Docker containers and development workflows.
+
+#### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2.git
+cd Eurobot-2026-Navigation2
+```
+
+2. Install the `nav2` command globally:
+```bash
+./nav2.sh install
+```
+
+3. Add to your PATH (if not already added):
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+#### Available Commands
+
+Once installed, you can use the following commands from anywhere:
+
+**Build & Development**
+- `nav2 rebuild` - Rebuild Docker images
+- `nav2 build` - Build the entire ROS2 workspace
+- `nav2 dev` - Enter interactive development shell
+
+**Running Services**
+- `nav2 run` - Launch Navigation2 stack (detached)
+- `nav2 vnc` - Start VNC server with GUI support (port 5901)
+
+**Container Management**
+- `nav2 stop [service]` - Stop containers (all or specific: build, dev, run, vnc)
+- `nav2 ps` - Show running containers status
+- `nav2 clean` - Stop all and remove containers
+
+**Monitoring & Debugging**
+- `nav2 logs [service]` - View container logs (follow mode)
+- `nav2 exec <service> <cmd>` - Execute command in running container
+  - Example: `nav2 exec dev "ros2 topic list"`
+
+**Help**
+- `nav2 tools` - Show detailed command reference
+
+#### Docker Services
+
+- **build** - Compiles the ROS2 workspace using `colcon build`
+- **dev** - Development environment for testing and debugging
+- **run** - Runs the main navigation stack (`real_launch.py`)
+- **vnc** - Provides GUI access via VNC (useful for rviz2)
+
+#### Examples
+
+```bash
+# Build the workspace
+nav2 build
+
+# Enter development container
+nav2 dev
+
+# Inside the container, you can:
+# - source install/local_setup.bash
+# - ros2 launch navigation2_run real_launch.py
+# - ros2 topic list
+# - rviz2
+
+# Run navigation (detached)
+nav2 run
+
+# Check logs
+nav2 logs run
+
+# Stop a specific service
+nav2 stop run
+```
+
+---
+
 ## How to Use
-For environment setup instructions and Docker configurations, please refer to the [docker/](docker/) directory.
+For detailed environment setup instructions and Docker configurations, please refer to the [docker/](docker/) directory.
 
 ---
 
