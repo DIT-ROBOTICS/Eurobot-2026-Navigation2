@@ -156,12 +156,10 @@ COPY ./settings/tf2_sensor_msgs.hpp /opt/ros/humble/include/tf2_sensor_msgs/tf2_
 # Copy scripts and set permissions
 ##############################################################################
 
-COPY ./scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./scripts/install_vnc.sh /usr/local/bin/install_vnc.sh
 COPY ./scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
 
-RUN chmod +x /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/install_vnc.sh \
+RUN chmod +x /usr/local/bin/install_vnc.sh \
     && chmod +x /usr/local/bin/start-vnc.sh
 
 ##############################################################################
@@ -192,13 +190,6 @@ USER root
 RUN echo 'user:user' | chpasswd
 
 ##############################################################################
-# Copy entrypoint script
-##############################################################################
-
-COPY ./scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-##############################################################################
 # Default user for docker exec
 ##############################################################################
 
@@ -212,5 +203,4 @@ WORKDIR /home/${USERNAME}
 EXPOSE 5901
 
 SHELL ["/bin/bash", "-c"]
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["bash"]
+CMD ["/bin/bash"]
