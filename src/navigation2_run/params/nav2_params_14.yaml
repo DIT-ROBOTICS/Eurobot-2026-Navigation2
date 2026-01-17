@@ -500,13 +500,13 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.2
+      max_linear_vel: 0.14
       min_linear_vel: 0.0
       linear_kp_accel_vel: 0.5
       linear_ki_accel_vel: 0.1
       linear_kp_decel_dis: 3.0
       angular_kp: 4.0
-      deceleration_distance: 0.8
+      deceleration_distance: 0.6
       reserved_distance: 0.0
       external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
       stop_degree: 120.0
