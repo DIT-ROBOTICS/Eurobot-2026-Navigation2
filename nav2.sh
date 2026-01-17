@@ -125,8 +125,18 @@ case $ACTION in
     vnc)
         echo "Starting VNC container..."
         docker compose up -d navigation-vnc
+        
+        # Get the host IP address
+        HOST_IP=$(hostname -I | awk '{print $1}')
+        
         echo "VNC server started on port ${VNC_PORT:-5901}"
-        echo "Connect using VNC viewer: localhost:${VNC_PORT:-5901}"
+        echo ""
+        echo "Connect using VNC viewer:"
+        echo "  • From this machine:    localhost:${VNC_PORT:-5901}"
+        if [[ -n "$HOST_IP" ]]; then
+            echo "  • From other machines:  ${HOST_IP}:${VNC_PORT:-5901}"
+        fi
+        echo ""
         echo "Password: ${VNC_PASSWORD:-ros}"
         docker compose exec navigation-vnc bash || echo "Exited container."
         ;;
@@ -191,27 +201,43 @@ case $ACTION in
     exec)
         if [[ -z "$SERVICE" ]]; then
             echo "Error: No service specified."
-            echo "Usage: ./nav2.sh exec <service> <command>"
+            echo "Usage: nav2 exec <service> [command]"
             exit 1
         fi
         COMMAND=${@:3}
+        # Default to bash if no command specified
         if [[ -z "$COMMAND" ]]; then
-            echo "Error: No command specified."
-            exit 1
+            COMMAND="bash"
         fi
         
         case $SERVICE in
             build)
-                docker compose exec navigation-build bash -c "$COMMAND"
+                if [[ "$COMMAND" == "bash" ]]; then
+                    docker compose exec navigation-build bash
+                else
+                    docker compose exec navigation-build bash -c "$COMMAND"
+                fi
                 ;;
             dev|develop)
-                docker compose exec navigation-develop bash -c "$COMMAND"
+                if [[ "$COMMAND" == "bash" ]]; then
+                    docker compose exec navigation-develop bash
+                else
+                    docker compose exec navigation-develop bash -c "$COMMAND"
+                fi
                 ;;
             run)
-                docker compose exec navigation-run bash -c "$COMMAND"
+                if [[ "$COMMAND" == "bash" ]]; then
+                    docker compose exec navigation-run bash
+                else
+                    docker compose exec navigation-run bash -c "$COMMAND"
+                fi
                 ;;
             vnc)
-                docker compose exec navigation-vnc bash -c "$COMMAND"
+                if [[ "$COMMAND" == "bash" ]]; then
+                    docker compose exec navigation-vnc bash
+                else
+                    docker compose exec navigation-vnc bash -c "$COMMAND"
+                fi
                 ;;
             *)
                 echo "Unknown service: $SERVICE"
@@ -238,13 +264,40 @@ case $ACTION in
     install)
         echo "Installing 'nav2' command globally..."
         SCRIPT_PATH="$DIR/nav2.sh"
+        COMPLETION_PATH="$DIR/nav2-completion.bash"
         
         # Create ~/.local/bin if it doesn't exist
         mkdir -p "$HOME/.local/bin"
         
-        # Create symlink
+        # Create symlink for nav2 command
         ln -sf "$SCRIPT_PATH" "$HOME/.local/bin/nav2"
         echo "✓ Installed to ~/.local/bin/nav2"
+        
+        # Install bash completion
+        if [[ -f "$COMPLETION_PATH" ]]; then
+            # Check if bash-completion directory exists
+            if [[ -d "$HOME/.local/share/bash-completion/completions" ]]; then
+                COMPLETION_DIR="$HOME/.local/share/bash-completion/completions"
+            else
+                mkdir -p "$HOME/.bash_completion.d"
+                COMPLETION_DIR="$HOME/.bash_completion.d"
+            fi
+            
+            cp "$COMPLETION_PATH" "$COMPLETION_DIR/nav2"
+            
+            # Add source line to .bashrc if not already present
+            if ! grep -q "bash_completion.d" "$HOME/.bashrc" 2>/dev/null; then
+                echo "" >> "$HOME/.bashrc"
+                echo "# Load bash completions" >> "$HOME/.bashrc"
+                echo "if [ -d ~/.bash_completion.d ]; then" >> "$HOME/.bashrc"
+                echo "  for file in ~/.bash_completion.d/*; do" >> "$HOME/.bashrc"
+                echo "    [ -f \"\$file\" ] && source \"\$file\"" >> "$HOME/.bashrc"
+                echo "  done" >> "$HOME/.bashrc"
+                echo "fi" >> "$HOME/.bashrc"
+            fi
+            
+            echo "✓ Installed bash completion"
+        fi
         
         # Check if ~/.local/bin is in PATH
         if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -252,10 +305,12 @@ case $ACTION in
             echo -e "\033[1;33m⚠ Note: ~/.local/bin is not in your PATH\033[0m"
             echo "Add this line to your ~/.bashrc:"
             echo -e "\033[1;36m  export PATH=\"\$HOME/.local/bin:\$PATH\"\033[0m"
-            echo "Then run: source ~/.bashrc"
-        else
-            echo "✓ You can now use 'nav2 build', 'nav2 run', etc. from anywhere!"
         fi
+        
+        echo ""
+        echo -e "\033[1;32m✓ Installation complete!\033[0m"
+        echo "Run: source ~/.bashrc"
+        echo "Then try: nav2 <Tab><Tab>"
         ;;
     
     *)
