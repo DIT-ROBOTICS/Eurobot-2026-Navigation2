@@ -149,29 +149,29 @@ controller_server:
       iterations: 1
       min_obstacle_dist: 0.25
       w_smooth: 1.0
-      w_obst: 1.0
+      w_obst: 6.0
       step_size: 0.05
-      lookahead_dist: 0.6
+      lookahead_dist: 0.5
       k_xy: 2.5
       k_w: 4.0
-      goal_xy_stop_dist: 0.02
+      goal_xy_stop_dist: 0.01
       goal_heading_switch_dist: 5.0
-      max_v: 3.0
+      max_v: 2.5
       min_v: 0.0
       max_w: 1.0
       max_acc_v: 10.0
       max_acc_w: 1.0
-      max_cost_threshold: 97.0
+      max_cost_threshold: 100.0
       blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
+      treat_no_info_as_obstacle: true
       cost_check_stride: 1
       stop_v_eps: 0.05
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
+      replan_min_blocked_time: 0.05
+      replan_cooldown: 0.05
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.7
+      obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 252.0
 
     Fast:
@@ -181,29 +181,29 @@ controller_server:
       iterations: 1
       min_obstacle_dist: 0.25
       w_smooth: 1.0
-      w_obst: 1.0
+      w_obst: 6.0
       step_size: 0.05
-      lookahead_dist: 0.6
+      lookahead_dist: 0.5
       k_xy: 2.5
       k_w: 4.0
-      goal_xy_stop_dist: 0.02
+      goal_xy_stop_dist: 0.01
       goal_heading_switch_dist: 5.0
-      max_v: 3.0
+      max_v: 2.5
       min_v: 0.0
       max_w: 2.0
       max_acc_v: 10.0
       max_acc_w: 50.0
-      max_cost_threshold: 97.0
+      max_cost_threshold: 100.0
       blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
+      treat_no_info_as_obstacle: true
       cost_check_stride: 1
       stop_v_eps: 0.05
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
+      replan_min_blocked_time: 0.05
+      replan_cooldown: 0.05
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.7
+      obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 252.0
 
     Slow:
@@ -245,29 +245,29 @@ controller_server:
       iterations: 1
       min_obstacle_dist: 0.25
       w_smooth: 1.0
-      w_obst: 1.0
+      w_obst: 6.0
       step_size: 0.05
-      lookahead_dist: 0.6
+      lookahead_dist: 0.4
       k_xy: 2.5
       k_w: 4.0
-      goal_xy_stop_dist: 0.02
+      goal_xy_stop_dist: 0.01
       goal_heading_switch_dist: 5.0
       max_v: 2.2
       min_v: 0.0
-      max_w: 2.0
+      max_w: 1.5
       max_acc_v: 10.0
       max_acc_w: 5.0
-      max_cost_threshold: 97.0
+      max_cost_threshold: 100.0
       blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
+      treat_no_info_as_obstacle: true
       cost_check_stride: 1
       stop_v_eps: 0.05
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
+      replan_min_blocked_time: 0.05
+      replan_cooldown: 0.05
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.7
+      obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 252.0
 
     AngularBoost:
@@ -286,9 +286,9 @@ controller_server:
       goal_heading_switch_dist: 5.0
       max_v: 0.6
       min_v: 0.0
-      max_w: 5.0
+      max_w: 3.0
       max_acc_v: 2.0
-      max_acc_w: 50.0
+      max_acc_w: 40.0
       max_cost_threshold: 97.0
       blocked_stop_clearance: 0.3
       treat_no_info_as_obstacle: false
