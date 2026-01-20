@@ -93,7 +93,7 @@ controller_server:
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost", "TEB"]
+    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
 
     # Progress checker parameters
     progress_checker:
