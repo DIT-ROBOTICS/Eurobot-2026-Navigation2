@@ -117,7 +117,7 @@ def generate_launch_description():
     
     declare_robot_pose_remap_cmd = DeclareLaunchArgument(
         'robot_pose_remap',
-        default_value='/final_pose_nav',
+        default_value='/local_pose',
         description='Remapping for robot pose topic')
 
     rviz_cmd = IncludeLaunchDescription(
@@ -142,13 +142,13 @@ def generate_launch_description():
                           'use_respawn': use_respawn,
                           'robot_pose_remap': robot_pose_remap}.items())
     
-    final_pose_bridge_cmd = Node(
-        package='navigation2_run',
-        executable='final_pose_bridge',
-        name='final_pose_bridge',
-        output='screen',
-        parameters=[params_file]
-    )
+    # local_pose_bridge_cmd = Node(
+    #     package='navigation2_run',
+    #     executable='local_pose_bridge',
+    #     name='local_pose_bridge',
+    #     output='screen',
+    #     parameters=[params_file]
+    # )
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -176,6 +176,6 @@ def generate_launch_description():
     ld.add_action(bringup_cmd)
 
     # Add the final pose bridge node
-    ld.add_action(final_pose_bridge_cmd)
+    # ld.add_action(local_pose_bridge_cmd)
 
     return ld

@@ -1,9 +1,7 @@
-// This is a bridge node which subscribes to the /final_pose topic from localization with data type /geometry_msgs/msg/pose_with_covariance_stamped &
-// the velocity feedback topic from chassis with data type /geometry_msgs/msg/twist,
-// then publishes the combined data as /final_pose_nav topic with data type /nav_msgs/msg/odometry
+// This is a bridge node which subscribes to the /final_pose topic with data type /nav_msgs/msg/odometry
+// and optionally updates the twist from chassis, then republishes as /final_pose_nav.
 
 #include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 
@@ -17,8 +15,8 @@ public:
         this->declare_parameter<std::string>("twist_topic", "/driving_duiduidui");
         std::string twist_topic_ = this->get_parameter("twist_topic").as_string();
 
-        // Subscribe to /final_pose topic (PoseWithCovarianceStamped)
-        subscription_pose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        // Subscribe to /final_pose topic (Odometry)
+        subscription_pose_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "/final_pose", 10, std::bind(&PoseToOdometryBridge::pose_callback, this, std::placeholders::_1));
 
         // Subscribe to the twist topic (Twist) using the parameter-loaded topic name
@@ -33,15 +31,10 @@ public:
     }
 
 private:
-    // PoseWithCovarianceStamped message callback
-    void pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+    // Odometry message callback
+    void pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
-        // Set the header from PoseWithCovarianceStamped
-        odom_msg_.header = msg->header;
-
-        // Extract Pose (position and orientation) and covariance, and set it in Odometry
-        odom_msg_.pose.pose = msg->pose.pose;
-        odom_msg_.pose.covariance = msg->pose.covariance;
+        odom_msg_ = *msg;
 
         // RCLCPP_INFO(this->get_logger(), "Published Odometry with Pose to /final_pose_nav");
     }
@@ -62,8 +55,8 @@ private:
         publisher_->publish(odom_msg_);
     }
 
-    // Subscription for PoseWithCovarianceStamped messages
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr subscription_pose_;
+    // Subscription for Odometry messages
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_pose_;
 
     // Subscription for Twist messages (loaded from parameter)
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_twist_;
