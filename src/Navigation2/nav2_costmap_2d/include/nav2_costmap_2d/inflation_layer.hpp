@@ -180,6 +180,22 @@ public:
     return access_;
   }
 
+  /**
+   * @brief Get the inflation radius used by this layer (in meters)
+   */
+  double getInflationRadius() const
+  {
+    return inflation_radius_;
+  }
+
+  /**
+   * @brief Get the cost scaling factor used by this layer
+   */
+  double getCostScalingFactor() const
+  {
+    return cost_scaling_factor_;
+  }
+
 protected:
   /**
    * @brief Process updates on footprint changes to the inflation layer
