@@ -64,10 +64,14 @@ namespace nav2_navfn_planner
 // whole width of a narrow hallway as equally undesirable and thus
 // will not plan paths down the center.
 
-//  version1: 15 / 0.8
-
-#define COST_NEUTRAL 15  // Set this to "open space" value
+#define COST_NEUTRAL 10  // Set this to "open space" value
 #define COST_FACTOR 0.8  // Used for translating costs in NavFn::setCostmap()
+
+// coeficients for bias calculation
+#define OBSTACLE_BIAS_SCALE 0.4f  // suggestion：0.15 ~ 0.4
+#define OBSTACLE_BIAS_OFFSET 10.0f  // suggestion：3 ~ 10
+
+#define LOWEST_GRAD 0.9f  // Minimum gradient to keep following
 
 // Define the cost type in the case that it is not set. However, this allows
 // clients to modify it without changing the file. Arguably, it is better to require it to

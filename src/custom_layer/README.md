@@ -19,7 +19,7 @@ global_costmap:
   global_costmap:
     ros__parameters:
       keepout_layer:
-        inflation_length: 0.15   # distance over which cost is inflated
+        inflation_length: 0.21   # distance over which cost is inflated
         cost_scaling_factor: 5.0   # higher value -> steeper cost increase
         keepout_expand_mode: 1   # 0: Circle, 1: Square
 ```

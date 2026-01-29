@@ -225,7 +225,7 @@ controller_server:
       max_w: 2.0
       max_acc_v: 5.0
       max_acc_w: 5.0
-      max_cost_threshold: 20.0
+      max_cost_threshold: 97.0
       blocked_stop_clearance: 0.3
       treat_no_info_as_obstacle: false
       cost_check_stride: 1

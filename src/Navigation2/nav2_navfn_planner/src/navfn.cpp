@@ -124,7 +124,7 @@ NavFn::NavFn(int xs, int ys)
 
   // for Dijkstra (breadth-first), set to COST_NEUTRAL
   // for A* (best-first), set to COST_NEUTRAL
-  priInc = 2 * COST_NEUTRAL;
+  priInc = 1.1f * COST_NEUTRAL;
 
   // goal and start
   goal[0] = goal[1] = 0;
@@ -308,14 +308,20 @@ void NavFn::setCostmap(const COSTTYPE * cmap, bool isROS, bool allow_unknown)
       int v = *cmap;
 
       if (v >= COST_OBS_ROS) {
-        // 真障礙
+        // set as obstacle
         *cm = COST_OBS;
       }
       else if (v == COST_UNKNOWN_ROS) {
-        *cm = allow_unknown ? COST_UNKNOWN : COST_OBS;
+        if (allow_unknown) {
+          // unknown space treated as high cost
+          *cm = COST_OBS - 1;
+        } else {
+          // set as obstacle
+          *cm = COST_OBS;
+        }
       }
       else {
-        // 線性映射，直接用原始 cost
+        // linear scaling, free space is 1
         *cm = std::max(COST_FREE, v);
       }
     }
@@ -354,7 +360,6 @@ float * NavFn::getPathX() {return pathx;}
 float * NavFn::getPathY() {return pathy;}
 int NavFn::getPathLen() {return npath;}
 
-/////////////////////等等可能要改//////////////////////////////
 // inserting onto the priority blocks
 #define push_cur(n)  {if (n >= 0 && n < ns && !pending[n] && \
       costarr[n] < COST_OBS && curPe < PRIORITYBUFSIZE) \
@@ -369,7 +374,6 @@ int NavFn::getPathLen() {return npath;}
 
 // Set up navigation potential arrays for new propagation
 
-//////////////////////////還沒看////////////////////////////
 void
 NavFn::setupNavFn(bool keepit)
 {
@@ -636,10 +640,77 @@ NavFn::updateCell(int n)
 //   }
 // }
 
+// inline void
+// NavFn::updateCellAstar(int n)
+// {
+//   // neighbors' potential (g cost)
+//   float l = potarr[n - 1];
+//   float r = potarr[n + 1];
+//   float u = potarr[n - nx];
+//   float d = potarr[n + nx];
+
+//   if (costarr[n] >= COST_OBS) {
+//     return;
+//   }
+
+//   // --- 1. 計算 g(n)（純 traversal cost） ---
+//   float ta = std::min(u, d);
+//   float tc = std::min(l, r);
+//   float dc = fabs(tc - ta);
+
+//   float hf = static_cast<float>(costarr[n]);
+//   float new_g;
+
+//   if (dc >= hf) {
+//     new_g = std::min(ta, tc) + hf;
+//   } else {
+//     float d = dc / hf;
+//     float v = -0.2301f * d * d + 0.5307f * d + 0.7040f;
+//     new_g = std::min(ta, tc) + hf * v;
+//   }
+
+//   // --- 2. 若沒有更好就結束 ---
+//   if (new_g >= potarr[n]) {
+//     return;
+//   }
+
+//   potarr[n] = new_g;   // ⚠️ 只存 g(n)
+
+//   // --- 3. heuristic（h(n)） ---
+//   int x = n % nx;
+//   int y = n / nx;
+
+//   float h = hypot(
+//     x - start[0],
+//     y - start[1]
+//   ) * static_cast<float>(COST_NEUTRAL);
+
+//   // ⭐ 可調：heuristic 權重（1.0 = 標準 A*）
+//   constexpr float HEURISTIC_SCALE = 0.8f;
+//   float f = new_g + HEURISTIC_SCALE * h;
+
+//   // --- 4. queue 分流只用 f ---
+//   float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
+//   float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
+//   float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
+//   float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
+
+//   if (f < curT) {
+//     if (l > new_g + le) { push_next(n - 1); }
+//     if (r > new_g + re) { push_next(n + 1); }
+//     if (u > new_g + ue) { push_next(n - nx); }
+//     if (d > new_g + de) { push_next(n + nx); }
+//   } else {
+//     if (l > new_g + le) { push_over(n - 1); }
+//     if (r > new_g + re) { push_over(n + 1); }
+//     if (u > new_g + ue) { push_over(n - nx); }
+//     if (d > new_g + de) { push_over(n + nx); }
+//   }
+// }
+
 inline void
 NavFn::updateCellAstar(int n)
 {
-  // neighbors' potential (g cost)
   float l = potarr[n - 1];
   float r = potarr[n + 1];
   float u = potarr[n - nx];
@@ -649,7 +720,7 @@ NavFn::updateCellAstar(int n)
     return;
   }
 
-  // --- 1. 計算 g(n)（純 traversal cost） ---
+  // --- 1. traversal cost g(n) ---
   float ta = std::min(u, d);
   float tc = std::min(l, r);
   float dc = fabs(tc - ta);
@@ -660,19 +731,34 @@ NavFn::updateCellAstar(int n)
   if (dc >= hf) {
     new_g = std::min(ta, tc) + hf;
   } else {
-    float d = dc / hf;
-    float v = -0.2301f * d * d + 0.5307f * d + 0.7040f;
+    float d_ratio = dc / hf;
+    float v = -0.2301f * d_ratio * d_ratio
+              + 0.5307f * d_ratio
+              + 0.7040f;
     new_g = std::min(ta, tc) + hf * v;
   }
 
-  // --- 2. 若沒有更好就結束 ---
   if (new_g >= potarr[n]) {
     return;
   }
 
-  potarr[n] = new_g;   // ⚠️ 只存 g(n)
+  // example patterns:
+  /////////////////
+  // 253 253 253
+  // 155 30  155
+  // 253 253 253
+  /////////////////
+  // use bias to increase potential of central cell (30)
+  // to avoid being a local minimum
+  if (hf > COST_NEUTRAL) {
+    float bias = (hf - COST_NEUTRAL + OBSTACLE_BIAS_OFFSET)
+                 * OBSTACLE_BIAS_SCALE;
+    new_g += bias;
+  }
 
-  // --- 3. heuristic（h(n)） ---
+  potarr[n] = new_g;
+
+  // --- 2. heuristic ---
   int x = n % nx;
   int y = n / nx;
 
@@ -681,11 +767,10 @@ NavFn::updateCellAstar(int n)
     y - start[1]
   ) * static_cast<float>(COST_NEUTRAL);
 
-  // ⭐ 可調：heuristic 權重（1.0 = 標準 A*）
-  constexpr float HEURISTIC_SCALE = 0.8f;
+  constexpr float HEURISTIC_SCALE = 1.0f;
   float f = new_g + HEURISTIC_SCALE * h;
 
-  // --- 4. queue 分流只用 f ---
+  // --- 3. queue divided ---
   float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
   float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
   float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
@@ -704,54 +789,6 @@ NavFn::updateCellAstar(int n)
   }
 }
 
-// inline void NavFn::updateCellAstar(int n)
-// {
-//     // --- 1. 取得鄰居的 g 值 ---
-//     float u = potarr[n - nx];
-//     float d = potarr[n + nx];
-//     float l = potarr[n - 1];
-//     float r = potarr[n + 1];
-
-//     // --- 2. 計算 g(n)（traversal cost） ---
-//     float min_neighbor = std::min({u, d, l, r});
-//     float hf = static_cast<float>(costarr[n]);
-//     hf = std::min(hf, 250.0f);  // 上限保護
-//     float g_new = min_neighbor + hf; // 單調累加
-
-//     // --- 3. 計算 h(n)（heuristic: 距離到 goal） ---
-//     int x = n % nx;
-//     int y = n / nx;
-//     float dx = static_cast<float>(goal[0] - x);
-//     float dy = static_cast<float>(goal[1] - y);
-//     float h = std::sqrt(dx*dx + dy*dy) * static_cast<float>(COST_NEUTRAL);
-
-//     // --- 4. pot = g + heuristic ---
-//     float HEURISTIC_SCALE = 0.8f;  // 可調，越大越偏直線
-//     float pot = g_new + HEURISTIC_SCALE * h;
-
-//     // --- 5. 更新 potarr 並放入 bucket ---
-//     if (pot < potarr[n] && costarr[n] < COST_OBS) {
-//         potarr[n] = pot;
-
-//         // 鄰居 cost 的折半，類似原本 INVSQRT2 加權
-//         float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
-//         float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
-//         float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
-//         float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
-
-//         if (pot < curT) {  // low-cost buffer block
-//             if (l > pot + le) push_next(n - 1);
-//             if (r > pot + re) push_next(n + 1);
-//             if (u > pot + ue) push_next(n - nx);
-//             if (d > pot + de) push_next(n + nx);
-//         } else {  // overflow block
-//             if (l > pot + le) push_over(n - 1);
-//             if (r > pot + re) push_over(n + 1);
-//             if (u > pot + ue) push_over(n - nx);
-//             if (d > pot + de) push_over(n + nx);
-//         }
-//     }
-// }
 
 
 //
@@ -856,7 +893,7 @@ NavFn::propNavFnAstar(int cycles)
 
   // set up start cell
   int startCell = start[1] * nx + start[0];
-
+  
   // do main cycle
   for (; cycle < cycles; cycle++) {  // go for this many cycles, unless interrupted
     if (curPe == 0 && nextPe == 0) {  // priority blocks empty
@@ -966,6 +1003,8 @@ NavFn::calcPath(int n, int * st)
   float dx = 0;
   float dy = 0;
   npath = 0;
+  int stagnation_count = 0;
+  float last_pot = potarr[stc];
 
   // go for <n> cycles at most
   for (int i = 0; i < n; i++) {
@@ -990,6 +1029,13 @@ NavFn::calcPath(int n, int * st)
     pathx[npath] = stc % nx + dx;
     pathy[npath] = stc / nx + dy;
     npath++;
+    // check for stagnation, whether we need plateau or not
+    if (potarr[stc] < last_pot - 1e-3f) {
+        stagnation_count = 0; // downslope
+    } else {
+        stagnation_count++;  // plate
+    }
+    last_pot = potarr[stc];
 
     bool oscillation_detected = false;
     if (npath > 2 &&
@@ -1003,43 +1049,80 @@ NavFn::calcPath(int n, int * st)
     }
 
     int stcnx = stc + nx;
-    int stcpx = stc - nx;
+    // int stcpx = stc - nx;
 
     // check for potentials at eight positions near cell
     if (potarr[stc] >= POT_HIGH ||
-      potarr[stc + 1] >= POT_HIGH ||
-      potarr[stc - 1] >= POT_HIGH ||
-      potarr[stcnx] >= POT_HIGH ||
-      potarr[stcnx + 1] >= POT_HIGH ||
-      potarr[stcnx - 1] >= POT_HIGH ||
-      potarr[stcpx] >= POT_HIGH ||
-      potarr[stcpx + 1] >= POT_HIGH ||
-      potarr[stcpx - 1] >= POT_HIGH ||
+      // potarr[stc + 1] >= POT_HIGH ||
+      // potarr[stc - 1] >= POT_HIGH ||
+      // potarr[stcnx] >= POT_HIGH ||
+      // potarr[stcnx + 1] >= POT_HIGH ||
+      // potarr[stcnx - 1] >= POT_HIGH ||
+      // potarr[stcpx] >= POT_HIGH ||
+      // potarr[stcpx + 1] >= POT_HIGH ||
+      // potarr[stcpx - 1] >= POT_HIGH ||
       oscillation_detected)
     {
-      RCLCPP_DEBUG(
+      RCLCPP_WARN(
         rclcpp::get_logger("rclcpp"),
         "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
 
-      // check eight neighbors to find the lowest
-      int minc = stc;
-      int minp = potarr[stc];
-      int st = stcpx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc + 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stcnx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
+      int minc = -1;
+      float minp = potarr[stc];
+      COSTTYPE cur_cost = costarr[stc];
+
+      // ---- normal ---- 
+      for (int dyc = -1; dyc <= 1; dyc++) {
+        for (int dxc = -1; dxc <= 1; dxc++) {
+          if (dxc == 0 && dyc == 0) continue;
+
+          int nb = stc + dxc + dyc * nx;
+          if (nb < 0 || nb >= ns) continue;
+
+          // no obstacles
+          if (costarr[nb] >= COST_OBS) continue;
+
+          // no cost increase
+          if (costarr[nb] > cur_cost) continue;
+
+          // potential must decrease
+          if (potarr[nb] < minp) {
+            minp = potarr[nb];
+            minc = nb;
+          }
+        }
+      }
+
+      // ---- recovery ----
+      if (minc < 0) {
+        for (int dyc = -1; dyc <= 1; dyc++) {
+          for (int dxc = -1; dxc <= 1; dxc++) {
+            if (dxc == 0 && dyc == 0) continue;
+
+            int nb = stc + dxc + dyc * nx;
+            if (nb < 0 || nb >= ns) continue;
+
+            // no obstacles
+            if (costarr[nb] >= COST_OBS) continue;
+
+            // only need potential to decrease (ignore cost)
+            if (potarr[nb] < minp) {
+              minp = potarr[nb];
+              minc = nb;
+            }
+          }
+        }
+      }
+
+      // if failed return 0
+      if (minc < 0) {
+        RCLCPP_WARN(
+          rclcpp::get_logger("rclcpp"),
+          "[PathCalc] Fallback trapped at cost boundary, aborting path extraction");
+        return 0;
+      }
+
+      // legal fallback
       stc = minc;
       dx = 0;
       dy = 0;
@@ -1049,7 +1132,7 @@ NavFn::calcPath(int n, int * st)
         potarr[stc], pathx[npath - 1], pathy[npath - 1]);
 
       if (potarr[stc] >= POT_HIGH) {
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
+        RCLCPP_WARN(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
         // savemap("navfn_highpot");
         return 0;
       }
@@ -1087,6 +1170,56 @@ NavFn::calcPath(int n, int * st)
 
       // move in the right direction
       float ss = pathStep / hypot(x, y);
+
+      bool plateau = (stagnation_count >= 3); // if we need plateau 
+
+      if (hypot(x, y) < LOWEST_GRAD || plateau) {   // gradient too small or plateau detected
+        int minc = -1;
+        float minp = potarr[stc];
+        // COSTTYPE cur_cost = costarr[stc];
+
+        for (int dyc = -1; dyc <= 1; dyc++) {
+            for (int dxc = -1; dxc <= 1; dxc++) {
+                if (dxc == 0 && dyc == 0) continue;
+
+                int nb = stc + dxc + dyc * nx;
+                if (nb < 0 || nb >= ns) continue;
+                if (costarr[nb] >= COST_OBS) continue;
+
+                if (potarr[nb] <= minp + 1e-3f) {
+                    minp = potarr[nb];
+                    minc = nb;
+                }
+            }
+        }
+
+        if (minc < 0) {
+            for (int dyc=-1; dyc<=1 && minc<0; dyc++) {
+                for (int dxc=-1; dxc<=1 && minc<0; dxc++) {
+                    if (dxc==0 && dyc==0) continue;
+                    int nb = stc + dxc + dyc*nx;
+                    if (nb<0 || nb>=ns) continue;
+                    if (costarr[nb] >= COST_OBS) continue;
+                    minc = nb; // force fallback
+                }
+            }
+            if (minc < 0) {
+                RCLCPP_WARN(rclcpp::get_logger("rclcpp"),
+                            "[PathCalc] Plateau trapped, aborting path");
+                return 0;
+            }
+        }
+
+        // fallback success
+        stc = minc;
+        dx = 0;
+        dy = 0;
+
+        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"),
+                    "[PathCalc] Zero gradient fallback: stc=%d pot=%.1f", stc, potarr[stc]);
+        continue;  // next loop
+      } 
+
       dx += x * ss;
       dy += y * ss;
 
