@@ -390,6 +390,9 @@ planner_server:
       smooth_path: True     # we prefer doing this by smoother
       max_iterations: 200000
       max_on_approach_iterations: 1000
+      straight_line_max_skip_points: 500
+      straight_line_resample_points: 500
+      straight_line_resample_spacing: 0.01
 
 smoother_server:
   ros__parameters:
