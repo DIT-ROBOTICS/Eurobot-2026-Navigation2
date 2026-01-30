@@ -20,6 +20,7 @@
 
 #include "nav2_smac_planner/smac_planner_2d.hpp"
 #include "nav2_util/geometry_utils.hpp"
+#include "nav2_util/line_iterator.hpp"
 
 // #define BENCHMARK_TESTING
 
@@ -90,6 +91,15 @@ void SmacPlanner2D::configure(
   nav2_util::declare_parameter_if_not_declared(
     node, name + ".max_planning_time", rclcpp::ParameterValue(2.0));
   node->get_parameter(name + ".max_planning_time", _max_planning_time);
+  nav2_util::declare_parameter_if_not_declared(
+    node, name + ".straight_line_max_skip_points", rclcpp::ParameterValue(50));
+  node->get_parameter(name + ".straight_line_max_skip_points", _straight_line_max_skip_points);
+  nav2_util::declare_parameter_if_not_declared(
+    node, name + ".straight_line_resample_points", rclcpp::ParameterValue(50));
+  node->get_parameter(name + ".straight_line_resample_points", _straight_line_resample_points);
+  nav2_util::declare_parameter_if_not_declared(
+    node, name + ".straight_line_resample_spacing", rclcpp::ParameterValue(0.0));
+  node->get_parameter(name + ".straight_line_resample_spacing", _straight_line_resample_spacing);
 
   _motion_model = MotionModel::TWOD;
 
@@ -281,6 +291,108 @@ nav_msgs::msg::Path SmacPlanner2D::createPlan(
     plan.poses.push_back(pose);
   }
 
+  auto is_line_free = [&](const geometry_msgs::msg::PoseStamped & a,
+    const geometry_msgs::msg::PoseStamped & b)
+  {
+    unsigned int x0, y0, x1, y1;
+    if (!costmap->worldToMap(a.pose.position.x, a.pose.position.y, x0, y0) ||
+      !costmap->worldToMap(b.pose.position.x, b.pose.position.y, x1, y1))
+    {
+      return false;
+    }
+
+    for (nav2_util::LineIterator line(
+        static_cast<int>(x0), static_cast<int>(y0),
+        static_cast<int>(x1), static_cast<int>(y1));
+      line.isValid(); line.advance())
+    {
+      const unsigned int mx = static_cast<unsigned int>(line.getX());
+      const unsigned int my = static_cast<unsigned int>(line.getY());
+      const unsigned char cost = costmap->getCost(mx, my);
+      if (cost != nav2_costmap_2d::FREE_SPACE) {
+        return false;
+      }
+
+      if (_collision_checker.inCollision(
+          static_cast<float>(line.getX()),
+          static_cast<float>(line.getY()),
+          0.0f,
+          false))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  if (plan.poses.size() > 1 && _straight_line_max_skip_points >= 1) {
+    std::vector<geometry_msgs::msg::PoseStamped> simplified;
+    simplified.reserve(plan.poses.size());
+    size_t idx = 0;
+    simplified.push_back(plan.poses.front());
+
+    while (idx < plan.poses.size() - 1) {
+      size_t max_jump =
+        std::min(idx + static_cast<size_t>(_straight_line_max_skip_points),
+        plan.poses.size() - 1);
+      size_t chosen = idx + 1;
+      for (size_t j = max_jump; j > idx; --j) {
+        if (is_line_free(plan.poses[idx], plan.poses[j])) {
+          chosen = j;
+          break;
+        }
+      }
+      simplified.push_back(plan.poses[chosen]);
+      idx = chosen;
+    }
+
+    const double spacing =
+      _straight_line_resample_spacing > 0.0 ? _straight_line_resample_spacing : 0.0;
+    const int resample_points = std::max(2, _straight_line_resample_points);
+    std::vector<geometry_msgs::msg::PoseStamped> resampled;
+    resampled.reserve((simplified.size() - 1) * resample_points + 1);
+    for (size_t i = 0; i + 1 < simplified.size(); ++i) {
+      const auto & p0 = simplified[i].pose.position;
+      const auto & p1 = simplified[i + 1].pose.position;
+      const double dx = p1.x - p0.x;
+      const double dy = p1.y - p0.y;
+      const double seg_len = std::hypot(dx, dy);
+      const double theta = atan2(dy, dx);
+      const auto q = nav2_util::geometry_utils::orientationAroundZAxis(theta);
+      if (spacing > 0.0 && seg_len > 1e-6) {
+        const int steps = std::max(1, static_cast<int>(std::floor(seg_len / spacing)));
+        for (int s = 0; s <= steps; ++s) {
+          if (i > 0 && s == 0) {
+            continue;
+          }
+          const double dist = std::min(seg_len, spacing * static_cast<double>(s));
+          const double t = dist / seg_len;
+          pose.pose.position.x = p0.x + t * dx;
+          pose.pose.position.y = p0.y + t * dy;
+          pose.pose.position.z = 0.0;
+          pose.pose.orientation = q;
+          resampled.push_back(pose);
+        }
+      } else {
+        for (int k = 0; k < resample_points; ++k) {
+          if (i > 0 && k == 0) {
+            continue;
+          }
+          const double t =
+            static_cast<double>(k) / static_cast<double>(resample_points - 1);
+          pose.pose.position.x = p0.x + t * dx;
+          pose.pose.position.y = p0.y + t * dy;
+          pose.pose.position.z = 0.0;
+          pose.pose.orientation = q;
+          resampled.push_back(pose);
+        }
+      }
+    }
+
+    plan.poses = std::move(resampled);
+  }
+
   // Publish raw path for debug
   if (_raw_plan_publisher->get_subscription_count() > 0) {
     _raw_plan_publisher->publish(plan);
@@ -380,6 +492,12 @@ SmacPlanner2D::dynamicParametersCallback(std::vector<rclcpp::Parameter> paramete
             "disabling tolerance and on approach iterations.");
           _max_on_approach_iterations = std::numeric_limits<int>::max();
         }
+      } else if (name == _name + ".straight_line_max_skip_points") {
+        _straight_line_max_skip_points = parameter.as_int();
+      } else if (name == _name + ".straight_line_resample_points") {
+        _straight_line_resample_points = parameter.as_int();
+      } else if (name == _name + ".straight_line_resample_spacing") {
+        _straight_line_resample_spacing = parameter.as_double();
       }
     }
   }
