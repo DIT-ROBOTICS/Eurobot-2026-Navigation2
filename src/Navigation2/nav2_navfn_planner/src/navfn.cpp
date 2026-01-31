@@ -124,7 +124,7 @@ NavFn::NavFn(int xs, int ys)
 
   // for Dijkstra (breadth-first), set to COST_NEUTRAL
   // for A* (best-first), set to COST_NEUTRAL
-  priInc = 1.1f * COST_NEUTRAL;
+  priInc = 2.0f * COST_NEUTRAL;
 
   // goal and start
   goal[0] = goal[1] = 0;
@@ -241,56 +241,6 @@ NavFn::setNavArr(int xs, int ys)
 //
 // set up cost array, usually from ROS
 //
-
-// void
-// NavFn::setCostmap(const COSTTYPE * cmap, bool isROS, bool allow_unknown)
-// {
-//   COSTTYPE * cm = costarr;
-//   if (isROS) {  // ROS-type cost array
-//     for (int i = 0; i < ny; i++) {
-//       int k = i * nx;
-//       for (int j = 0; j < nx; j++, k++, cmap++, cm++) {
-//         // This transforms the incoming cost values:
-//         // COST_OBS                 -> COST_OBS (incoming "lethal obstacle")
-//         // COST_OBS_ROS             -> COST_OBS (incoming "inscribed inflated obstacle")
-//         // values in range 0 to 252 -> values from COST_NEUTRAL to COST_OBS_ROS.
-//         *cm = COST_OBS;
-//         int v = *cmap;
-//         if (v < COST_OBS_ROS) {
-//           v = COST_NEUTRAL + COST_FACTOR * v;
-//           if (v >= COST_OBS) {
-//             v = COST_OBS - 1;
-//           }
-//           *cm = v;
-//         } else if (v == COST_UNKNOWN_ROS && allow_unknown) {
-//           v = COST_OBS - 1;
-//           *cm = v;
-//         }
-//       }
-//     }
-//   } else {  // not a ROS map, just a PGM
-//     for (int i = 0; i < ny; i++) {
-//       int k = i * nx;
-//       for (int j = 0; j < nx; j++, k++, cmap++, cm++) {
-//         *cm = COST_OBS;
-//         if (i < 7 || i > ny - 8 || j < 7 || j > nx - 8) {
-//           continue;  // don't do borders
-//         }
-//         int v = *cmap;
-//         if (v < COST_OBS_ROS) {
-//           v = COST_NEUTRAL + COST_FACTOR * v;
-//           if (v >= COST_OBS) {
-//             v = COST_OBS - 1;
-//           }
-//           *cm = v;
-//         } else if (v == COST_UNKNOWN_ROS) {
-//           v = COST_OBS - 1;
-//           *cm = v;
-//         }
-//       }
-//     }
-//   }
-// }
 
 void NavFn::setCostmap(const COSTTYPE * cmap, bool isROS, bool allow_unknown)
 {
@@ -471,51 +421,7 @@ NavFn::updateCell(int n)
   float ta, tc;
   if (l < r) {tc = l;} else {tc = r;}
   if (u < d) {ta = u;} else {ta = d;}
-
   // do planar wave update
-  // if (costarr[n] < COST_OBS) {  // don't propagate into obstacles
-  //   float hf = static_cast<float>(costarr[n]);  // traversability factor
-  //   float dc = tc - ta;  // relative cost between ta,tc
-  //   if (dc < 0) {  // ta is lowest
-  //     dc = -dc;
-  //     ta = tc;
-  //   }
-
-  //   // calculate new potential
-  //   float pot;
-  //   if (dc >= hf) {  // if too large, use ta-only update
-  //     pot = ta + hf;
-  //   } else {  // two-neighbor interpolation update
-  //     // use quadratic approximation
-  //     // might speed this up through table lookup, but still have to
-  //     //   do the divide
-  //     float d = dc / hf;
-  //     float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
-  //     pot = ta + hf * v;
-  //   }
-
-  //   //      ROS_INFO("[Update] new pot: %d\n", costarr[n]);
-
-  //   // now add affected neighbors to priority blocks
-  //   if (pot < potarr[n]) {
-  //     float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
-  //     float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
-  //     float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
-  //     float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
-  //     potarr[n] = pot;
-  //     if (pot < curT) {  // low-cost buffer block
-  //       if (l > pot + le) {push_next(n - 1);}
-  //       if (r > pot + re) {push_next(n + 1);}
-  //       if (u > pot + ue) {push_next(n - nx);}
-  //       if (d > pot + de) {push_next(n + nx);}
-  //     } else {  // overflow block
-  //       if (l > pot + le) {push_over(n - 1);}
-  //       if (r > pot + re) {push_over(n + 1);}
-  //       if (u > pot + ue) {push_over(n - nx);}
-  //       if (d > pot + de) {push_over(n + nx);}
-  //     }
-  //   }
-  // }
   if (costarr[n] < COST_OBS) {  // don't propagate into obstacles
     float hf = static_cast<float>(costarr[n]);  // traversability factor
     // 可以選擇輕微增強，保持 propagation 安全
@@ -568,145 +474,6 @@ NavFn::updateCell(int n)
 //
 
 #define INVSQRT2 0.707106781
-
-// inline void
-// NavFn::updateCellAstar(int n)
-// {
-//   // get neighbors
-//   float u, d, l, r;
-//   l = potarr[n - 1];
-//   r = potarr[n + 1];
-//   u = potarr[n - nx];
-//   d = potarr[n + nx];
-//   // ROS_INFO("[Update] c: %0.1f  l: %0.1f  r: %0.1f  u: %0.1f  d: %0.1f\n",
-//   // potarr[n], l, r, u, d);
-//   // ROS_INFO("[Update] cost of %d: %d\n", n, costarr[n]);
-
-//   // find lowest, and its lowest neighbor
-//   float ta, tc;
-//   if (l < r) {tc = l;} else {tc = r;}
-//   if (u < d) {ta = u;} else {ta = d;}
-
-//   // do planar wave update
-//   if (costarr[n] < COST_OBS) {  // don't propagate into obstacles
-//     float hf = static_cast<float>(costarr[n]);  // traversability factor
-//     float dc = tc - ta;  // relative cost between ta,tc
-//     if (dc < 0) {  // ta is lowest
-//       dc = -dc;
-//       ta = tc;
-//     }
-
-//     // calculate new potential
-//     float pot;
-//     if (dc >= hf) {  // if too large, use ta-only update
-//       pot = ta + hf;
-//     } else {  // two-neighbor interpolation update
-//       // use quadratic approximation
-//       // might speed this up through table lookup, but still have to
-//       //   do the divide
-//       float d = dc / hf;
-//       float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
-//       pot = ta + hf * v;
-//     }
-
-//     // ROS_INFO("[Update] new pot: %d\n", costarr[n]);
-
-//     // now add affected neighbors to priority blocks
-//     if (pot < potarr[n]) {
-//       float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
-//       float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
-//       float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
-//       float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
-
-//       // calculate distance
-//       int x = n % nx;
-//       int y = n / nx;
-//       float dist = hypot(x - start[0], y - start[1]) * static_cast<float>(COST_NEUTRAL);
-
-//       potarr[n] = pot;
-//       pot += dist;
-//       if (pot < curT) {  // low-cost buffer block
-//         if (l > pot + le) {push_next(n - 1);}
-//         if (r > pot + re) {push_next(n + 1);}
-//         if (u > pot + ue) {push_next(n - nx);}
-//         if (d > pot + de) {push_next(n + nx);}
-//       } else {
-//         if (l > pot + le) {push_over(n - 1);}
-//         if (r > pot + re) {push_over(n + 1);}
-//         if (u > pot + ue) {push_over(n - nx);}
-//         if (d > pot + de) {push_over(n + nx);}
-//       }
-//     }
-//   }
-// }
-
-// inline void
-// NavFn::updateCellAstar(int n)
-// {
-//   // neighbors' potential (g cost)
-//   float l = potarr[n - 1];
-//   float r = potarr[n + 1];
-//   float u = potarr[n - nx];
-//   float d = potarr[n + nx];
-
-//   if (costarr[n] >= COST_OBS) {
-//     return;
-//   }
-
-//   // --- 1. 計算 g(n)（純 traversal cost） ---
-//   float ta = std::min(u, d);
-//   float tc = std::min(l, r);
-//   float dc = fabs(tc - ta);
-
-//   float hf = static_cast<float>(costarr[n]);
-//   float new_g;
-
-//   if (dc >= hf) {
-//     new_g = std::min(ta, tc) + hf;
-//   } else {
-//     float d = dc / hf;
-//     float v = -0.2301f * d * d + 0.5307f * d + 0.7040f;
-//     new_g = std::min(ta, tc) + hf * v;
-//   }
-
-//   // --- 2. 若沒有更好就結束 ---
-//   if (new_g >= potarr[n]) {
-//     return;
-//   }
-
-//   potarr[n] = new_g;   // ⚠️ 只存 g(n)
-
-//   // --- 3. heuristic（h(n)） ---
-//   int x = n % nx;
-//   int y = n / nx;
-
-//   float h = hypot(
-//     x - start[0],
-//     y - start[1]
-//   ) * static_cast<float>(COST_NEUTRAL);
-
-//   // ⭐ 可調：heuristic 權重（1.0 = 標準 A*）
-//   constexpr float HEURISTIC_SCALE = 0.8f;
-//   float f = new_g + HEURISTIC_SCALE * h;
-
-//   // --- 4. queue 分流只用 f ---
-//   float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
-//   float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
-//   float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
-//   float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
-
-//   if (f < curT) {
-//     if (l > new_g + le) { push_next(n - 1); }
-//     if (r > new_g + re) { push_next(n + 1); }
-//     if (u > new_g + ue) { push_next(n - nx); }
-//     if (d > new_g + de) { push_next(n + nx); }
-//   } else {
-//     if (l > new_g + le) { push_over(n - 1); }
-//     if (r > new_g + re) { push_over(n + 1); }
-//     if (u > new_g + ue) { push_over(n - nx); }
-//     if (d > new_g + de) { push_over(n + nx); }
-//   }
-// }
 
 inline void
 NavFn::updateCellAstar(int n)
@@ -1053,19 +820,11 @@ NavFn::calcPath(int n, int * st)
 
     // check for potentials at eight positions near cell
     if (potarr[stc] >= POT_HIGH ||
-      // potarr[stc + 1] >= POT_HIGH ||
-      // potarr[stc - 1] >= POT_HIGH ||
-      // potarr[stcnx] >= POT_HIGH ||
-      // potarr[stcnx + 1] >= POT_HIGH ||
-      // potarr[stcnx - 1] >= POT_HIGH ||
-      // potarr[stcpx] >= POT_HIGH ||
-      // potarr[stcpx + 1] >= POT_HIGH ||
-      // potarr[stcpx - 1] >= POT_HIGH ||
       oscillation_detected)
     {
-      RCLCPP_WARN(
-        rclcpp::get_logger("rclcpp"),
-        "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
+      // RCLCPP_WARN(
+      //   rclcpp::get_logger("rclcpp"),
+      //   "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
 
       int minc = -1;
       float minp = potarr[stc];
