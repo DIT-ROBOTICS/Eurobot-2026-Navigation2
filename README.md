@@ -91,6 +91,28 @@ See more about the params [/navigation2_run/params/nav2_params_default.yaml](htt
     - `straight_line_resample_points`: points per segment (used when spacing <= 0)  
     - `straight_line_resample_spacing`: fixed spacing (meters), overrides points  
 
+- **NavfnPlanner2D**
+
+  - **Straight-line refinement**  
+    - use linear scale to mapping global costmap into navfn costmap (cost 1~254), not use COST_NEUTRAL as base.
+    - add function to fix the oscillation and stagnation issues during path extraction, including plateau detection and fallback mechanisms for better robustness in complex environments.
+    - add obstacle bias in A* updates to penalize high-cost cells.
+    - adjust A* heuristic scaling, encouraging safer path choices.
+    
+  - **New parameters (planner_server -> GridBased)**  
+```yaml
+      # A* / propagation parameters
+      heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+      priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+      # Obstacle-aware bias
+      obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+      obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+      # Path extraction / fallback
+      plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+      min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+      potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+```
+
 #### Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)
 
