@@ -67,12 +67,6 @@ namespace nav2_navfn_planner
 #define COST_NEUTRAL 10  // Set this to "open space" value
 #define COST_FACTOR 0.8  // Used for translating costs in NavFn::setCostmap()
 
-// coeficients for bias calculation
-#define OBSTACLE_BIAS_SCALE 0.4f  // suggestion：0.15 ~ 0.4
-#define OBSTACLE_BIAS_OFFSET 10.0f  // suggestion：3 ~ 10
-
-#define LOWEST_GRAD 0.9f  // Minimum gradient to keep following
-
 // Define the cost type in the case that it is not set. However, this allows
 // clients to modify it without changing the file. Arguably, it is better to require it to
 // be defined by a user explicitly
@@ -119,6 +113,15 @@ public:
   NavFn(int nx, int ny);
 
   ~NavFn();
+
+  void setParams(
+    float heuristic_scale,
+    float priority_increment_scale,
+    float obstacle_bias_scale,
+    float obstacle_bias_offset,
+    int plateau_stagnation_steps,
+    float min_gradient_norm,
+    float potential_epsilon);
 
   /**
    * @brief  Sets or resets the size of the map
@@ -186,6 +189,18 @@ public:
   /** block priority thresholds */
   float curT;  /**< current threshold */
   float priInc;  /**< priority threshold increment */
+
+  /**
+   * @brief  parameters for path planning, included from param file
+   */
+  float heuristic_scale_;
+  float priority_increment_scale_;
+  float obstacle_bias_scale_;
+  float obstacle_bias_offset_;
+  int plateau_stagnation_steps_;
+  float min_gradient_norm_;
+  float potential_epsilon_;
+
 
   /** goal and start positions */
   /**

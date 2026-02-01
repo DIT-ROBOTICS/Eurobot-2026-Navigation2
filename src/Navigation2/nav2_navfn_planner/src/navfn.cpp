@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include "rclcpp/rclcpp.hpp"
+#include "nav2_util/node_utils.hpp"
 
 namespace nav2_navfn_planner
 {
@@ -122,10 +123,6 @@ NavFn::NavFn(int xs, int ys)
   pb2 = new int[PRIORITYBUFSIZE];
   pb3 = new int[PRIORITYBUFSIZE];
 
-  // for Dijkstra (breadth-first), set to COST_NEUTRAL
-  // for A* (best-first), set to COST_NEUTRAL
-  priInc = 2.0f * COST_NEUTRAL;
-
   // goal and start
   goal[0] = goal[1] = 0;
   start[0] = start[1] = 0;
@@ -175,6 +172,27 @@ NavFn::~NavFn()
   }
 }
 
+void
+NavFn::setParams(
+  float heuristic_scale,
+  float priority_increment_scale,
+  float obstacle_bias_scale,
+  float obstacle_bias_offset,
+  int plateau_stagnation_steps,
+  float min_gradient_norm,
+  float potential_epsilon)
+{
+  heuristic_scale_ = heuristic_scale;
+  priority_increment_scale_ = priority_increment_scale;
+  obstacle_bias_scale_ = obstacle_bias_scale;
+  obstacle_bias_offset_ = obstacle_bias_offset;
+  plateau_stagnation_steps_ = plateau_stagnation_steps;
+  min_gradient_norm_ = min_gradient_norm;
+  potential_epsilon_ = potential_epsilon;
+  // for Dijkstra (breadth-first), set to COST_NEUTRAL
+  // for A* (best-first), set to COST_NEUTRAL
+  priInc = priority_increment_scale_ * COST_NEUTRAL;
+}
 
 //
 // set goal, start positions for the nav fn
@@ -518,8 +536,7 @@ NavFn::updateCellAstar(int n)
   // use bias to increase potential of central cell (30)
   // to avoid being a local minimum
   if (hf > COST_NEUTRAL) {
-    float bias = (hf - COST_NEUTRAL + OBSTACLE_BIAS_OFFSET)
-                 * OBSTACLE_BIAS_SCALE;
+    float bias = (hf - COST_NEUTRAL + obstacle_bias_offset_) * obstacle_bias_scale_;
     new_g += bias;
   }
 
@@ -534,8 +551,7 @@ NavFn::updateCellAstar(int n)
     y - start[1]
   ) * static_cast<float>(COST_NEUTRAL);
 
-  constexpr float HEURISTIC_SCALE = 1.0f;
-  float f = new_g + HEURISTIC_SCALE * h;
+  float f = new_g + heuristic_scale_ * h;
 
   // --- 3. queue divided ---
   float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
@@ -797,7 +813,7 @@ NavFn::calcPath(int n, int * st)
     pathy[npath] = stc / nx + dy;
     npath++;
     // check for stagnation, whether we need plateau or not
-    if (potarr[stc] < last_pot - 1e-3f) {
+    if (potarr[stc] < last_pot - potential_epsilon_) {
         stagnation_count = 0; // downslope
     } else {
         stagnation_count++;  // plate
@@ -816,7 +832,6 @@ NavFn::calcPath(int n, int * st)
     }
 
     int stcnx = stc + nx;
-    // int stcpx = stc - nx;
 
     // check for potentials at eight positions near cell
     if (potarr[stc] >= POT_HIGH ||
@@ -930,9 +945,9 @@ NavFn::calcPath(int n, int * st)
       // move in the right direction
       float ss = pathStep / hypot(x, y);
 
-      bool plateau = (stagnation_count >= 3); // if we need plateau 
+      bool plateau = (stagnation_count >= plateau_stagnation_steps_); // if we need plateau 
 
-      if (hypot(x, y) < LOWEST_GRAD || plateau) {   // gradient too small or plateau detected
+      if (hypot(x, y) < min_gradient_norm_ || plateau) {   // gradient too small or plateau detected
         int minc = -1;
         float minp = potarr[stc];
         // COSTTYPE cur_cost = costarr[stc];
