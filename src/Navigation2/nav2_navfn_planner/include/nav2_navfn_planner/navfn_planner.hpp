@@ -227,6 +227,17 @@ protected:
    */
   rcl_interfaces::msg::SetParametersResult
   dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
+
+  /**
+  * @brief  parameters for path planning, included from param file
+  */
+  float heuristic_scale_;
+  float priority_increment_scale_;
+  float obstacle_bias_scale_;
+  float obstacle_bias_offset_;
+  int plateau_stagnation_steps_;
+  float min_gradient_norm_;
+  float potential_epsilon_;
 };
 
 }  // namespace nav2_navfn_planner
