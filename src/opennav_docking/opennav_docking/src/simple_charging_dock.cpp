@@ -253,8 +253,6 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   reset_timer_flag_ = false;
   if (dock_type.find("cam") != std::string::npos) {
     dock_w_cam_ = true;
-    // use_external_detection_pose_ = true;
-    resetDockPoseSubscription();
   } else {
     dock_w_cam_ = false;
     use_external_detection_pose_ = false;
@@ -320,7 +318,6 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
       }
       use_external_detection_pose_ = false;
       resetDockPoseSubscription();
-      reset_flag_ = true;
 
       // Non-blocking wait: check if enough time has passed since subscription reset
       auto elapsed = node_->now() - last_reset_time_;
@@ -333,6 +330,9 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
         dock_pose_pub_->publish(detected_dock_pose_prev_);
         // dock_pose_ = detected_dock_pose_prev_;
         return true;
+      }
+      else {
+        reset_flag_ = true;
       }
     }
   }
@@ -477,6 +477,7 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
   }
   dock_pose_pub_->publish(dock_pose_);
   pose = dock_pose_;
+  use_external_detection_pose_ = false;
   detected_dock_pose_prev_ = dock_pose_;  // Update with processed pose
   return true;
 }
