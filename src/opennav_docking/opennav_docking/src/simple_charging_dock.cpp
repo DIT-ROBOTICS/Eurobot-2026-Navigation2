@@ -180,6 +180,9 @@ void SimpleChargingDock::configure(
         bool was_cam_mode = dock_w_cam_;
         if ( msg->data == "Cam" ) {
           dock_w_cam_ = true;
+          if ( !was_cam_mode ) {
+            resetDockPoseSubscription();
+          }
         }
         else {
           dock_w_cam_ = false;
@@ -188,9 +191,9 @@ void SimpleChargingDock::configure(
         RCLCPP_INFO(node_->get_logger(), "Dock controller type changed to: %s, dock_w_cam_: %s",
           msg->data.c_str(), dock_w_cam_ ? "true" : "false");
         // Reset subscription on any transition (to or from camera mode)
-        if (was_cam_mode != dock_w_cam_) {
-          resetDockPoseSubscription();
-        }
+        // if (was_cam_mode != dock_w_cam_) {
+        //   resetDockPoseSubscription();
+        // }
   });
 
   bool use_stall_detection;
@@ -311,30 +314,30 @@ return staging_pose;
 bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
 {
   if ( dock_w_cam_ ) {
-    if ( !reset_flag_ ) {
-      if ( !reset_timer_flag_ ) {
-        last_reset_time_ = node_->now();
-        reset_timer_flag_ = true;
-      }
-      use_external_detection_pose_ = false;
-      resetDockPoseSubscription();
+    // if ( !reset_flag_ ) {
+    //   if ( !reset_timer_flag_ ) {
+    //     last_reset_time_ = node_->now();
+    //     reset_timer_flag_ = true;
+    //   }
+    //   use_external_detection_pose_ = false;
+    //   resetDockPoseSubscription();
 
-      // Non-blocking wait: check if enough time has passed since subscription reset
-      auto elapsed = node_->now() - last_reset_time_;
-      if (elapsed.seconds() < 0.08) {
-        // Not enough time passed, use previous pose
-        if(detected_dock_pose_prev_.header.frame_id.empty()) {
-          RCLCPP_WARN(node_->get_logger(), "Waiting for fresh detections after reset");
-        }
-        detected_dock_pose_prev_ = pose;
-        dock_pose_pub_->publish(detected_dock_pose_prev_);
-        // dock_pose_ = detected_dock_pose_prev_;
-        return true;
-      }
-      else {
-        reset_flag_ = true;
-      }
-    }
+    //   // Non-blocking wait: check if enough time has passed since subscription reset
+    //   auto elapsed = node_->now() - last_reset_time_;
+    //   if (elapsed.seconds() < 0.08) {
+    //     // Not enough time passed, use previous pose
+    //     if(detected_dock_pose_prev_.header.frame_id.empty()) {
+    //       RCLCPP_WARN(node_->get_logger(), "Waiting for fresh detections after reset");
+    //     }
+    //     detected_dock_pose_prev_ = pose;
+    //     dock_pose_pub_->publish(detected_dock_pose_prev_);
+    //     // dock_pose_ = detected_dock_pose_prev_;
+    //     return true;
+    //   }
+    //   else {
+    //     reset_flag_ = true;
+    //   }
+    // }
   }
   else {
     use_external_detection_pose_ = false;
