@@ -65,7 +65,7 @@ namespace Object_costmap_plugin {
         obstacle_sub = node->create_subscription<geometry_msgs::msg::PoseArray>(
             "/scan_obstacles", 100, std::bind(&ObjectLayer::obstaclePoseArrayCallback, this, std::placeholders::_1));
         robot_pose_sub = node->create_subscription<nav_msgs::msg::Odometry>(
-            "/final_pose_nav", 100, std::bind(&ObjectLayer::robotPoseCallback, this, std::placeholders::_1));
+            "/final_pose", 100, std::bind(&ObjectLayer::robotPoseCallback, this, std::placeholders::_1));
         overturn_sub = node->create_subscription<geometry_msgs::msg::PoseArray>(
             "/detected/global_center_poses/overturn", 100, std::bind(&ObjectLayer::overturnPoseArrayCallback, this, std::placeholders::_1));
         tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());

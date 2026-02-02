@@ -17,7 +17,7 @@ services:
     ipc: host
     privileged: true
     stop_grace_period: &STOP_GRACE_PERIOD 1s
-    deploy: &DEPLOY_SETTING
+    deploy: &DEPLOY_SETTING 
       # resources:
       #   limits:
       #     cpus: '2'
@@ -27,16 +27,16 @@ services:
       - ../..:/home/user/Eurobot-2026-Navigation2-ws
       - /home/share:/home/share
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - $HOME/.Xauthority:/home/user/.Xauthority 
+      - $HOME/.Xauthority:/home/user/.Xauthority
       - /dev:/dev
 
-    working_dir: &WORKING_DIR
-      /home/user/Eurobot-2026-Navigation2-ws
+    working_dir: &WORKING_DIR /home/user/Eurobot-2026-Navigation2-ws
 
-    environment: &ENV
+    environment:
       # - DISPLAY=${DISPLAY}  # Set display environment variable
+      &ENV
       - RCUTILS_COLORIZED_OUTPUT=1
-      - XAUTHORITY=/home/user/.Xauthority   # Set Xauthority path
+      - XAUTHORITY=/home/user/.Xauthority # Set Xauthority path
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
       - USERID=${USER_UID:-1000}
@@ -51,7 +51,7 @@ services:
         USERID: "${USER_UID:-1000}"
         USERGID: "${USER_UID:-1000}"
         ENABLE_VNC: "false"
-    image: *IMG_NAME 
+    image: *IMG_NAME
     container_name: navigation2-dev
     command: &CMD_DEVELOP /bin/bash
     tty: true
@@ -67,7 +67,6 @@ services:
     working_dir: *WORKING_DIR
 
     environment: *ENV
-    
 
   navigation-run:
     build:
@@ -77,7 +76,7 @@ services:
         USERID: "${USER_UID:-1000}"
         USERGID: "${USER_UID:-1000}"
         ENABLE_VNC: "false"
-    image: *IMG_NAME 
+    image: *IMG_NAME
     container_name: navigation2-run
     command: &CMD_RUN /bin/bash -c "cd /home/user/Eurobot-2026-Navigation2-ws && source install/local_setup.bash && ros2 launch navigation2_run real_launch.py 2>&1 | tee /home/user/Eurobot-2026-Navigation2-ws/nav2_log.txt"
     tty: true
@@ -98,7 +97,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args: 
+      args:
         USERID: "${USER_UID:-1000}"
         USERGID: "${USER_UID:-1000}"
         ENABLE_VNC: "true"
@@ -107,11 +106,10 @@ services:
     hostname: navigation2-vnc
     command: /usr/local/bin/start-vnc.sh
     tty: true
-    ports:
-      - "${VNC_PORT:-5901}:5901"
     environment:
       - VNC_PASSWORD=${VNC_PASSWORD:-ros}
-      - DISPLAY=:1
+      - VNC_DISPLAY=5
+      - DISPLAY=:5
       - QT_X11_NO_MITSHM=1
       - RCUTILS_COLORIZED_OUTPUT=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -124,6 +122,7 @@ services:
       - ../..:/home/user/Eurobot-2026-Navigation2-ws
       - /dev:/dev
     working_dir: /home/user/Eurobot-2026-Navigation2-ws
+    network_mode: host
     ipc: host
     privileged: true
     stdin_open: true

@@ -116,7 +116,7 @@ def generate_launch_description():
         description='log level')
     
     declare_robot_remap_cmd = DeclareLaunchArgument(
-        'robot_pose_remap', default_value='odom',
+        'robot_pose_remap', default_value='/local_pose',
         description='Remapping for robot pose topic')
 
     # Specify the actions

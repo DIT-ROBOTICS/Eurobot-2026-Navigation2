@@ -33,7 +33,7 @@ public:
       });
 
     subscription_pose_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/final_pose_nav", rclcpp::QoS(10),
+      "/final_pose", rclcpp::QoS(10),
       [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
           latest_pose_ = msg;
       });

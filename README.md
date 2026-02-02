@@ -52,43 +52,66 @@ global_costmap:
 ```
 see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
-#### Custom Controller: `follow_path_controller`
+#### Controller: TEB
+
+We use the TEB controller with multiple profiles (Fast/Slow/LinearBoost/AngularBoost)
+tuned for different speeds and obstacle conditions.
 
 Main features:
 
-- **Look-ahead path following**  
-  Uses a configurable `look_ahead_distance` to pick a look-ahead target on the
-  global path and generate smooth velocity commands.
+- **Time‑elastic band optimization**  
+  Optimizes a short‑horizon trajectory (poses + timing) to satisfy kinematic limits
+  while progressing toward the goal.
 
-- **Costmap-aware slowdown and replanning**  
-  Checks cost values along the segment from current pose to a point ahead on the path.  
-  If any cell exceeds `costmap_tolerance`:
-  - Scales linear velocity by `speed_decade` (slowdown).  
-  - Sets angular velocity to zero temporarily.  
-  - Sets `update_plan_ = true` to request replanning.  
-  - If the robot is almost stopped, throws `PlannerException("Obstacle detected")`
-    so the BT can enter recovery.
+- **Obstacle‑aware trajectory shaping**  
+  Penalizes proximity to obstacles and can slow down or replan when the costmap
+  indicates blocked space ahead.
 
-- **Goal yaw alignment**  
-  Tracks the final goal yaw (`final_goal_angle_`).  
-  Uses `angular_kp` to scale the yaw error and clamps it with `max_angular_vel_`.  
-  Uses `yaw_goal_tolerance_` to decide when the orientation is aligned.
+- **Goal handling**  
+  Uses goal distance thresholds to decide when to stop in position vs. rotate
+  toward the final heading.
 
-- **Rival-aware slowdown (optional)**  
-  Computes the distance between the robot and the rival.  
-  When the distance is smaller than `rival_slowdown_radius_`, scales linear speed
-  by `rival_decay_`.  
-  Publishes the current distance on the `rival_distance` topic.
+- **Profile‑based tuning**  
+  Different parameter sets for fast/slow/boost behaviors (e.g., max_v/max_w,
+  obstacle distances, cooldowns).
 
-- **DelaySpin behavior**  
-  When `controller_function` is set to `"DelaySpin"`, in-place spinning is
-  disabled near the start of the path.  
-  Spinning is only allowed after the robot moves beyond `spin_delay_threshold_`,
-  then the mode automatically switches back to `"None"`.
+See more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
-- **Dynamic speed limiting**  
-  Supports `setSpeedLimit()` to apply dynamic speed limits, either as a
-  percentage of a base speed or as an absolute value.
+#### Nav2 planner has been modified with custom logic and parameters
+- **SmacPlanner2D**
+
+  - **Straight-line refinement**  
+    SMAC 2D expands 8-connected neighbors, which can produce zig-zag paths even in free space.
+    We add a line-of-sight check after A* (LineIterator + collision check): if a straight segment
+    is collision-free, intermediate nodes are skipped and the segment is resampled into evenly
+    spaced points with consistent orientation. This yields straighter, smoother paths.
+  
+  - **New parameters (planner_server -> GridBased)**  
+    - `straight_line_max_skip_points`: max nodes to skip for line-of-sight jump  
+    - `straight_line_resample_points`: points per segment (used when spacing <= 0)  
+    - `straight_line_resample_spacing`: fixed spacing (meters), overrides points  
+
+- **NavfnPlanner2D**
+
+  - **Straight-line refinement**  
+    - use linear scale to mapping global costmap into navfn costmap (cost 1~254), not use COST_NEUTRAL as base.
+    - add function to fix the oscillation and stagnation issues during path extraction, including plateau detection and fallback mechanisms for better robustness in complex environments.
+    - add obstacle bias in A* updates to penalize high-cost cells.
+    - adjust A* heuristic scaling, encouraging safer path choices.
+    
+  - **New parameters (planner_server -> GridBased)**  
+```yaml
+      # A* / propagation parameters
+      heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+      priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+      # Obstacle-aware bias
+      obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+      obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+      # Path extraction / fallback
+      plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+      min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+      potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+```
 
 #### Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)

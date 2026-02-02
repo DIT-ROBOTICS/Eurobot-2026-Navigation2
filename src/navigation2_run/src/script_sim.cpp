@@ -4,6 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include <opennav_docking_msgs/action/dock_robot.hpp>
@@ -45,9 +46,9 @@ public:
         goal_checker_selector_pub_ = this->create_publisher<std_msgs::msg::String>("/goal_checker_type", rclcpp::QoS(10).reliable().transient_local());
 
         // Create subscriber for localization data
-        final_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        final_pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "/final_pose", rclcpp::QoS(10),
-            [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+            [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
                 final_pose_data_ = *msg;
             });
         
@@ -263,8 +264,8 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr controller_selector_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr goal_checker_selector_pub_;
 
-    geometry_msgs::msg::PoseWithCovarianceStamped final_pose_data_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr final_pose_sub_;
+    nav_msgs::msg::Odometry final_pose_data_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr final_pose_sub_;
     geometry_msgs::msg::PoseArray beacon_pose_array_;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr beacon_pose_array_sub_;
     geometry_msgs::msg::PoseWithCovarianceStamped lidar_pose_data_;
