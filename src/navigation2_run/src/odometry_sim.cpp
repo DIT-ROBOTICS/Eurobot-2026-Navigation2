@@ -8,9 +8,9 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp> // toMsg & fromMsg
 
 double car[3] = {0};
-double x = 0.5;
-double y = 0.5;
-double th = 3.1415926 / 2;
+double x = 0.0;
+double y = 0.0;
+double th = 0.0;
 
 void vel_callback(const geometry_msgs::msg::Twist::SharedPtr data) {
     car[0] = data->linear.x;
@@ -19,18 +19,8 @@ void vel_callback(const geometry_msgs::msg::Twist::SharedPtr data) {
     //RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received velocity command: linear.x=%f, linear.y=%f, angular.z=%f", car[0], car[1], car[2]);
 }
 
-void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr data) {
-    x = data->pose.pose.position.x;
-    y = data->pose.pose.position.y;
-
-    // Convert quaternion to tf2::Quaternion
-    tf2::Quaternion quat;
-    tf2::fromMsg(data->pose.pose.orientation, quat);
-
-    // Extract yaw from quaternion
-    double roll, pitch, yaw;
-    tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-    th = yaw;
+void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr /*data*/) {
+    // Ignore initial pose so odom stays fixed at the configured map->odom offset.
 }
 
 int main(int argc, char **argv) {
@@ -42,20 +32,26 @@ int main(int argc, char **argv) {
     node->get_parameter("cmd_cb_name", cmd_cb_name);
 
     // Publishers and subscribers
-    auto odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("odom", 50);
+    auto odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("local_pose", 50);
     auto global_vel_pub = node->create_publisher<geometry_msgs::msg::Twist>("global_vel", 50);
     auto sub = node->create_subscription<geometry_msgs::msg::Twist>(
         cmd_cb_name, 1000, vel_callback);
-    auto sub_initial_pose = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    (void)node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
         "initial_pose", 1000, initial_pose_callback);
 
     tf2_ros::TransformBroadcaster odom_broadcaster(node);
     
     std::string tf_prefix_;
-    node->declare_parameter("tf_prefix", "");
-    node->get_parameter("tf_prefix", tf_prefix_);
-    if (!tf_prefix_.empty()) {
-        tf_prefix_ = tf_prefix_ + "/";
+    geometry_msgs::msg::TransformStamped map_to_odom;
+    map_to_odom.header.frame_id = tf_prefix_ + "map";
+    map_to_odom.child_frame_id = tf_prefix_ + "odom";
+    map_to_odom.transform.translation.x = 0.5;
+    map_to_odom.transform.translation.y = 0.5;
+    map_to_odom.transform.translation.z = 0.0;
+    {
+        tf2::Quaternion map_quat;
+        map_quat.setRPY(0, 0, 3.1415926 / 2);
+        map_to_odom.transform.rotation = tf2::toMsg(map_quat);
     }
 
     double vx = 0;
@@ -69,12 +65,15 @@ int main(int argc, char **argv) {
     rclcpp::WallRate loop_rate(20.0);
 
     while (rclcpp::ok()) {
+        rclcpp::spin_some(node);  // Check for incoming messages
+        current_time = node->get_clock()->now();
+
+        map_to_odom.header.stamp = current_time;
+        odom_broadcaster.sendTransform(map_to_odom);
+
         vx = car[0];
         vy = car[1];
         vth = car[2];
-
-        rclcpp::spin_some(node);  // Check for incoming messages
-        current_time = node->get_clock()->now();
 
         // Compute odometry in a typical way given the velocities of the robot
         double dt = (current_time - last_time).seconds();
@@ -99,7 +98,7 @@ int main(int argc, char **argv) {
         // First, we'll publish the transform over tf
         geometry_msgs::msg::TransformStamped odom_trans;
         odom_trans.header.stamp = current_time;
-        odom_trans.header.frame_id = tf_prefix_ + "map";
+        odom_trans.header.frame_id = tf_prefix_ + "odom";
         odom_trans.child_frame_id = tf_prefix_ + "base_footprint";
         odom_trans.transform.translation.x = x;
         odom_trans.transform.translation.y = y;
@@ -112,7 +111,7 @@ int main(int argc, char **argv) {
         // Next, we'll publish the odometry message over ROS
         nav_msgs::msg::Odometry odom;
         odom.header.stamp = current_time;
-        odom.header.frame_id = tf_prefix_ + "map";
+        odom.header.frame_id = tf_prefix_ + "odom";
 
         // Set the position
         odom.pose.pose.position.x = x;

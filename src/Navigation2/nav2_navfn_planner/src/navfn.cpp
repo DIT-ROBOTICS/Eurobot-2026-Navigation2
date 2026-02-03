@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include "rclcpp/rclcpp.hpp"
+#include "nav2_util/node_utils.hpp"
 
 namespace nav2_navfn_planner
 {
@@ -122,10 +123,6 @@ NavFn::NavFn(int xs, int ys)
   pb2 = new int[PRIORITYBUFSIZE];
   pb3 = new int[PRIORITYBUFSIZE];
 
-  // for Dijkstra (breadth-first), set to COST_NEUTRAL
-  // for A* (best-first), set to COST_NEUTRAL
-  priInc = 2 * COST_NEUTRAL;
-
   // goal and start
   goal[0] = goal[1] = 0;
   start[0] = start[1] = 0;
@@ -175,6 +172,27 @@ NavFn::~NavFn()
   }
 }
 
+void
+NavFn::setParams(
+  float heuristic_scale,
+  float priority_increment_scale,
+  float obstacle_bias_scale,
+  float obstacle_bias_offset,
+  int plateau_stagnation_steps,
+  float min_gradient_norm,
+  float potential_epsilon)
+{
+  heuristic_scale_ = heuristic_scale;
+  priority_increment_scale_ = priority_increment_scale;
+  obstacle_bias_scale_ = obstacle_bias_scale;
+  obstacle_bias_offset_ = obstacle_bias_offset;
+  plateau_stagnation_steps_ = plateau_stagnation_steps;
+  min_gradient_norm_ = min_gradient_norm;
+  potential_epsilon_ = potential_epsilon;
+  // for Dijkstra (breadth-first), set to COST_NEUTRAL
+  // for A* (best-first), set to COST_NEUTRAL
+  priInc = priority_increment_scale_ * COST_NEUTRAL;
+}
 
 //
 // set goal, start positions for the nav fn
@@ -242,55 +260,42 @@ NavFn::setNavArr(int xs, int ys)
 // set up cost array, usually from ROS
 //
 
-void
-NavFn::setCostmap(const COSTTYPE * cmap, bool isROS, bool allow_unknown)
+void NavFn::setCostmap(const COSTTYPE * cmap, bool isROS, bool allow_unknown)
 {
   COSTTYPE * cm = costarr;
-  if (isROS) {  // ROS-type cost array
-    for (int i = 0; i < ny; i++) {
-      int k = i * nx;
-      for (int j = 0; j < nx; j++, k++, cmap++, cm++) {
-        // This transforms the incoming cost values:
-        // COST_OBS                 -> COST_OBS (incoming "lethal obstacle")
-        // COST_OBS_ROS             -> COST_OBS (incoming "inscribed inflated obstacle")
-        // values in range 0 to 252 -> values from COST_NEUTRAL to COST_OBS_ROS.
+
+  if (!isROS) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("rclcpp"),
+      "[NavFn] Non-ROS costmaps are deprecated, please use ROS costmaps");
+  }
+
+  for (int i = 0; i < ny; ++i) {
+    for (int j = 0; j < nx; ++j, ++cmap, ++cm) {
+
+      int v = *cmap;
+
+      if (v >= COST_OBS_ROS) {
+        // set as obstacle
         *cm = COST_OBS;
-        int v = *cmap;
-        if (v < COST_OBS_ROS) {
-          v = COST_NEUTRAL + COST_FACTOR * v;
-          if (v >= COST_OBS) {
-            v = COST_OBS - 1;
-          }
-          *cm = v;
-        } else if (v == COST_UNKNOWN_ROS && allow_unknown) {
-          v = COST_OBS - 1;
-          *cm = v;
+      }
+      else if (v == COST_UNKNOWN_ROS) {
+        if (allow_unknown) {
+          // unknown space treated as high cost
+          *cm = COST_OBS - 1;
+        } else {
+          // set as obstacle
+          *cm = COST_OBS;
         }
       }
-    }
-  } else {  // not a ROS map, just a PGM
-    for (int i = 0; i < ny; i++) {
-      int k = i * nx;
-      for (int j = 0; j < nx; j++, k++, cmap++, cm++) {
-        *cm = COST_OBS;
-        if (i < 7 || i > ny - 8 || j < 7 || j > nx - 8) {
-          continue;  // don't do borders
-        }
-        int v = *cmap;
-        if (v < COST_OBS_ROS) {
-          v = COST_NEUTRAL + COST_FACTOR * v;
-          if (v >= COST_OBS) {
-            v = COST_OBS - 1;
-          }
-          *cm = v;
-        } else if (v == COST_UNKNOWN_ROS) {
-          v = COST_OBS - 1;
-          *cm = v;
-        }
+      else {
+        // linear scaling, free space is 1
+        *cm = std::max(COST_FREE, v);
       }
     }
   }
 }
+
 
 bool
 NavFn::calcNavFnDijkstra(bool atStart)
@@ -434,48 +439,44 @@ NavFn::updateCell(int n)
   float ta, tc;
   if (l < r) {tc = l;} else {tc = r;}
   if (u < d) {ta = u;} else {ta = d;}
-
   // do planar wave update
   if (costarr[n] < COST_OBS) {  // don't propagate into obstacles
     float hf = static_cast<float>(costarr[n]);  // traversability factor
-    float dc = tc - ta;  // relative cost between ta,tc
-    if (dc < 0) {  // ta is lowest
-      dc = -dc;
-      ta = tc;
+    // 可以選擇輕微增強，保持 propagation 安全
+    hf = std::min(hf * 1.1f, 250.0f); 
+
+    float dc = tc - ta;
+    if (dc < 0) { 
+      dc = -dc; 
+      ta = tc; 
     }
 
-    // calculate new potential
     float pot;
-    if (dc >= hf) {  // if too large, use ta-only update
-      pot = ta + hf;
-    } else {  // two-neighbor interpolation update
-      // use quadratic approximation
-      // might speed this up through table lookup, but still have to
-      //   do the divide
+    if (dc >= hf) { 
+      pot = ta + hf; 
+    } else {  
       float d = dc / hf;
-      float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
-      pot = ta + hf * v;
+      float v = -0.2301f*d*d + 0.5307f*d + 0.7040f;
+      pot = ta + hf * v;  // 不要額外乘大因子
     }
 
-    //      ROS_INFO("[Update] new pot: %d\n", costarr[n]);
-
-    // now add affected neighbors to priority blocks
     if (pot < potarr[n]) {
+      potarr[n] = pot;
       float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
       float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
       float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
       float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
-      potarr[n] = pot;
-      if (pot < curT) {  // low-cost buffer block
-        if (l > pot + le) {push_next(n - 1);}
-        if (r > pot + re) {push_next(n + 1);}
-        if (u > pot + ue) {push_next(n - nx);}
-        if (d > pot + de) {push_next(n + nx);}
-      } else {  // overflow block
-        if (l > pot + le) {push_over(n - 1);}
-        if (r > pot + re) {push_over(n + 1);}
-        if (u > pot + ue) {push_over(n - nx);}
-        if (d > pot + de) {push_over(n + nx);}
+
+      if (pot < curT) {
+        if (l > pot + le) push_next(n-1);
+        if (r > pot + re) push_next(n+1);
+        if (u > pot + ue) push_next(n-nx);
+        if (d > pot + de) push_next(n+nx);
+      } else {
+        if (l > pot + le) push_over(n-1);
+        if (r > pot + re) push_over(n+1);
+        if (u > pot + ue) push_over(n-nx);
+        if (d > pot + de) push_over(n+nx);
       }
     }
   }
@@ -495,73 +496,82 @@ NavFn::updateCell(int n)
 inline void
 NavFn::updateCellAstar(int n)
 {
-  // get neighbors
-  float u, d, l, r;
-  l = potarr[n - 1];
-  r = potarr[n + 1];
-  u = potarr[n - nx];
-  d = potarr[n + nx];
-  // ROS_INFO("[Update] c: %0.1f  l: %0.1f  r: %0.1f  u: %0.1f  d: %0.1f\n",
-  // potarr[n], l, r, u, d);
-  // ROS_INFO("[Update] cost of %d: %d\n", n, costarr[n]);
+  float l = potarr[n - 1];
+  float r = potarr[n + 1];
+  float u = potarr[n - nx];
+  float d = potarr[n + nx];
 
-  // find lowest, and its lowest neighbor
-  float ta, tc;
-  if (l < r) {tc = l;} else {tc = r;}
-  if (u < d) {ta = u;} else {ta = d;}
+  if (costarr[n] >= COST_OBS) {
+    return;
+  }
 
-  // do planar wave update
-  if (costarr[n] < COST_OBS) {  // don't propagate into obstacles
-    float hf = static_cast<float>(costarr[n]);  // traversability factor
-    float dc = tc - ta;  // relative cost between ta,tc
-    if (dc < 0) {  // ta is lowest
-      dc = -dc;
-      ta = tc;
-    }
+  // --- 1. traversal cost g(n) ---
+  float ta = std::min(u, d);
+  float tc = std::min(l, r);
+  float dc = fabs(tc - ta);
 
-    // calculate new potential
-    float pot;
-    if (dc >= hf) {  // if too large, use ta-only update
-      pot = ta + hf;
-    } else {  // two-neighbor interpolation update
-      // use quadratic approximation
-      // might speed this up through table lookup, but still have to
-      //   do the divide
-      float d = dc / hf;
-      float v = -0.2301 * d * d + 0.5307 * d + 0.7040;
-      pot = ta + hf * v;
-    }
+  float hf = static_cast<float>(costarr[n]);
+  float new_g;
 
-    // ROS_INFO("[Update] new pot: %d\n", costarr[n]);
+  if (dc >= hf) {
+    new_g = std::min(ta, tc) + hf;
+  } else {
+    float d_ratio = dc / hf;
+    float v = -0.2301f * d_ratio * d_ratio
+              + 0.5307f * d_ratio
+              + 0.7040f;
+    new_g = std::min(ta, tc) + hf * v;
+  }
 
-    // now add affected neighbors to priority blocks
-    if (pot < potarr[n]) {
-      float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
-      float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
-      float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
-      float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
+  if (new_g >= potarr[n]) {
+    return;
+  }
 
-      // calculate distance
-      int x = n % nx;
-      int y = n / nx;
-      float dist = hypot(x - start[0], y - start[1]) * static_cast<float>(COST_NEUTRAL);
+  // example patterns:
+  /////////////////
+  // 253 253 253
+  // 155 30  155
+  // 253 253 253
+  /////////////////
+  // use bias to increase potential of central cell (30)
+  // to avoid being a local minimum
+  if (hf > COST_NEUTRAL) {
+    float bias = (hf - COST_NEUTRAL + obstacle_bias_offset_) * obstacle_bias_scale_;
+    new_g += bias;
+  }
 
-      potarr[n] = pot;
-      pot += dist;
-      if (pot < curT) {  // low-cost buffer block
-        if (l > pot + le) {push_next(n - 1);}
-        if (r > pot + re) {push_next(n + 1);}
-        if (u > pot + ue) {push_next(n - nx);}
-        if (d > pot + de) {push_next(n + nx);}
-      } else {
-        if (l > pot + le) {push_over(n - 1);}
-        if (r > pot + re) {push_over(n + 1);}
-        if (u > pot + ue) {push_over(n - nx);}
-        if (d > pot + de) {push_over(n + nx);}
-      }
-    }
+  potarr[n] = new_g;
+
+  // --- 2. heuristic ---
+  int x = n % nx;
+  int y = n / nx;
+
+  float h = hypot(
+    x - start[0],
+    y - start[1]
+  ) * static_cast<float>(COST_NEUTRAL);
+
+  float f = new_g + heuristic_scale_ * h;
+
+  // --- 3. queue divided ---
+  float le = INVSQRT2 * static_cast<float>(costarr[n - 1]);
+  float re = INVSQRT2 * static_cast<float>(costarr[n + 1]);
+  float ue = INVSQRT2 * static_cast<float>(costarr[n - nx]);
+  float de = INVSQRT2 * static_cast<float>(costarr[n + nx]);
+
+  if (f < curT) {
+    if (l > new_g + le) { push_next(n - 1); }
+    if (r > new_g + re) { push_next(n + 1); }
+    if (u > new_g + ue) { push_next(n - nx); }
+    if (d > new_g + de) { push_next(n + nx); }
+  } else {
+    if (l > new_g + le) { push_over(n - 1); }
+    if (r > new_g + re) { push_over(n + 1); }
+    if (u > new_g + ue) { push_over(n - nx); }
+    if (d > new_g + de) { push_over(n + nx); }
   }
 }
+
 
 
 //
@@ -666,7 +676,7 @@ NavFn::propNavFnAstar(int cycles)
 
   // set up start cell
   int startCell = start[1] * nx + start[0];
-
+  
   // do main cycle
   for (; cycle < cycles; cycle++) {  // go for this many cycles, unless interrupted
     if (curPe == 0 && nextPe == 0) {  // priority blocks empty
@@ -776,6 +786,8 @@ NavFn::calcPath(int n, int * st)
   float dx = 0;
   float dy = 0;
   npath = 0;
+  int stagnation_count = 0;
+  float last_pot = potarr[stc];
 
   // go for <n> cycles at most
   for (int i = 0; i < n; i++) {
@@ -800,6 +812,13 @@ NavFn::calcPath(int n, int * st)
     pathx[npath] = stc % nx + dx;
     pathy[npath] = stc / nx + dy;
     npath++;
+    // check for stagnation, whether we need plateau or not
+    if (potarr[stc] < last_pot - potential_epsilon_) {
+        stagnation_count = 0; // downslope
+    } else {
+        stagnation_count++;  // plate
+    }
+    last_pot = potarr[stc];
 
     bool oscillation_detected = false;
     if (npath > 2 &&
@@ -813,43 +832,71 @@ NavFn::calcPath(int n, int * st)
     }
 
     int stcnx = stc + nx;
-    int stcpx = stc - nx;
 
     // check for potentials at eight positions near cell
     if (potarr[stc] >= POT_HIGH ||
-      potarr[stc + 1] >= POT_HIGH ||
-      potarr[stc - 1] >= POT_HIGH ||
-      potarr[stcnx] >= POT_HIGH ||
-      potarr[stcnx + 1] >= POT_HIGH ||
-      potarr[stcnx - 1] >= POT_HIGH ||
-      potarr[stcpx] >= POT_HIGH ||
-      potarr[stcpx + 1] >= POT_HIGH ||
-      potarr[stcpx - 1] >= POT_HIGH ||
       oscillation_detected)
     {
-      RCLCPP_DEBUG(
-        rclcpp::get_logger("rclcpp"),
-        "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
+      // RCLCPP_WARN(
+      //   rclcpp::get_logger("rclcpp"),
+      //   "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
 
-      // check eight neighbors to find the lowest
-      int minc = stc;
-      int minp = potarr[stc];
-      int st = stcpx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stc + 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st = stcnx - 1;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
-      st++;
-      if (potarr[st] < minp) {minp = potarr[st]; minc = st;}
+      int minc = -1;
+      float minp = potarr[stc];
+      COSTTYPE cur_cost = costarr[stc];
+
+      // ---- normal ---- 
+      for (int dyc = -1; dyc <= 1; dyc++) {
+        for (int dxc = -1; dxc <= 1; dxc++) {
+          if (dxc == 0 && dyc == 0) continue;
+
+          int nb = stc + dxc + dyc * nx;
+          if (nb < 0 || nb >= ns) continue;
+
+          // no obstacles
+          if (costarr[nb] >= COST_OBS) continue;
+
+          // no cost increase
+          if (costarr[nb] > cur_cost) continue;
+
+          // potential must decrease
+          if (potarr[nb] < minp) {
+            minp = potarr[nb];
+            minc = nb;
+          }
+        }
+      }
+
+      // ---- recovery ----
+      if (minc < 0) {
+        for (int dyc = -1; dyc <= 1; dyc++) {
+          for (int dxc = -1; dxc <= 1; dxc++) {
+            if (dxc == 0 && dyc == 0) continue;
+
+            int nb = stc + dxc + dyc * nx;
+            if (nb < 0 || nb >= ns) continue;
+
+            // no obstacles
+            if (costarr[nb] >= COST_OBS) continue;
+
+            // only need potential to decrease (ignore cost)
+            if (potarr[nb] < minp) {
+              minp = potarr[nb];
+              minc = nb;
+            }
+          }
+        }
+      }
+
+      // if failed return 0
+      if (minc < 0) {
+        RCLCPP_WARN(
+          rclcpp::get_logger("rclcpp"),
+          "[PathCalc] Fallback trapped at cost boundary, aborting path extraction");
+        return 0;
+      }
+
+      // legal fallback
       stc = minc;
       dx = 0;
       dy = 0;
@@ -859,7 +906,7 @@ NavFn::calcPath(int n, int * st)
         potarr[stc], pathx[npath - 1], pathy[npath - 1]);
 
       if (potarr[stc] >= POT_HIGH) {
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
+        RCLCPP_WARN(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
         // savemap("navfn_highpot");
         return 0;
       }
@@ -897,6 +944,56 @@ NavFn::calcPath(int n, int * st)
 
       // move in the right direction
       float ss = pathStep / hypot(x, y);
+
+      bool plateau = (stagnation_count >= plateau_stagnation_steps_); // if we need plateau 
+
+      if (hypot(x, y) < min_gradient_norm_ || plateau) {   // gradient too small or plateau detected
+        int minc = -1;
+        float minp = potarr[stc];
+        // COSTTYPE cur_cost = costarr[stc];
+
+        for (int dyc = -1; dyc <= 1; dyc++) {
+            for (int dxc = -1; dxc <= 1; dxc++) {
+                if (dxc == 0 && dyc == 0) continue;
+
+                int nb = stc + dxc + dyc * nx;
+                if (nb < 0 || nb >= ns) continue;
+                if (costarr[nb] >= COST_OBS) continue;
+
+                if (potarr[nb] <= minp + 1e-3f) {
+                    minp = potarr[nb];
+                    minc = nb;
+                }
+            }
+        }
+
+        if (minc < 0) {
+            for (int dyc=-1; dyc<=1 && minc<0; dyc++) {
+                for (int dxc=-1; dxc<=1 && minc<0; dxc++) {
+                    if (dxc==0 && dyc==0) continue;
+                    int nb = stc + dxc + dyc*nx;
+                    if (nb<0 || nb>=ns) continue;
+                    if (costarr[nb] >= COST_OBS) continue;
+                    minc = nb; // force fallback
+                }
+            }
+            if (minc < 0) {
+                RCLCPP_WARN(rclcpp::get_logger("rclcpp"),
+                            "[PathCalc] Plateau trapped, aborting path");
+                return 0;
+            }
+        }
+
+        // fallback success
+        stc = minc;
+        dx = 0;
+        dy = 0;
+
+        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"),
+                    "[PathCalc] Zero gradient fallback: stc=%d pot=%.1f", stc, potarr[stc]);
+        continue;  // next loop
+      } 
+
       dx += x * ss;
       dy += y * ss;
 

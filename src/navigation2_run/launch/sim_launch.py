@@ -115,7 +115,7 @@ def generate_launch_description():
 
     declare_robot_pose_remap_cmd = DeclareLaunchArgument(
         'robot_pose_remap',
-        default_value='/final_pose_nav',
+        default_value='/final_pose',
         description='Remapping for robot pose topic')
 
     rviz_cmd = IncludeLaunchDescription(
