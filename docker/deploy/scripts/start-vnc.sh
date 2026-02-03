@@ -4,15 +4,23 @@
 # Starts VNC server with XFCE desktop environment
 ##############################################################################
 
-set -e
-
 echo "Starting VNC server..."
 
-# Fix hostname resolution for VNC
+# Fix hostname resolution issue in Docker containers FIRST
+# This must happen before any command that needs hostname resolution (including sudo)
 HOSTNAME=$(hostname)
-sudo sh -c "echo '127.0.0.1 $HOSTNAME' >> /etc/hosts" 2>/dev/null || true
+if ! getent hosts "$HOSTNAME" > /dev/null 2>&1; then
+    echo "Fixing hostname resolution for: $HOSTNAME"
+    # Write directly - container runs as privileged so we can use su or write directly
+    # Use python as a portable way to append without sudo
+    python3 -c "
+import os
+with open('/etc/hosts', 'a') as f:
+    f.write('127.0.0.1 $HOSTNAME\n')
+" 2>/dev/null || echo "127.0.0.1 $HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
+fi
 
-# Create .vnc directory if it doesn't exist and fix permissions
+# Create .vnc directory if it doesn't exist
 mkdir -p ~/.vnc
 sudo chown -R $USER:$USER ~/.vnc 2>/dev/null || true
 chmod 700 ~/.vnc
@@ -37,21 +45,20 @@ EOF
 
 chmod +x ~/.vnc/xstartup
 
-# Kill any existing VNC server
-vncserver -kill :2 2>/dev/null || true
-sleep 1
+# VNC display number (default: 5 to avoid conflict with host X server when using network_mode: host)
+VNC_DISPLAY=${VNC_DISPLAY:-5}
+VNC_PORT=$((5900 + VNC_DISPLAY))
 
-# Clean up any leftover socket files (use sudo if needed)
-sudo rm -rf /tmp/.X11-unix/X2 /tmp/.X2-lock 2>/dev/null || true
-rm -rf ~/.vnc/*.pid 2>/dev/null || true
-sleep 1
+# Kill any existing VNC server and clean up stale files
+vncserver -kill :$VNC_DISPLAY 2>/dev/null || true
+rm -f /tmp/.X${VNC_DISPLAY}-lock /tmp/.X11-unix/X${VNC_DISPLAY} 2>/dev/null || true
 
 # Start VNC server
-vncserver :7 -geometry 1920x1080 -depth 24 -localhost no
+vncserver :$VNC_DISPLAY -geometry 1920x1080 -depth 24 -localhost no
 
-echo "VNC server started on :7 (port 5907)"
+echo "VNC server started on :$VNC_DISPLAY (port $VNC_PORT)"
 echo "Password: $VNC_PASSWORD"
-echo "Connect with: <hostname>:5907"
+echo "Connect with: <hostname>:$VNC_PORT"
 
 # Keep container running
 if [ $# -eq 0 ]; then

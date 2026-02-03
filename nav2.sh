@@ -127,14 +127,14 @@ case $ACTION in
         docker compose up -d navigation-vnc
         
         # Get the host IP address
-        HOST_IP=$(hostname -I | awk '{print $7}')
+        HOST_IP=$(hostname -I | awk '{print $5}')
         
-        echo "VNC server started on port ${VNC_PORT:-5907}"
+        echo "VNC server started on port ${VNC_PORT:-5905}"
         echo ""
         echo "Connect using VNC viewer:"
-        echo "  • From this machine:    localhost:${VNC_PORT:-5907}"
+        echo "  • From this machine:    localhost:${VNC_PORT:-5905}"
         if [[ -n "$HOST_IP" ]]; then
-            echo "  • From other machines:  ${HOST_IP}:${VNC_PORT:-5907}"
+            echo "  • From other machines:  ${HOST_IP}:${VNC_PORT:-5905}"
         fi
         echo ""
         echo "Password: ${VNC_PASSWORD:-ros}"
