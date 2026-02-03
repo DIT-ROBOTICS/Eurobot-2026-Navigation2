@@ -19,8 +19,20 @@ void vel_callback(const geometry_msgs::msg::Twist::SharedPtr data) {
     //RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received velocity command: linear.x=%f, linear.y=%f, angular.z=%f", car[0], car[1], car[2]);
 }
 
-void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr /*data*/) {
-    // Ignore initial pose so odom stays fixed at the configured map->odom offset.
+void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr data) {
+    // Update odometry to match the initial pose
+    x = data->pose.pose.position.x;
+    y = data->pose.pose.position.y;
+    
+    // Extract yaw from quaternion
+    tf2::Quaternion q;
+    tf2::fromMsg(data->pose.pose.orientation, q);
+    tf2::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    th = yaw;
+    
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Initial pose set: x=%f, y=%f, yaw=%f", x, y, th);
 }
 
 int main(int argc, char **argv) {
@@ -37,7 +49,7 @@ int main(int argc, char **argv) {
     auto sub = node->create_subscription<geometry_msgs::msg::Twist>(
         cmd_cb_name, 1000, vel_callback);
     (void)node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "initial_pose", 1000, initial_pose_callback);
+        "/initial_pose", 1000, initial_pose_callback);
 
     tf2_ros::TransformBroadcaster odom_broadcaster(node);
     
