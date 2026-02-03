@@ -8,8 +8,17 @@ set -e
 
 echo "Starting VNC server..."
 
-# Create .vnc directory if it doesn't exist
+# Fix hostname resolution for VNC
+HOSTNAME=$(hostname)
+sudo sh -c "echo '127.0.0.1 $HOSTNAME' >> /etc/hosts" 2>/dev/null || true
+
+# Create .vnc directory if it doesn't exist and fix permissions
 mkdir -p ~/.vnc
+sudo chown -R $USER:$USER ~/.vnc 2>/dev/null || true
+chmod 700 ~/.vnc
+
+# Remove old .Xauthority to avoid conflicts
+rm -f ~/.Xauthority ~/.Xauthority-*
 
 # Set VNC password (default: ros)
 VNC_PASSWORD=${VNC_PASSWORD:-ros}
@@ -29,14 +38,20 @@ EOF
 chmod +x ~/.vnc/xstartup
 
 # Kill any existing VNC server
-vncserver -kill :1 2>/dev/null || true
+vncserver -kill :2 2>/dev/null || true
+sleep 1
+
+# Clean up any leftover socket files (use sudo if needed)
+sudo rm -rf /tmp/.X11-unix/X2 /tmp/.X2-lock 2>/dev/null || true
+rm -rf ~/.vnc/*.pid 2>/dev/null || true
+sleep 1
 
 # Start VNC server
-vncserver :1 -geometry 1920x1080 -depth 24 -localhost no
+vncserver :7 -geometry 1920x1080 -depth 24 -localhost no
 
-echo "VNC server started on :1 (port 5901)"
+echo "VNC server started on :7 (port 5907)"
 echo "Password: $VNC_PASSWORD"
-echo "Connect with: <hostname>:5901"
+echo "Connect with: <hostname>:5907"
 
 # Keep container running
 if [ $# -eq 0 ]; then
