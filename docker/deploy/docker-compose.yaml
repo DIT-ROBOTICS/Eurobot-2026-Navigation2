@@ -107,9 +107,10 @@ services:
     command: /usr/local/bin/start-vnc.sh
     tty: true
     environment:
+      - VNC_PORT=${VNC_PORT:-5905}
       - VNC_PASSWORD=${VNC_PASSWORD:-ros}
-      - VNC_DISPLAY=5
       - DISPLAY=:5
+      - XAUTHORITY=/home/user/.Xauthority
       - QT_X11_NO_MITSHM=1
       - RCUTILS_COLORIZED_OUTPUT=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -132,3 +133,5 @@ volumes:
   ros_x11:
     external: true
     name: ros_x11
+  vnc_xauthority:
+    driver: local

@@ -22,6 +22,11 @@ fi
 
 # Create .vnc directory if it doesn't exist
 mkdir -p ~/.vnc
+sudo chown -R $USER:$USER ~/.vnc 2>/dev/null || true
+chmod 700 ~/.vnc
+
+# Remove old .Xauthority to avoid conflicts
+rm -f ~/.Xauthority ~/.Xauthority-*
 
 # Set VNC password (default: ros)
 VNC_PASSWORD=${VNC_PASSWORD:-ros}
