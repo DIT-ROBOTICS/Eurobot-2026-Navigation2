@@ -436,9 +436,34 @@ planner_server:
     use_sim_time: False
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
+    # navfn planner setting
+#     GridBased:
+#       plugin: "nav2_navfn_planner/NavfnPlanner"
+#       tolerance: 0.02
+#       use_astar: True
+#       allow_unknown: false
+#       # ============================
+#       # A* / propagation parameters
+#       # ============================
+#       heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+#       priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+#       # ============================
+#       # Obstacle-aware bias
+#       # ============================
+#       obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+#       obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+#       # ============================
+#       # Path extraction / fallback
+#       # ============================
+#       plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+#       min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+#       potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+
+    # smac planner setting
     GridBased:
-      plugin: "nav2_smac_planner/SmacPlanner2D"
+      plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.02
+      use_astar: True
       allow_unknown: false
       # useful parameters
       cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
