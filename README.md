@@ -1,24 +1,26 @@
-# Navigation Packages for DIT Robotics Eurobot 2025
+# Navigation Packages for DIT Robotics Eurobot 2026
 
-## 🔧 Features
+This repository contains a customized navigation system based on the [ROS 2 Navigation Stack (Nav2)](https://github.com/ros-navigation/navigation2.git), adapted for DIT Robotics' Eurobot 2026 competition requirements.
 
-### 🧭 Basic Navigation  
-Enables smooth and efficient autonomous movement.  
+## Features
+
+### Basic Navigation
+Enables smooth and efficient autonomous movement.
 - Uses `/nav_to_pose` and `/nav_thru_poses` action servers for basic navigation.
 
-### 🧭 Docking Integration  
-Seamlessly integrates docking and navigation for autonomous charging or station return.  
+### Docking Integration
+Seamlessly integrates docking and navigation for autonomous charging or station return.
 - Utilizes the `/dock_robot` action server to control the docking process.
 
-### 🧩 Multi-Functional Interfaces  
+### Multi-Functional Interfaces
 Offers a variety of commands for enhanced control and flexibility:
 
-- `/stopRobot`: Lock/unlock the robot.  
-- `/keepout_zone`: Dynamically set keepout zones to avoid certain areas.  
-- `/dock_robot`: Supports flexible keyword-based commands via the `dock_type` parameter.  
+- `/stopRobot`: Lock/unlock the robot.
+- `/keepout_zone`: Dynamically set keepout zones to avoid certain areas.
+- `/dock_robot`: Supports flexible keyword-based commands via the `dock_type` parameter.
 - `rival_param.yaml`: Supports dynamic rival data setup adjustments.
 
-#### ✅ Stop Robot
+#### Stop Robot
 
 Control the robot's emergency stop or resume behavior via the `/stopRobot` topic.
 
@@ -26,7 +28,7 @@ Control the robot's emergency stop or resume behavior via the `/stopRobot` topic
 - `false`: Unlocks and resumes normal operation.  
 - **Message Type**: `std_msgs/msg/Bool`
 
-#### ✅ Keepout Zone Index
+#### Keepout Zone Index
 
 The keepout zones correspond to specific regions on the Eurobot 2026 field, used to restrict robot access dynamically via `/keepout_zone`.
 
@@ -50,7 +52,7 @@ global_costmap:
 ```
 see more about the params [/navigation2_run/params/nav2_params_default.yaml](https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2/blob/develop/src/navigation2_run/params/nav2_params_default.yaml#L194)
 
-#### ✅ Custom Controller: `follow_path_controller`
+#### Custom Controller: `follow_path_controller`
 
 Main features:
 
@@ -88,7 +90,7 @@ Main features:
   Supports `setSpeedLimit()` to apply dynamic speed limits, either as a
   percentage of a base speed or as an absolute value.
 
-#### ✅ Supported Keywords for `/dock_robot` API parameter `/dock_type`
+#### Supported Keywords for `/dock_robot` API parameter `/dock_type`
 (Keyword order does not matter and is designed for compatibility.)
 
 - **Template Base**:  
@@ -101,7 +103,7 @@ Main features:
   - **Docking Style**: `ordinary`, `gentle`, `rush`  
   - **Special Control**: `delaySpin`
 
-#### ✅ Format for `rival_param.yaml`
+#### Format for `rival_param.yaml`
 
 ```yaml
 rival_parameters:
@@ -110,30 +112,109 @@ rival_parameters:
 
 ---
 
+## Environment Setup
+
+### Quick Start
+
+This repository includes a convenient `nav2.sh` script for managing Docker containers and development workflows.
+
+#### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/DIT-ROBOTICS/Eurobot-2026-Navigation2.git
+cd Eurobot-2026-Navigation2
+```
+
+2. Install the `nav2` command globally:
+```bash
+./nav2.sh install
+```
+
+3. Add to your PATH (if not already added):
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+#### Available Commands
+
+Once installed, you can use the following commands from anywhere:
+
+**Build & Development**
+- `nav2 rebuild` - Rebuild Docker images
+- `nav2 build` - Build the entire ROS2 workspace
+- `nav2 dev` - Enter interactive development shell
+
+**Running Services**
+- `nav2 run` - Launch Navigation2 stack (detached)
+- `nav2 vnc` - Start VNC server with GUI support (port 5901)
+
+**Container Management**
+- `nav2 stop [service]` - Stop containers (all or specific: build, dev, run, vnc)
+- `nav2 ps` - Show running containers status
+- `nav2 clean` - Stop all and remove containers
+
+**Monitoring & Debugging**
+- `nav2 logs [service]` - View container logs (follow mode)
+- `nav2 exec <service> <cmd>` - Execute command in running container
+  - Example: `nav2 exec dev "ros2 topic list"`
+
+**Help**
+- `nav2 tools` - Show detailed command reference
+
+#### Docker Services
+
+- **build** - Compiles the ROS2 workspace using `colcon build`
+- **dev** - Development environment for testing and debugging
+- **run** - Runs the main navigation stack (`real_launch.py`)
+- **vnc** - Provides GUI access via VNC (useful for rviz2)
+
+#### Examples
+
+```bash
+# Build the workspace
+nav2 build
+
+# Enter development container
+nav2 dev
+
+# Inside the container, you can:
+# - source install/local_setup.bash
+# - ros2 launch navigation2_run real_launch.py
+# - ros2 topic list
+# - rviz2
+
+# Run navigation (detached)
+nav2 run
+
+# Check logs
+nav2 logs run
+
+# Stop a specific service
+nav2 stop run
+```
+
+---
+
 ## How to Use
-
-1. Download the latest version of `nav2_release_vX.X.X.zip` and extract it into the folder `~/Eurobot-2025/Eurobot-2025-ws`.  
-2. Start the container with `Eurobot-2025-Navigation2-envs`.  
-3. Launch the navigation packages by executing the appropriate launch files.  
-
-For more details, please refer to the README file at:  
-[https://github.com/DIT-ROBOTICS/Eurobot-2025-Navigation2-envs](https://github.com/DIT-ROBOTICS/Eurobot-2025-Navigation2-envs)   
+For detailed environment setup instructions and Docker configurations, please refer to the [docker/](docker/) directory.
 
 ---
 
 ## Repository Structure
 ```
-Eurobot-2025
-└── Eurobot-2025-ws/
+Eurobot-2026
+└── Eurobot-2026-ws/
    └── src/
-      ├── Eurobot-2025-Navigation2/         # Core navigation system code
+      ├── Eurobot-2026-Navigation2/         # Core navigation system code
          ├── custom_bts/                     # Custom behavior trees
          ├── custom_controller/              # Custom controller plugins
          ├── custom_layer/                   # Custom costmap layers
          ├── navigation2_run/                # Navigation system packages
          ├── Navigation2/                    # Modified version of Nav2
          └── opennav_docking/                # Docking server implementation
-      └── Eurobot-2025-Navigation2-envs/    # Docker environments
+      └── Eurobot-2026-Navigation2-envs/    # Docker environments
          ├── Navigation2-humble-local/       # Local PC environment
          └── Navigation2-humble-deploy/      # Remote machine environment
 
@@ -152,6 +233,8 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+Portions of this software are based on the ROS 2 Navigation Stack (Nav2), which is licensed under the Apache License 2.0. See the Navigation2 submodule for more details.
 
 ---
 
