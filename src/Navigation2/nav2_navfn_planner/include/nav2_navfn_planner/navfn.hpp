@@ -48,8 +48,10 @@ namespace nav2_navfn_planner
 {
 
 // cost defs
+#define COST_FREE      1
+#define COST_UNKNOWN   5
 #define COST_UNKNOWN_ROS 255  // 255 is unknown cost
-#define COST_OBS 254  // 254 for forbidden regions
+#define COST_OBS 253  // 254 for forbidden regions
 #define COST_OBS_ROS 253  // ROS values of 253 are obstacles
 
 // navfn cost values are set to
@@ -62,7 +64,7 @@ namespace nav2_navfn_planner
 // whole width of a narrow hallway as equally undesirable and thus
 // will not plan paths down the center.
 
-#define COST_NEUTRAL 50  // Set this to "open space" value
+#define COST_NEUTRAL 10  // Set this to "open space" value
 #define COST_FACTOR 0.8  // Used for translating costs in NavFn::setCostmap()
 
 // Define the cost type in the case that it is not set. However, this allows
@@ -111,6 +113,15 @@ public:
   NavFn(int nx, int ny);
 
   ~NavFn();
+
+  void setParams(
+    float heuristic_scale,
+    float priority_increment_scale,
+    float obstacle_bias_scale,
+    float obstacle_bias_offset,
+    int plateau_stagnation_steps,
+    float min_gradient_norm,
+    float potential_epsilon);
 
   /**
    * @brief  Sets or resets the size of the map
@@ -178,6 +189,18 @@ public:
   /** block priority thresholds */
   float curT;  /**< current threshold */
   float priInc;  /**< priority threshold increment */
+
+  /**
+   * @brief  parameters for path planning, included from param file
+   */
+  float heuristic_scale_;
+  float priority_increment_scale_;
+  float obstacle_bias_scale_;
+  float obstacle_bias_offset_;
+  int plateau_stagnation_steps_;
+  float min_gradient_norm_;
+  float potential_epsilon_;
+
 
   /** goal and start positions */
   /**

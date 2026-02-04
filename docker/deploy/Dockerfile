@@ -18,6 +18,7 @@ ARG USERNAME=user
 ARG USERID=1000
 ARG USERGID=${USERID}
 ARG SHELL=bash
+ARG ENABLE_VNC=false
 
 ##############################################################################
 # Display build information
@@ -79,6 +80,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     locales \
     build-essential \
     cmake \
+    gosu \
     python3-colcon-common-extensions \
     && rm -rf /var/lib/apt/lists/*
 
@@ -147,7 +149,36 @@ COPY ./settings/.bashrc /home/${USERNAME}/.bashrc
 # Copy tf2_sensor_msgs to avoid error from building navigation2
 ##############################################################################
 
+USER root
 COPY ./settings/tf2_sensor_msgs.hpp /opt/ros/humble/include/tf2_sensor_msgs/tf2_sensor_msgs.hpp
+
+##############################################################################
+# Copy tmux config file
+##############################################################################
+COPY ./settings/.tmux.conf /home/${USERNAME}/.tmux.conf
+
+##############################################################################
+# Copy scripts and set permissions
+##############################################################################
+
+COPY ./scripts/install_vnc.sh /usr/local/bin/install_vnc.sh
+COPY ./scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
+
+RUN chmod +x /usr/local/bin/install_vnc.sh \
+    && chmod +x /usr/local/bin/start-vnc.sh
+
+##############################################################################
+# Conditional VNC Installation
+##############################################################################
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    if [ "$ENABLE_VNC" = "true" ]; then \
+        echo "Installing VNC support..."; \
+        /usr/local/bin/install_vnc.sh; \
+    else \
+        echo "Skipping VNC installation"; \
+    fi
 
 ##############################################################################
 # Clean apt-cache
@@ -157,8 +188,24 @@ RUN sudo apt autoremove -y && \
     sudo apt clean -y 
 
 ##############################################################################
-# Default command
+# Set user password (for VNC screen unlock if needed)
 ##############################################################################
 
+USER root
+RUN echo 'user:user' | chpasswd
+
+##############################################################################
+# Default user for docker exec
+##############################################################################
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+##############################################################################
+# Default environment and entrypoint
+##############################################################################
+
+EXPOSE 5901
+
 SHELL ["/bin/bash", "-c"]
-CMD ["bash"]
+CMD ["/bin/bash"]

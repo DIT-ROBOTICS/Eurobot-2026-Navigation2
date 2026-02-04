@@ -91,10 +91,33 @@ NavfnPlanner::configure(
     node, name + ".use_final_approach_orientation", rclcpp::ParameterValue(false));
   node->get_parameter(name + ".use_final_approach_orientation", use_final_approach_orientation_);
 
+  declare_parameter_if_not_declared(node, name + ".heuristic_scale", rclcpp::ParameterValue(1.0));
+  node->get_parameter(name + ".heuristic_scale", heuristic_scale_);
+  declare_parameter_if_not_declared(node, name + ".priority_increment_scale", rclcpp::ParameterValue(1.1));
+  node->get_parameter(name + ".priority_increment_scale", priority_increment_scale_);
+  declare_parameter_if_not_declared(node, name + ".obstacle_bias_scale", rclcpp::ParameterValue(0.4));
+  node->get_parameter(name + ".obstacle_bias_scale", obstacle_bias_scale_);
+  declare_parameter_if_not_declared(node, name + ".obstacle_bias_offset", rclcpp::ParameterValue(10.0));
+  node->get_parameter(name + ".obstacle_bias_offset", obstacle_bias_offset_);
+  declare_parameter_if_not_declared(node, name + ".plateau_stagnation_steps", rclcpp::ParameterValue(3));
+  node->get_parameter(name + ".plateau_stagnation_steps",plateau_stagnation_steps_);
+  declare_parameter_if_not_declared(node, name + ".min_gradient_norm", rclcpp::ParameterValue(0.9));
+  node->get_parameter(name + ".min_gradient_norm", min_gradient_norm_);
+  declare_parameter_if_not_declared(node, name + ".potential_epsilon", rclcpp::ParameterValue(1.0e-3));
+  node->get_parameter(name + ".potential_epsilon", potential_epsilon_);
+
   // Create a planner based on the new costmap size
   planner_ = std::make_unique<NavFn>(
     costmap_->getSizeInCellsX(),
     costmap_->getSizeInCellsY());
+  planner_->setParams(
+    heuristic_scale_,
+    priority_increment_scale_,
+    obstacle_bias_scale_,
+    obstacle_bias_offset_,
+    plateau_stagnation_steps_,
+    min_gradient_norm_,
+    potential_epsilon_);
 }
 
 void
