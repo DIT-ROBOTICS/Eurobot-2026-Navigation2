@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
 
     // Publishers and subscribers
     auto odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("local_pose", 50);
+    auto final_pose_pub = node->create_publisher<nav_msgs::msg::Odometry>("final_pose", 50);
     auto global_vel_pub = node->create_publisher<geometry_msgs::msg::Twist>("global_vel", 50);
     auto sub = node->create_subscription<geometry_msgs::msg::Twist>(
         cmd_cb_name, 1000, vel_callback);
@@ -127,6 +128,7 @@ int main(int argc, char **argv) {
 
         // Publish the message
         odom_pub->publish(odom);
+        final_pose_pub->publish(odom);
 
         last_time = current_time;
         loop_rate.sleep();
