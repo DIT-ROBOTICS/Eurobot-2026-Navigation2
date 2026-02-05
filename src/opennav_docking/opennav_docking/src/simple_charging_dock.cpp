@@ -216,7 +216,7 @@ void SimpleChargingDock::configure(
 
   // Subscribe to final_pose_nav topic
   final_pose_nav_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
-    "final_pose_nav", 10,
+    "/final_pose", 10,
     [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
       final_pose_nav_ = *msg;
   });
@@ -307,6 +307,13 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
 
   staging_pose_pub_->publish(staging_pose);
 
+  RCLCPP_INFO(node_->get_logger(), "Staging pose: frame=%s, pos=(%.3f, %.3f, %.3f), yaw=%.3f",
+  staging_pose.header.frame_id.c_str(),
+  staging_pose.pose.position.x,
+  staging_pose.pose.position.y,
+  staging_pose.pose.position.z,
+  tf2::getYaw(staging_pose.pose.orientation));
+
 return staging_pose;
 
 }
@@ -375,23 +382,26 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     return true;
   }
 
+  // ignore use which side for now
   // Apply z-offset to move dock_pose away from detected pose before transform
   // Use stored dock_offset_z_ value from original goal
-  if ( offset_direction_ == 'x' &&  dock_positive_ ) {
-    detected.pose.position.x -= fabs(dock_offset_z_);
-  }
-  else if ( offset_direction_ == 'x' && !dock_positive_ ) {
-    detected.pose.position.x += fabs(dock_offset_z_);
-  }
-  else if ( offset_direction_ == 'y' && dock_positive_ ) {
-    detected.pose.position.y -= fabs(dock_offset_z_);
-  }
-  else if ( offset_direction_ == 'y' && !dock_positive_ ) {
-    detected.pose.position.y += fabs(dock_offset_z_);
-  }
-  else {
-    // do nothing
-  }
+  // if ( offset_direction_ == 'x' &&  dock_positive_ ) {
+  //   detected.pose.position.x -= fabs(dock_offset_z_);
+  // }
+  // else if ( offset_direction_ == 'x' && !dock_positive_ ) {
+  //   detected.pose.position.x += fabs(dock_offset_z_);
+  // }
+  // else if ( offset_direction_ == 'y' && dock_positive_ ) {
+  //   detected.pose.position.y -= fabs(dock_offset_z_);
+  // }
+  // else if ( offset_direction_ == 'y' && !dock_positive_ ) {
+  //   detected.pose.position.y += fabs(dock_offset_z_);
+  // }
+  // else {
+  //   // do nothing
+  // }
+  detected.pose.position.y += fabs(dock_offset_z_);
+
 
   // Transform detected pose into fixed frame. Note that the argument pose
   // is the output of detection, but also acts as the initial estimate
@@ -470,14 +480,12 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     dock_pose_.pose.position.y,
     dock_pose_.pose.position.z,
     tf2::getYaw(dock_pose_.pose.orientation));
-  if (!final_pose_nav_.header.frame_id.empty()) {
     RCLCPP_INFO(node_->get_logger(), "Final pose nav: frame=%s, pos=(%.3f, %.3f, %.3f), yaw=%.3f",
       final_pose_nav_.header.frame_id.c_str(),
       final_pose_nav_.pose.pose.position.x,
       final_pose_nav_.pose.pose.position.y,
       final_pose_nav_.pose.pose.position.z,
       tf2::getYaw(final_pose_nav_.pose.pose.orientation));
-  }
   dock_pose_pub_->publish(dock_pose_);
   pose = dock_pose_;
   use_external_detection_pose_ = false;
