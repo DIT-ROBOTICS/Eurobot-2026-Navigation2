@@ -5,6 +5,7 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp> // toMsg & fromMsg
 
 double car[3] = {0};
@@ -19,8 +20,20 @@ void vel_callback(const geometry_msgs::msg::Twist::SharedPtr data) {
     //RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received velocity command: linear.x=%f, linear.y=%f, angular.z=%f", car[0], car[1], car[2]);
 }
 
-void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr /*data*/) {
-    // Ignore initial pose so odom stays fixed at the configured map->odom offset.
+void initial_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr data) {
+    // Update odometry to match the initial pose
+    x = data->pose.pose.position.x;
+    y = data->pose.pose.position.y;
+    
+    // Extract yaw from quaternion
+    tf2::Quaternion q;
+    tf2::fromMsg(data->pose.pose.orientation, q);
+    tf2::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    th = yaw;
+    
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Initial pose set: x=%f, y=%f, yaw=%f", x, y, th);
 }
 
 int main(int argc, char **argv) {
@@ -33,11 +46,12 @@ int main(int argc, char **argv) {
 
     // Publishers and subscribers
     auto odom_pub = node->create_publisher<nav_msgs::msg::Odometry>("local_pose", 50);
+    auto final_pose_pub = node->create_publisher<nav_msgs::msg::Odometry>("final_pose", 50);
     auto global_vel_pub = node->create_publisher<geometry_msgs::msg::Twist>("global_vel", 50);
     auto sub = node->create_subscription<geometry_msgs::msg::Twist>(
         cmd_cb_name, 1000, vel_callback);
     (void)node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "initial_pose", 1000, initial_pose_callback);
+        "/initial_pose", 1000, initial_pose_callback);
 
     tf2_ros::TransformBroadcaster odom_broadcaster(node);
     
@@ -127,6 +141,38 @@ int main(int argc, char **argv) {
 
         // Publish the message
         odom_pub->publish(odom);
+        
+        // Transform odom pose to map frame for final_pose
+        nav_msgs::msg::Odometry final_pose;
+        final_pose.header.stamp = current_time;
+        final_pose.header.frame_id = tf_prefix_ + "map";
+        final_pose.child_frame_id = tf_prefix_ + "base_footprint";
+        
+        // Extract map_to_odom transform components
+        double map_to_odom_x = map_to_odom.transform.translation.x;
+        double map_to_odom_y = map_to_odom.transform.translation.y;
+        tf2::Quaternion map_to_odom_q;
+        tf2::fromMsg(map_to_odom.transform.rotation, map_to_odom_q);
+        double map_to_odom_yaw = tf2::getYaw(map_to_odom_q);
+        
+        // Transform position from odom to map frame
+        double cos_yaw = cos(map_to_odom_yaw);
+        double sin_yaw = sin(map_to_odom_yaw);
+        final_pose.pose.pose.position.x = map_to_odom_x + (x * cos_yaw - y * sin_yaw);
+        final_pose.pose.pose.position.y = map_to_odom_y + (x * sin_yaw + y * cos_yaw);
+        final_pose.pose.pose.position.z = 0.0;
+        
+        // Transform orientation from odom to map frame
+        tf2::Quaternion final_quat;
+        final_quat.setRPY(0, 0, th + map_to_odom_yaw);
+        final_pose.pose.pose.orientation = tf2::toMsg(final_quat);
+        
+        // Twist is in child_frame, same as odom
+        final_pose.twist.twist.linear.x = vx;
+        final_pose.twist.twist.linear.y = vy;
+        final_pose.twist.twist.angular.z = vth;
+        
+        final_pose_pub->publish(final_pose);
 
         last_time = current_time;
         loop_rate.sleep();
