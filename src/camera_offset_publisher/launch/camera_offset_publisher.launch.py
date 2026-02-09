@@ -39,6 +39,12 @@ def generate_launch_description():
         default_value='25.0',
         description='Publishing rate in Hz'
     )
+
+    publish_rate_arg = DeclareLaunchArgument(
+        'dock_side',
+        default_value='0',
+        description='Use which side of camera to dock'
+    )
     
     # Create the node
     camera_offset_publisher_node = Node(
@@ -50,6 +56,7 @@ def generate_launch_description():
             'goal_x': LaunchConfiguration('goal_x'),
             'goal_y': LaunchConfiguration('goal_y'),
             'publish_rate': LaunchConfiguration('publish_rate'),
+            'dock_side': LaunchConfiguration('dock_side')
         }]
     )
     
