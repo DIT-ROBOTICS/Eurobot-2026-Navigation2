@@ -138,6 +138,7 @@ void SimpleChargingDock::configure(
   dock_w_cam_ = false;
   dock_offset_z_ = 0.0;
   reset_flag_ = false;
+  domain_id_ = 50;
 
   if (use_battery_status_) {
     battery_sub_ = node_->create_subscription<sensor_msgs::msg::BatteryState>(
@@ -145,6 +146,20 @@ void SimpleChargingDock::configure(
       [this](const sensor_msgs::msg::BatteryState::SharedPtr state) {
         is_charging_ = state->current > charging_threshold_;
       });
+  }
+
+
+  const char* domain_id_str = std::getenv("ROS_DOMAIN_ID");
+  if ( domain_id_str != nullptr ) {
+    domain_id_ = std::atoi(domain_id_str);
+    if ( 11 <= domain_id_ && domain_id_ <= 14 ) {
+      RCLCPP_INFO(node_->get_logger(), "ROS_DOMAIN_ID: %d (expected range)", domain_id_);
+    }
+    else {
+      RCLCPP_WARN(node_->get_logger(), "ROS_DOMAIN_ID: %d (outside expected range 11-14)", domain_id_);
+    }
+  } else {
+    RCLCPP_INFO(node_->get_logger(), "ROS_DOMAIN_ID not set, using default");
   }
 
   dock_pose_.header.stamp = rclcpp::Time(0);
@@ -219,6 +234,15 @@ void SimpleChargingDock::configure(
     "/final_pose", 10,
     [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
       final_pose_nav_ = *msg;
+  });
+
+  // Subscribe to dock_side topic
+  dock_side_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
+    "/robot/dock_side", 10,
+    [this](const std_msgs::msg::Int16::SharedPtr msg) {
+      cam_side_ = msg->data;
+      if ( cam_side_ < 0 || cam_side_ > 3 )
+        RCLCPP_WARN(node_->get_logger(), "/robot/dock_side:%d is not in valid range: 0-3", cam_side_);
   });
 }
 
@@ -377,31 +401,43 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
   auto timeout = rclcpp::Duration::from_seconds(external_detection_timeout_);
   if (node_->now() - detected.header.stamp > timeout) {
     RCLCPP_WARN(node_->get_logger(), "Lost detection or did not detect: timeout exceeded");
+    use_external_detection_pose_ = false; // experimental
     dock_pose_pub_->publish(detected_dock_pose_prev_);
     dock_pose_ = detected_dock_pose_prev_;
     return true;
   }
 
-  // ignore use which side for now
+  // RCLCPP_INFO(node_->get_logger(), "domain_id: %d, cam_side: %d", domain_id_, cam_side_);
   // Apply z-offset to move dock_pose away from detected pose before transform
   // Use stored dock_offset_z_ value from original goal
-  // if ( offset_direction_ == 'x' &&  dock_positive_ ) {
-  //   detected.pose.position.x -= fabs(dock_offset_z_);
-  // }
-  // else if ( offset_direction_ == 'x' && !dock_positive_ ) {
-  //   detected.pose.position.x += fabs(dock_offset_z_);
-  // }
-  // else if ( offset_direction_ == 'y' && dock_positive_ ) {
-  //   detected.pose.position.y -= fabs(dock_offset_z_);
-  // }
-  // else if ( offset_direction_ == 'y' && !dock_positive_ ) {
-  //   detected.pose.position.y += fabs(dock_offset_z_);
-  // }
-  // else {
-  //   // do nothing
-  // }
-  detected.pose.position.y += fabs(dock_offset_z_);
-
+  if ( domain_id_ == 11 ) { // White-Orange Robot
+    if ( cam_side_ == 0 ) { // dock toward -y of robot, actually no cam this side
+      detected.pose.position.y += fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 1 ) { // toward -x
+      detected.pose.position.x += fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 2 ) { // toward +y
+      detected.pose.position.y -= fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 3 ) { // toward +x
+      detected.pose.position.x -= fabs(dock_offset_z_);
+    }
+  }
+  else if ( domain_id_ == 13 ) { // Black-Red Robot
+    if ( cam_side_ == 0 ) { // dock toward +y
+      detected.pose.position.y -= fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 1 ) { // +x
+      detected.pose.position.x -= fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 2 ) { // -y
+      detected.pose.position.y += fabs(dock_offset_z_);
+    }
+    else if ( cam_side_ == 3 ) { // -x
+      detected.pose.position.x += fabs(dock_offset_z_);
+    }
+  }
 
   // Transform detected pose into fixed frame. Note that the argument pose
   // is the output of detection, but also acts as the initial estimate

@@ -23,6 +23,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "std_msgs/msg/int16.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
@@ -121,6 +122,9 @@ protected:
   // subscribe to dock controller, to enable cam or not
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr dock_controller_selector_sub_;
 
+  // Subscribe to dock side information
+  rclcpp::Subscription<std_msgs::msg::Int16>::SharedPtr dock_side_sub_;
+
   // Subscribe to final pose from navigation
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr final_pose_nav_sub_;
   nav_msgs::msg::Odometry final_pose_nav_;
@@ -173,6 +177,9 @@ protected:
   char offset_direction_;
   bool dock_positive_;
   bool dock_w_cam_;
+
+  int cam_side_;
+  int domain_id_;
 
   bool reset_flag_;
   bool reset_timer_flag_;
