@@ -407,36 +407,20 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     return true;
   }
 
-  // RCLCPP_INFO(node_->get_logger(), "domain_id: %d, cam_side: %d", domain_id_, cam_side_);
+  RCLCPP_INFO(node_->get_logger(), "domain_id: %d, cam_side: %d", domain_id_, cam_side_);
   // Apply z-offset to move dock_pose away from detected pose before transform
   // Use stored dock_offset_z_ value from original goal
-  if ( domain_id_ == 11 ) { // White-Orange Robot
-    if ( cam_side_ == 0 ) { // dock toward -y of robot, actually no cam this side
-      detected.pose.position.y += fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 1 ) { // toward -x
-      detected.pose.position.x += fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 2 ) { // toward +y
-      detected.pose.position.y -= fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 3 ) { // toward +x
-      detected.pose.position.x -= fabs(dock_offset_z_);
-    }
+  if ( cam_side_ == 0 ) { // dock toward +y
+    detected.pose.position.y -= fabs(dock_offset_z_);
   }
-  else if ( domain_id_ == 13 ) { // Black-Red Robot
-    if ( cam_side_ == 0 ) { // dock toward +y
-      detected.pose.position.y -= fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 1 ) { // +x
-      detected.pose.position.x -= fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 2 ) { // -y
-      detected.pose.position.y += fabs(dock_offset_z_);
-    }
-    else if ( cam_side_ == 3 ) { // -x
-      detected.pose.position.x += fabs(dock_offset_z_);
-    }
+  else if ( cam_side_ == 1 ) { // +x
+    detected.pose.position.x -= fabs(dock_offset_z_);
+  }
+  else if ( cam_side_ == 2 ) { // -y
+    detected.pose.position.y += fabs(dock_offset_z_);
+  }
+  else if ( cam_side_ == 3 ) { // -x
+    detected.pose.position.x += fabs(dock_offset_z_);
   }
 
   // Transform detected pose into fixed frame. Note that the argument pose
