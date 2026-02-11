@@ -280,11 +280,13 @@ void DockingServer::dockRobot()
     rclcpp::Time dock_contact_time;
     controller_->velocityInit(dock_pose.pose);  // ** Set total distance for velocity control
     RCLCPP_INFO(get_logger(), "\033[1;90m Starting docking control loop. \033[0m");
+    bool dock_stop_ = false;
     while (rclcpp::ok()) {
       try {
         // Approach the dock using control law
         if (approachDock(dock, dock_pose)) {
           if (waitForCharge(dock)) {
+            dock_stop_ = true;
             RCLCPP_INFO(get_logger(), "\033[1;32mRobot is docked!\033[0m");
             result->success = true;
             result->num_retries = num_retries_;
@@ -294,9 +296,13 @@ void DockingServer::dockRobot()
             publishZeroVelocity();
             publishZeroVelocity();
             publishZeroVelocity();
-            return;
           }
         }
+        if ( dock_stop_ ) {
+          publishZeroVelocity();
+          return;
+        }
+
 
         // Cancelled, preempted, or shutting down (recoverable errors throw DockingException)
         stashDockData(goal->use_dock_id, dock, false);
@@ -306,6 +312,7 @@ void DockingServer::dockRobot()
       } catch (opennav_docking_core::DockingException & e) {
         if (++num_retries_ > max_retries_) {
           RCLCPP_ERROR(get_logger(), "Failed to dock");
+          publishZeroVelocity();
           throw;
         }
         RCLCPP_WARN(get_logger(), "Docking failed, will retry: %s", e.what());
@@ -453,6 +460,7 @@ bool DockingServer::approachDock(Dock * dock, geometry_msgs::msg::PoseStamped & 
     }
     
     if (this->now() - start > timeout) {
+      publishZeroVelocity();
       throw opennav_docking_core::FailedToControl(
               "Timed out approaching dock");
     }

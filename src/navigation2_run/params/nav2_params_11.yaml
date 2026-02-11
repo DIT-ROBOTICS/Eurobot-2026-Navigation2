@@ -143,7 +143,7 @@ controller_server:
       yaw_debounce_threshold: 1
 
     # Controller parameters
-    DidilongController:  # First version
+    DidilongController:  # first version
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
@@ -151,107 +151,14 @@ controller_server:
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
       min_obstacle_dist: 0.25 
-      lookahead_dist: 0.7
+      lookahead_dist: 1.2
       w_smooth: 1.0 
       w_obst: 1.0               
-      k_xy: 0.35                   
-      k_w: 2.0             
-      max_v: 0.4               
+      k_xy: 0.5                   
+      k_w: 1.2             
+      max_v: 0.6               
       min_v: 0.0
-      max_acc_v: 1.2             
-      max_w: 0.75                   
-      max_acc_w: 1.5                                      
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      stop_v_eps: 0.05
-      replan_min_blocked_time: 0.05
-      replan_cooldown: 0.05
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
-      obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 252.0
-
-    Fast:   # First version
-      plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.7
-      w_smooth: 1.0 
-      w_obst: 1.0               
-      k_xy: 0.35                   
-      k_w: 2.0             
-      max_v: 0.4               
-      min_v: 0.0
-      max_acc_v: 1.0            
-      max_w: 2.0                   
-      max_acc_w: 10.0                                      
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      stop_v_eps: 0.05
-      replan_min_blocked_time: 0.05
-      replan_cooldown: 0.05
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
-      obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 240.0 
-
-    Slow: # First version
-      plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.5
-      w_smooth: 1.0 
-      w_obst: 1.0               
-      k_xy: 0.6                   
-      k_w: 2.0             
-      max_v: 0.2               
-      min_v: 0.0
-      max_acc_v: 1.0             
-      max_w: 1.2                   
-      max_acc_w: 3.0                                      
-      stop_v_eps: 0.05                             
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
-      cost_check_stride: 1
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
-      obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
-      obstacle_cost_threshold: 252.0
-
-    LinearBoost:   # First version
-      plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.8
-      w_smooth: 1.0 
-      w_obst: 1.0               
-      k_xy: 0.4                   
-      k_w: 2.0             
-      max_v: 0.5               
-      min_v: 0.0
-      max_acc_v: 2.5             
+      max_acc_v: 30.0             
       max_w: 1.0                   
       max_acc_w: 3.0                                      
       max_cost_threshold: 97.0
@@ -265,9 +172,40 @@ controller_server:
       stop_obstacle_dist: 0.6
       obstacle_check_lookahead: 0.7
       obstacle_check_time_horizon: 0.8
+      obstacle_cost_threshold: 252.0
+
+    Fast:  # first version
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.05                
+      resample_ds: 0.05
+      iterations: 4 
+      goal_xy_stop_dist: 0.03   
+      goal_heading_switch_dist: 5.0
+      min_obstacle_dist: 0.25 
+      lookahead_dist: 1.2
+      w_smooth: 1.0 
+      w_obst: 1.0               
+      k_xy: 0.5                   
+      k_w: 1.5             
+      max_v: 0.6               
+      min_v: 0.0
+      max_acc_v: 5.0             
+      max_w: 4.0                   
+      max_acc_w: 5.0                                      
+      max_cost_threshold: 97.0
+      blocked_stop_clearance: 0.3
+      treat_no_info_as_obstacle: true
+      cost_check_stride: 1
+      stop_v_eps: 0.05
+      replan_min_blocked_time: 0.05
+      replan_cooldown: 0.05
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.7
+      obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 240.0 
 
-    AngularBoost:  # First version
+    Slow:  # first version
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
@@ -279,12 +217,74 @@ controller_server:
       w_smooth: 1.0 
       w_obst: 1.0               
       k_xy: 0.6                   
-      k_w: 2.0             
-      max_v: 0.2               
+      k_w: 1.6             
+      max_v: 0.15               
       min_v: 0.0
-      max_acc_v: 1.0             
-      max_w: 4.0                   
-      max_acc_w: 15.0                                      
+      max_acc_v: 0.8             
+      max_w: 0.9                   
+      max_acc_w: 1.8                                      
+      stop_v_eps: 0.05                             
+      slowdown_obstacle_dist: 0.6
+      stop_obstacle_dist: 0.25
+      max_cost_threshold: 97.0
+      blocked_stop_clearance: 0.3
+      treat_no_info_as_obstacle: false
+      cost_check_stride: 1
+      replan_min_blocked_time: 0.20
+      replan_cooldown: 0.20
+      obstacle_check_lookahead: 0.4
+      obstacle_check_time_horizon: 0.6
+      obstacle_cost_threshold: 240.0
+
+    LinearBoost:  # first version
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.05                
+      resample_ds: 0.05
+      iterations: 4 
+      goal_xy_stop_dist: 0.03   
+      goal_heading_switch_dist: 5.0
+      min_obstacle_dist: 0.25 
+      lookahead_dist: 1.0
+      w_smooth: 1.0 
+      w_obst: 1.0               
+      k_xy: 0.35                   
+      k_w: 1.2             
+      max_v: 0.6               
+      min_v: 0.0
+      max_acc_v: 30.0             
+      max_w: 1.2                   
+      max_acc_w: 3.6                                      
+      max_cost_threshold: 97.0
+      blocked_stop_clearance: 0.3
+      treat_no_info_as_obstacle: true
+      cost_check_stride: 1
+      stop_v_eps: 0.05
+      replan_min_blocked_time: 0.05
+      replan_cooldown: 0.05
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.7
+      obstacle_check_time_horizon: 0.8
+      obstacle_cost_threshold: 240.0
+
+    AngularBoost:  # first version 
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.05                
+      resample_ds: 0.05
+      iterations: 4 
+      goal_xy_stop_dist: 0.03   
+      goal_heading_switch_dist: 5.0
+      min_obstacle_dist: 0.25 
+      lookahead_dist: 0.4
+      w_smooth: 1.0 
+      w_obst: 1.0               
+      k_xy: 0.4                   
+      k_w: 2.5             
+      max_v: 0.15               
+      min_v: 0.0
+      max_acc_v: 0.8             
+      max_w: 3.5                   
+      max_acc_w: 14.0                              
       stop_v_eps: 0.05                             
       slowdown_obstacle_dist: 0.6
       stop_obstacle_dist: 0.25
@@ -543,7 +543,7 @@ docking_server:
     controller_frequency: 20.0
     initial_perception_timeout: 5.0
     wait_charge_timeout: 5.0
-    dock_approach_timeout: 6.0
+    dock_approach_timeout: 5.0
     max_retries: 0
     base_frame: "base_footprint"
     fixed_frame: "map"
@@ -551,7 +551,7 @@ docking_server:
     dock_prestaging_tolerance: 0.01
     enable_stop_robot: false
     velocity_smoother_wait: 0.12
-    external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+    external_rival_data_path: "/home/share/data/rival_params.yaml"
     shrink_nav_rival_radius: 0.05
     shrink_dock_rival_radius: 0.27
     shrink_dock_rival_degree: 60.0
@@ -559,7 +559,7 @@ docking_server:
     # Types of docks
     dock_plugins: ["dock"]
     dock:
-      plugin: "opennav_docking::SimpleChargingDock"
+      plugin: 'opennav_docking::SimpleChargingDock'
       docking_threshold: 0.005
       use_debounce: true
       xy_debounce_threshold: 2
@@ -580,69 +580,68 @@ docking_server:
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.4
+      camera_aruco_max: 0.6
       camera_aruco_min: 0.19
 
-
-    docks: ["home_dock"]
+    docks: ['home_dock']
     home_dock:
-      type: "dock"
+      type: 'dock'
       frame: map
       pose: [0.0, 0.0, 0.0]
-
+    
     # dock_database: /my/path/to/dock_database.yaml
 
     controllers: ["Ordinary", "Gentle", "Rush", "Cam"]
 
     Ordinary:
-      max_linear_vel: 0.3
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.05
+      max_linear_vel: 0.15
+      min_linear_vel: 0.015
+      linear_kp_accel_vel: 0.12
+      linear_ki_accel_vel: 0.015
+      linear_kp_decel_dis: 0.15
+      angular_kp: 1.0
+      deceleration_distance: 0.08
       reserved_distance: 0.0
-      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Gentle:
-      max_linear_vel: 0.3
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.1
-      reserved_distance: 0.0
-      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      max_linear_vel: 0.12
+      min_linear_vel: 0.0 
+      linear_kp_accel_vel: 0.08
+      linear_ki_accel_vel: 0.007
+      linear_kp_decel_dis: 0.12
+      angular_kp: 0.2
+      deceleration_distance: 0.06
+      reserved_distance: 0.005
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Rush:
-      max_linear_vel: 0.3
+      max_linear_vel: 0.24
       min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.03
-      reserved_distance: 0.0
-      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      linear_kp_accel_vel: 0.16
+      linear_ki_accel_vel: 0.02
+      linear_kp_decel_dis: 0.25
+      angular_kp: 1.0
+      deceleration_distance: 0.1
+      reserved_distance: 0.005
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.2
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.8
-      reserved_distance: 0.0
-      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      max_linear_vel: 0.15
+      min_linear_vel: 0.00
+      linear_kp_accel_vel: 0.12
+      linear_ki_accel_vel: 0.015
+      linear_kp_decel_dis: 0.15
+      angular_kp: 1.0
+      deceleration_distance: 0.1
+      reserved_distance: 0.005
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
