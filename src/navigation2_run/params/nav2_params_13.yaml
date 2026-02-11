@@ -594,12 +594,12 @@ docking_server:
     controllers: ["Ordinary", "Gentle", "Rush", "Cam"]
 
     Ordinary:
-      max_linear_vel: 0.3
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 3.0
+      max_linear_vel: 0.15
+      min_linear_vel: 0.015
+      linear_kp_accel_vel: 0.12
+      linear_ki_accel_vel: 0.015
+      linear_kp_decel_dis: 0.15
+      angular_kp: 1.0
       deceleration_distance: 0.08
       reserved_distance: 0.0
       external_rival_data_path: "/home/share/data/rival_params.yaml"
@@ -611,37 +611,37 @@ docking_server:
       min_linear_vel: 0.015
       linear_kp_accel_vel: 0.08
       linear_ki_accel_vel: 0.007
-      linear_kp_decel_dis: 1.0
-      angular_kp: 2.0
-      deceleration_distance: 0.2
+      linear_kp_decel_dis: 0.12
+      angular_kp: 1.0
+      deceleration_distance: 0.06
       reserved_distance: 0.0
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Rush:
-      max_linear_vel: 0.3
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.05
+      max_linear_vel: 0.24
+      min_linear_vel: 0.015
+      linear_kp_accel_vel: 0.16
+      linear_ki_accel_vel: 0.02
+      linear_kp_decel_dis: 0.25
+      angular_kp: 1.0
+      deceleration_distance: 0.1
       reserved_distance: 0.0
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.12
+      max_linear_vel: 0.15
       min_linear_vel: 0.015
-      linear_kp_accel_vel: 0.08
-      linear_ki_accel_vel: 0.007
-      linear_kp_decel_dis: 1.0
-      angular_kp: 2.0
-      deceleration_distance: 0.2
+      linear_kp_accel_vel: 0.12
+      linear_ki_accel_vel: 0.015
+      linear_kp_decel_dis: 0.15
+      angular_kp: 1.0
+      deceleration_distance: 0.08
       reserved_distance: 0.0
-      external_rival_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/rival_params.yaml"
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 

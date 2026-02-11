@@ -291,6 +291,9 @@ void DockingServer::dockRobot()
             stashDockData(goal->use_dock_id, dock, true);
             publishZeroVelocity();
             docking_action_server_->succeeded_current(result);
+            publishZeroVelocity();
+            publishZeroVelocity();
+            publishZeroVelocity();
             return;
           }
         }
@@ -692,7 +695,14 @@ geometry_msgs::msg::PoseStamped DockingServer::getRobotPoseInFrame(const std::st
 
 void DockingServer::publishZeroVelocity()
 {
-  vel_publisher_->publish(geometry_msgs::msg::Twist());
+  auto vel = geometry_msgs::msg::Twist();
+  vel.linear.x = 0.0;
+  vel.linear.y = 0.0;
+  vel.linear.z = 0.0;
+  vel.angular.x = 0.0;
+  vel.angular.y = 0.0;
+  vel.angular.z = 0.0;
+  vel_publisher_->publish(vel);
 }
 
 void DockingServer::publishDockingFeedback(uint16_t state)
