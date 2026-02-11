@@ -182,10 +182,10 @@ controller_server:
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
       min_obstacle_dist: 0.25 
-      lookahead_dist: 0.7
+      lookahead_dist: 1.2
       w_smooth: 1.0 
       w_obst: 1.0               
-      k_xy: 0.35                   
+      k_xy: 0.45                   
       k_w: 2.0             
       max_v: 0.4               
       min_v: 0.0
@@ -217,12 +217,12 @@ controller_server:
       w_smooth: 1.0 
       w_obst: 1.0               
       k_xy: 0.6                   
-      k_w: 2.0             
+      k_w: 1.6             
       max_v: 0.2               
       min_v: 0.0
-      max_acc_v: 1.0             
+      max_acc_v: 1.2             
       max_w: 1.2                   
-      max_acc_w: 3.0                                      
+      max_acc_w: 3.6                                     
       stop_v_eps: 0.05                             
       slowdown_obstacle_dist: 0.6
       stop_obstacle_dist: 0.25
