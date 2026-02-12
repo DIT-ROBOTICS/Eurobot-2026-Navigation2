@@ -634,13 +634,13 @@ docking_server:
 
     Cam:
       max_linear_vel: 0.12
-      min_linear_vel: 0.01
+      min_linear_vel: 0.0
       linear_kp_accel_vel: 0.08
       linear_ki_accel_vel: 0.007
       linear_kp_decel_dis: 0.12
       angular_kp: 0.4
       deceleration_distance: 0.08
-      reserved_distance: 0.006
+      reserved_distance: 0.01
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
