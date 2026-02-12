@@ -187,7 +187,7 @@ protected:
 
   // this is only set here, there is no param for this
   // Flag to ignore orientation from detected_dock_pose
-  const bool ignore_detected_orientation_ = true;
+  const bool ignore_detected_orientation_ = 0;
 
 
   double dock_offset_z_; // Stores the z-offset value from the original dock goal
