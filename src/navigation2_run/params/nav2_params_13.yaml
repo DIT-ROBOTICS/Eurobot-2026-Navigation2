@@ -599,6 +599,7 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.015
       linear_kp_decel_dis: 0.15
+      linear_ki_decel_dis: 0.04
       angular_kp: 1.0
       deceleration_distance: 0.08
       reserved_distance: 0.0
@@ -612,6 +613,7 @@ docking_server:
       linear_kp_accel_vel: 0.08
       linear_ki_accel_vel: 0.007
       linear_kp_decel_dis: 0.12
+      linear_ki_decel_dis: 0.04
       angular_kp: 0.6
       deceleration_distance: 0.06
       reserved_distance: 0.0
@@ -625,6 +627,7 @@ docking_server:
       linear_kp_accel_vel: 0.16
       linear_ki_accel_vel: 0.02
       linear_kp_decel_dis: 0.25
+      linear_ki_decel_dis: 0.04
       angular_kp: 1.0
       deceleration_distance: 0.1
       reserved_distance: 0.0
@@ -638,6 +641,7 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.015
       linear_kp_decel_dis: 0.15
+      linear_ki_decel_dis: 0.04
       angular_kp: 0.6
       deceleration_distance: 0.08
       reserved_distance: 0.0
