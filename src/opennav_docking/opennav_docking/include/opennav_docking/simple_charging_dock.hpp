@@ -20,8 +20,10 @@
 #include <vector>
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "std_msgs/msg/int16.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
@@ -107,12 +109,25 @@ public:
 
 protected:
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state);
+  void resetDockPoseSubscription();
+  double computeExternalDockingDist(const double z); 
+  // z is diff of aruco_center and robot pose to do mission
 
   // Optionally subscribe to a detected dock pose topic
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr dock_pose_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr dock_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_dock_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr staging_pose_pub_;
+
+  // subscribe to dock controller, to enable cam or not
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr dock_controller_selector_sub_;
+
+  // Subscribe to dock side information
+  rclcpp::Subscription<std_msgs::msg::Int16>::SharedPtr dock_side_sub_;
+
+  // Subscribe to final pose from navigation
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr final_pose_nav_sub_;
+  nav_msgs::msg::Odometry final_pose_nav_;
 
   // If subscribed to a detected pose topic, will contain latest message
   geometry_msgs::msg::PoseStamped detected_dock_pose_;
@@ -160,6 +175,26 @@ protected:
   double staging_yaw_offset_;
   // set offset direction for goal checking 
   char offset_direction_;
+  bool dock_positive_;
+  bool dock_w_cam_;
+
+  int cam_side_;
+  int domain_id_;
+
+  bool reset_flag_;
+  bool reset_timer_flag_;
+  rclcpp::Time last_reset_time_;
+
+  // this is only set here, there is no param for this
+  // Flag to ignore orientation from detected_dock_pose
+  const bool ignore_detected_orientation_ = 0;
+
+
+  double dock_offset_z_; // Stores the z-offset value from the original dock goal
+
+  // Camera ArUco detection distance thresholds
+  double camera_aruco_max_;  // The farthest dist the camera can see ArUco
+  double camera_aruco_min_;  // The closest dist
 
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;

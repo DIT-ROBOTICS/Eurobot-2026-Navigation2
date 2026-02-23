@@ -143,7 +143,7 @@ controller_server:
       yaw_debounce_threshold: 1
 
     # Controller parameters
-    DidilongController:  # First version
+    DidilongController:  # first version
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
@@ -543,7 +543,7 @@ docking_server:
     controller_frequency: 20.0
     initial_perception_timeout: 5.0
     wait_charge_timeout: 5.0
-    dock_approach_timeout: 5.0
+    dock_approach_timeout: 6.0
     max_retries: 0
     base_frame: "base_footprint"
     fixed_frame: "map"
@@ -571,6 +571,17 @@ docking_server:
       use_battery_status: false
       use_stall_detection: false
       base_frame: "base_footprint"
+      # External detection parameters (for camera-based docking)
+      external_detection_timeout: 1.0
+      external_detection_translation_x: 0.0
+      external_detection_translation_y: 0.0
+      external_detection_rotation_yaw: 0.0
+      external_detection_rotation_pitch: 0.0
+      external_detection_rotation_roll: 0.0
+      filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
+      # the threshold for CameraOnBoard to see ArUco
+      camera_aruco_max: 0.6
+      camera_aruco_min: 0.19
 
     docks: ['home_dock']
     home_dock:
@@ -580,15 +591,16 @@ docking_server:
     
     # dock_database: /my/path/to/dock_database.yaml
 
-    controllers: ["Ordinary", "Gentle", "Rush"]
+    controllers: ["Ordinary", "Gentle", "Rush", "Cam"]
 
     Ordinary:
-      max_linear_vel: 0.3
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 3.0
+      max_linear_vel: 0.15
+      min_linear_vel: 0.015
+      linear_kp_accel_vel: 0.12
+      linear_ki_accel_vel: 0.015
+      linear_kp_decel_dis: 0.15
+      linear_ki_decel_dis: 0.04
+      angular_kp: 0.2
       deceleration_distance: 0.08
       reserved_distance: 0.0
       external_rival_data_path: "/home/share/data/rival_params.yaml"
@@ -596,27 +608,43 @@ docking_server:
       rival_radius: 0.44
 
     Gentle:
-      max_linear_vel: 0.3
+      max_linear_vel: 0.015
       min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 2.0
-      deceleration_distance: 0.1
-      reserved_distance: 0.0
+      linear_kp_accel_vel: 0.6
+      linear_ki_accel_vel: 0.04
+      linear_kp_decel_dis: 0.2
+      linear_ki_decel_dis: 0.04
+      angular_kp: 0.2
+      deceleration_distance: 0.08
+      reserved_distance: 0.005
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Rush:
-      max_linear_vel: 0.3
+      max_linear_vel: 0.24
+      min_linear_vel: 0.015
+      linear_kp_accel_vel: 0.16
+      linear_ki_accel_vel: 0.02
+      linear_kp_decel_dis: 0.22
+      linear_ki_decel_dis: 0.04
+      angular_kp: 0.3
+      deceleration_distance: 0.14
+      reserved_distance: 0.005
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      stop_degree: 120.0
+      rival_radius: 0.44
+
+    Cam:
+      max_linear_vel: 0.12
       min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.5
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 3.0
-      angular_kp: 4.0
-      deceleration_distance: 0.05
-      reserved_distance: 0.0
+      linear_kp_accel_vel: 0.08
+      linear_ki_accel_vel: 0.007
+      linear_kp_decel_dis: 0.12
+      linear_ki_decel_dis: 0.04
+      angular_kp: 0.3
+      deceleration_distance: 0.08
+      reserved_distance: 0.005
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44

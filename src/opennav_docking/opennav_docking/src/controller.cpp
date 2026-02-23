@@ -237,6 +237,7 @@ void Controller::Acceleration(double & vel, const double & remaining_distance, V
         state = VelocityState::CONSTANT;
     } else if(remaining_distance < deceleration_distance_) {
         initial_decel_speed_ = vel;
+        decel_dist_error_sum_ = 0.0;
         state = VelocityState::DECELERATION;
     }
 }
@@ -246,14 +247,23 @@ void Controller::ConstantVelocity(double & vel, const double & remaining_distanc
 
     if(remaining_distance < deceleration_distance_) {
         initial_decel_speed_ = vel;
+        decel_dist_error_sum_ = 0.0;
         state = VelocityState::DECELERATION;
     }
 }
 
 void Controller::Deceleration(double & vel, const double & remaining_distance, VelocityState & /*state*/) {
-    vel = std::min(linear_kp_decel_dis_ * remaining_distance, initial_decel_speed_);
+    double decel_dist_error = remaining_distance;
+    
+    vel = linear_kp_decel_dis_ * decel_dist_error + linear_ki_decel_dis_ * decel_dist_error_sum_;
+    vel = std::min(vel, initial_decel_speed_);
     vel = std::min(vel, max_linear_vel_);
     vel = std::max(vel, min_linear_vel_);
+    
+    decel_dist_error_sum_ += decel_dist_error;
+    decel_dist_error_sum_ = std::min(decel_dist_error_sum_, 3.0);
+    decel_dist_error_sum_ = std::max(decel_dist_error_sum_, -3.0);
+    
     if(remaining_distance < reserved_distance_) {
         vel = min_linear_vel_;
     }
@@ -291,6 +301,7 @@ void Controller::declareAllControlParams()
         {"linear_kp_accel_vel", rclcpp::ParameterValue(0.5)},
         {"linear_ki_accel_vel", rclcpp::ParameterValue(0.7)},
         {"linear_kp_decel_dis", rclcpp::ParameterValue(3.0)},
+        {"linear_ki_decel_dis", rclcpp::ParameterValue(0.7)},
         {"angular_kp", rclcpp::ParameterValue(4.0)},
         {"deceleration_distance", rclcpp::ParameterValue(0.1)},
         {"reserved_distance", rclcpp::ParameterValue(0.03)},
@@ -318,6 +329,7 @@ void Controller::updateParams() {
     node_->get_parameter(param_name_ + ".linear_kp_accel_vel", linear_kp_accel_vel_);
     node_->get_parameter(param_name_ + ".linear_ki_accel_vel", linear_ki_accel_vel_);
     node_->get_parameter(param_name_ + ".linear_kp_decel_dis", linear_kp_decel_dis_);
+    node_->get_parameter(param_name_ + ".linear_ki_decel_dis", linear_ki_decel_dis_);
     node_->get_parameter(param_name_ + ".angular_kp", angular_kp_);
     node_->get_parameter(param_name_ + ".deceleration_distance", deceleration_distance_);
     RCLCPP_INFO(

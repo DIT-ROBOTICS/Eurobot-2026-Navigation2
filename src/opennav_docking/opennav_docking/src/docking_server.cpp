@@ -280,20 +280,29 @@ void DockingServer::dockRobot()
     rclcpp::Time dock_contact_time;
     controller_->velocityInit(dock_pose.pose);  // ** Set total distance for velocity control
     RCLCPP_INFO(get_logger(), "\033[1;90m Starting docking control loop. \033[0m");
+    bool dock_stop_ = false;
     while (rclcpp::ok()) {
       try {
         // Approach the dock using control law
         if (approachDock(dock, dock_pose)) {
           if (waitForCharge(dock)) {
+            dock_stop_ = true;
             RCLCPP_INFO(get_logger(), "\033[1;32mRobot is docked!\033[0m");
             result->success = true;
             result->num_retries = num_retries_;
             stashDockData(goal->use_dock_id, dock, true);
             publishZeroVelocity();
             docking_action_server_->succeeded_current(result);
-            return;
+            publishZeroVelocity();
+            publishZeroVelocity();
+            publishZeroVelocity();
           }
         }
+        if ( dock_stop_ ) {
+          publishZeroVelocity();
+          return;
+        }
+
 
         // Cancelled, preempted, or shutting down (recoverable errors throw DockingException)
         stashDockData(goal->use_dock_id, dock, false);
@@ -303,6 +312,7 @@ void DockingServer::dockRobot()
       } catch (opennav_docking_core::DockingException & e) {
         if (++num_retries_ > max_retries_) {
           RCLCPP_ERROR(get_logger(), "Failed to dock");
+          publishZeroVelocity();
           throw;
         }
         RCLCPP_WARN(get_logger(), "Docking failed, will retry: %s", e.what());
@@ -450,16 +460,19 @@ bool DockingServer::approachDock(Dock * dock, geometry_msgs::msg::PoseStamped & 
     }
     
     if (this->now() - start > timeout) {
+      publishZeroVelocity();
       throw opennav_docking_core::FailedToControl(
               "Timed out approaching dock");
     }
 
+    // TODO: open if we need obstable detect in docking behavior,
+    // Currently not working due to the bad orientation definition, need to be fix
     // Compute if rival is on the way
-    if (controller_->computeIfNeedStop(dock_pose.pose)) {
-      publishZeroVelocity();
-      throw opennav_docking_core::BlockByRival(
-        "Goal blocked by rival, stop the robot");
-    }
+    // if (controller_->computeIfNeedStop(dock_pose.pose)) {
+    //   publishZeroVelocity();
+    //   throw opennav_docking_core::BlockByRival(
+    //     "Goal blocked by rival, stop the robot");
+    // }
 
     vel_publisher_->publish(command);
 
@@ -690,7 +703,14 @@ geometry_msgs::msg::PoseStamped DockingServer::getRobotPoseInFrame(const std::st
 
 void DockingServer::publishZeroVelocity()
 {
-  vel_publisher_->publish(geometry_msgs::msg::Twist());
+  auto vel = geometry_msgs::msg::Twist();
+  vel.linear.x = 0.0;
+  vel.linear.y = 0.0;
+  vel.linear.z = 0.0;
+  vel.angular.x = 0.0;
+  vel.angular.y = 0.0;
+  vel.angular.z = 0.0;
+  vel_publisher_->publish(vel);
 }
 
 void DockingServer::publishDockingFeedback(uint16_t state)
