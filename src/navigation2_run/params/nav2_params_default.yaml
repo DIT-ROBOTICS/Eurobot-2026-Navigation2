@@ -313,7 +313,7 @@ local_costmap:
       width: 3
       height: 2
       resolution: 0.01
-      robot_radius: 0.22
+      robot_radius: 0.19
       plugins: ["static_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -328,7 +328,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.22
+      robot_radius: 0.19
       resolution: 0.01
       track_unknown_space: false
       trinary_costmap: false
@@ -342,7 +342,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.22
+        inflation_radius: 0.19
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -382,7 +382,7 @@ global_costmap:
         enabled: True
         auto_reset_with_timeout: True  # auto reset when no rival detected for a while
         reset_timeout_threshold: 70
-        robot_inscribed_radius: 0.22
+        robot_inscribed_radius: 0.19
         column_inscribed_radius: 0.075
         board_inscribed_radius: 0.01
         obstacle_inscribed_radius: 0.2
@@ -420,7 +420,7 @@ global_costmap:
             1.9, 0.175, 0.2, 0.15, # Q
             1.85, 0.8, 0.2, 0.15, # R
           ] 
-        inflation_length: 0.21 # distance over which cost is inflated
+        inflation_length: 0.19 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
         keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
