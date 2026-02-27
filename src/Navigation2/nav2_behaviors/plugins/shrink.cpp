@@ -144,8 +144,9 @@ namespace nav2_behaviors
     }
 
     void Shrink::changeInflationLayer(bool doShrink) {
-        if (!setMode_inflation_client->service_is_ready()) {
-            RCLCPP_ERROR(logger_, "Service is not ready for inflation layer");
+        // Wait for service to be ready with a timeout
+        if (!setMode_inflation_client->wait_for_service(std::chrono::seconds(1))) {
+            RCLCPP_WARN(logger_, "Service is not ready for inflation layer, skipping");
             return;
         }
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
@@ -168,8 +169,9 @@ namespace nav2_behaviors
     }
 
     void Shrink::changeRivalLayer(bool doShrink) {
-        if (!setMode_rival_client->service_is_ready()) {
-            RCLCPP_ERROR(logger_, "Service is not ready for rival layer");
+        // Wait for service to be ready with a timeout
+        if (!setMode_rival_client->wait_for_service(std::chrono::seconds(1))) {
+            RCLCPP_WARN(logger_, "Service is not ready for rival layer, skipping");
             return;
         }
         
@@ -193,8 +195,9 @@ namespace nav2_behaviors
     }
 
     void Shrink::changeObjectLayer(bool doShrink) {
-        if (!setMode_object_client->service_is_ready()) {
-            RCLCPP_ERROR(logger_, "Service is not ready for object layer");
+        // Wait for service to be ready with a timeout
+        if (!setMode_object_client->wait_for_service(std::chrono::seconds(1))) {
+            RCLCPP_WARN(logger_, "Service is not ready for object layer, skipping");
             return;
         }
         
