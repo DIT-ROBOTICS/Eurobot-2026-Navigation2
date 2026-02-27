@@ -625,12 +625,12 @@ docking_server:
 
     Rush:
       max_linear_vel: 0.07
-      min_linear_vel: 0.0
+      min_linear_vel: 0.008
       linear_kp_accel_vel: 0.2
       linear_ki_accel_vel: 0.1
       linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.01
-      max_speed_diff: 0.05
+      linear_ki_decel_dis: 0.1
+      max_speed_diff: 0.1
       angular_kp: 0.2
       deceleration_distance: 0.16
       reserved_distance: 0.005

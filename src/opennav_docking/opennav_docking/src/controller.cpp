@@ -51,8 +51,9 @@ Controller::Controller(const rclcpp_lifecycle::LifecycleNode::SharedPtr & node) 
     // Get parameters from the config file
     updateParams();
 
-    // Initialize previous speed
+    // Initialize previous speed and time
     previous_speed_ = 0.0;
+    previous_time_ = node->get_clock()->now();
 
     logger_ = node->get_logger();
     clock_ = node->get_clock();
@@ -241,6 +242,8 @@ void Controller::Acceleration(double & vel, const double & remaining_distance, V
         state = VelocityState::CONSTANT;
     } else if(remaining_distance < deceleration_distance_) {
         initial_decel_speed_ = vel;
+        previous_speed_ = vel;
+        previous_time_ = clock_->now();
         decel_dist_error_sum_ = 0.0;
         state = VelocityState::DECELERATION;
     }
@@ -262,7 +265,7 @@ void Controller::ConstantVelocity(double & vel, const double & remaining_distanc
 void Controller::Deceleration(double & vel, const double & remaining_distance, VelocityState & /*state*/) {
     double decel_dist_error = remaining_distance;
 
-    double raw_vel = linear_kp_decel_dis_ * decel_dist_error + linear_ki_decel_dis_ * decel_dist_error_sum_;
+    double raw_vel = linear_kp_decel_dis_ * decel_dist_error;
     raw_vel = std::min(raw_vel, initial_decel_speed_);
     raw_vel = std::min(raw_vel, max_linear_vel_);
     raw_vel = std::max(raw_vel, min_linear_vel_);
@@ -282,6 +285,7 @@ void Controller::Deceleration(double & vel, const double & remaining_distance, V
     } else {
         vel = raw_vel;
     }
+    RCLCPP_INFO(logger_, "[Deceleration] raw_vel: %f, previous_speed: %f, max_delta: %f, vel: %f", raw_vel, previous_speed_, max_delta, vel);
     previous_speed_ = vel;
     previous_time_ = now;
 
