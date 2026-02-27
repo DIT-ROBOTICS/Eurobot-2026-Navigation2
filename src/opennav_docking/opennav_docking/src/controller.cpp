@@ -252,8 +252,9 @@ void Controller::ConstantVelocity(double & vel, const double & remaining_distanc
     if(remaining_distance < deceleration_distance_) {
         initial_decel_speed_ = vel;
         decel_dist_error_sum_ = 0.0;
-        // Reset previous_speed_ for deceleration phase
+        // Reset previous_speed_ and previous_time_ for deceleration phase
         previous_speed_ = vel;
+        previous_time_ = clock_->now();
         state = VelocityState::DECELERATION;
     }
 }
@@ -266,14 +267,23 @@ void Controller::Deceleration(double & vel, const double & remaining_distance, V
     raw_vel = std::min(raw_vel, max_linear_vel_);
     raw_vel = std::max(raw_vel, min_linear_vel_);
 
-    // Limit the change of speed
+    // Limit the change of speed based on elapsed time
+    rclcpp::Time now = clock_->now();
+    double dt = (now - previous_time_).seconds();
+    if (dt <= 0.0) dt = 1e-3; // avoid division by zero or negative time
+    double max_delta = max_speed_diff_ * dt;
     double speed_diff = raw_vel - previous_speed_;
-    if (std::abs(speed_diff) > max_speed_diff_) {
-        vel = previous_speed_ - max_speed_diff_;
+    if (std::abs(speed_diff) > max_delta) {
+        if (speed_diff > 0) {
+            vel = previous_speed_ + max_delta;
+        } else {
+            vel = previous_speed_ - max_delta;
+        }
     } else {
         vel = raw_vel;
     }
     previous_speed_ = vel;
+    previous_time_ = now;
 
     decel_dist_error_sum_ += decel_dist_error;
     decel_dist_error_sum_ = std::min(decel_dist_error_sum_, 3.0);

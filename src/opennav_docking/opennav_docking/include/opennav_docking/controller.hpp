@@ -187,6 +187,7 @@ class Controller
     // New parameter and variable for speed difference limiting
     double max_speed_diff_;
     double previous_speed_;
+    rclcpp::Time previous_time_;
 };
 
 }  // namespace opennav_docking
