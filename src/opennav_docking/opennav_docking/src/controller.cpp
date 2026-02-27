@@ -36,6 +36,7 @@ using rcl_interfaces::msg::ParameterType;
 
 namespace opennav_docking
 {
+// Add initialization for previous_speed_
 Controller::Controller(const rclcpp_lifecycle::LifecycleNode::SharedPtr & node) {
     // Initialize node
     node_ = node;
@@ -49,6 +50,9 @@ Controller::Controller(const rclcpp_lifecycle::LifecycleNode::SharedPtr & node) 
 
     // Get parameters from the config file
     updateParams();
+
+    // Initialize previous speed
+    previous_speed_ = 0.0;
 
     logger_ = node->get_logger();
     clock_ = node->get_clock();
@@ -248,24 +252,36 @@ void Controller::ConstantVelocity(double & vel, const double & remaining_distanc
     if(remaining_distance < deceleration_distance_) {
         initial_decel_speed_ = vel;
         decel_dist_error_sum_ = 0.0;
+        // Reset previous_speed_ for deceleration phase
+        previous_speed_ = vel;
         state = VelocityState::DECELERATION;
     }
 }
 
 void Controller::Deceleration(double & vel, const double & remaining_distance, VelocityState & /*state*/) {
     double decel_dist_error = remaining_distance;
-    
-    vel = linear_kp_decel_dis_ * decel_dist_error + linear_ki_decel_dis_ * decel_dist_error_sum_;
-    vel = std::min(vel, initial_decel_speed_);
-    vel = std::min(vel, max_linear_vel_);
-    vel = std::max(vel, min_linear_vel_);
-    
+
+    double raw_vel = linear_kp_decel_dis_ * decel_dist_error + linear_ki_decel_dis_ * decel_dist_error_sum_;
+    raw_vel = std::min(raw_vel, initial_decel_speed_);
+    raw_vel = std::min(raw_vel, max_linear_vel_);
+    raw_vel = std::max(raw_vel, min_linear_vel_);
+
+    // Limit the change of speed
+    double speed_diff = raw_vel - previous_speed_;
+    if (std::abs(speed_diff) > max_speed_diff_) {
+        vel = previous_speed_ - max_speed_diff_;
+    } else {
+        vel = raw_vel;
+    }
+    previous_speed_ = vel;
+
     decel_dist_error_sum_ += decel_dist_error;
     decel_dist_error_sum_ = std::min(decel_dist_error_sum_, 3.0);
     decel_dist_error_sum_ = std::max(decel_dist_error_sum_, -3.0);
-    
+
     if(remaining_distance < reserved_distance_) {
         vel = min_linear_vel_;
+        previous_speed_ = vel;
     }
 }
 
@@ -308,6 +324,7 @@ void Controller::declareAllControlParams()
         {"external_rival_data_path", rclcpp::ParameterValue("")},
         {"stop_degree", rclcpp::ParameterValue(45.0)},
         {"rival_radius", rclcpp::ParameterValue(0.44)},
+        {"max_speed_diff", rclcpp::ParameterValue(0.05)},
     };
 
     for (const auto& profile : profiles_)
@@ -338,6 +355,7 @@ void Controller::updateParams() {
     node_->get_parameter(param_name_ + ".reserved_distance", reserved_distance_);
     node_->get_parameter(param_name_ + ".stop_degree", stop_degree_);
     node_->get_parameter(param_name_ + ".rival_radius", rival_radius_);
+    node_->get_parameter(param_name_ + ".max_speed_diff", max_speed_diff_);
     std::string external_rival_data_path;
     node_->get_parameter(param_name_ + ".external_rival_data_path", external_rival_data_path);
     if(!external_rival_data_path.empty()) {
@@ -367,3 +385,5 @@ void Controller::updateParams() {
 }
 
 }  // namespace opennav_docking
+
+// Add member variable definitions (if not already present in the header)
