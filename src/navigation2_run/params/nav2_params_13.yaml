@@ -599,11 +599,10 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.007
       max_speed_diff: 0.05
       angular_kp: 0.1
       deceleration_distance: 0.08
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
@@ -614,11 +613,10 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.25
-      linear_ki_decel_dis: 0.007
       max_speed_diff: 0.05
       angular_kp: 0.1
       deceleration_distance: 0.07
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
@@ -629,11 +627,10 @@ docking_server:
       linear_kp_accel_vel: 0.7
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.15
-      linear_ki_decel_dis: 0.2
       max_speed_diff: 0.18
       angular_kp: 0.2
       deceleration_distance: 0.08
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
@@ -644,11 +641,10 @@ docking_server:
       linear_kp_accel_vel: 0.5
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.15
-      linear_ki_decel_dis: 0.2
       max_speed_diff: 0.1
       angular_kp: 0.2
       deceleration_distance: 0.08
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
