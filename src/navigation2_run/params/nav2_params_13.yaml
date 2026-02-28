@@ -580,7 +580,7 @@ docking_server:
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.6
+      camera_aruco_max: 0.5
       camera_aruco_min: 0.19
 
     docks: ['home_dock']
@@ -599,10 +599,10 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.007
+      max_speed_diff: 0.05
       angular_kp: 0.1
       deceleration_distance: 0.08
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
@@ -613,38 +613,38 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.25
-      linear_ki_decel_dis: 0.007
+      max_speed_diff: 0.05
       angular_kp: 0.1
       deceleration_distance: 0.07
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Rush:
-      max_linear_vel: 0.07
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.2
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.01
+      max_linear_vel: 0.2
+      min_linear_vel: 0.013
+      linear_kp_accel_vel: 0.7
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.15
+      max_speed_diff: 0.18
       angular_kp: 0.2
-      deceleration_distance: 0.16
-      reserved_distance: 0.005
+      deceleration_distance: 0.08
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.07
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.2
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 0.4
-      linear_ki_decel_dis: 0.01
+      max_linear_vel: 0.16
+      min_linear_vel: 0.013
+      linear_kp_accel_vel: 0.5
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.15
+      max_speed_diff: 0.1
       angular_kp: 0.2
-      deceleration_distance: 0.16
-      reserved_distance: 0.005
+      deceleration_distance: 0.08
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
