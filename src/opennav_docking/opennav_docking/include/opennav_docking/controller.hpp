@@ -129,7 +129,7 @@ class Controller
     double vel_error_sum_;
     double decel_dist_error_sum_;
     double linear_ki_accel_vel_, linear_kp_accel_vel_;
-    double linear_kp_decel_dis_, linear_ki_decel_dis_, linear_kp_decel_vel_;
+    double linear_kp_decel_dis_;
     double angular_kp_;
     double look_ahead_distance_;
     double final_goal_angle_;

@@ -331,7 +331,6 @@ void Controller::declareAllControlParams()
         {"linear_kp_accel_vel", rclcpp::ParameterValue(0.5)},
         {"linear_ki_accel_vel", rclcpp::ParameterValue(0.7)},
         {"linear_kp_decel_dis", rclcpp::ParameterValue(3.0)},
-        {"linear_ki_decel_dis", rclcpp::ParameterValue(0.7)},
         {"angular_kp", rclcpp::ParameterValue(4.0)},
         {"deceleration_distance", rclcpp::ParameterValue(0.1)},
         {"reserved_distance", rclcpp::ParameterValue(0.03)},
@@ -360,7 +359,6 @@ void Controller::updateParams() {
     node_->get_parameter(param_name_ + ".linear_kp_accel_vel", linear_kp_accel_vel_);
     node_->get_parameter(param_name_ + ".linear_ki_accel_vel", linear_ki_accel_vel_);
     node_->get_parameter(param_name_ + ".linear_kp_decel_dis", linear_kp_decel_dis_);
-    node_->get_parameter(param_name_ + ".linear_ki_decel_dis", linear_ki_decel_dis_);
     node_->get_parameter(param_name_ + ".angular_kp", angular_kp_);
     node_->get_parameter(param_name_ + ".deceleration_distance", deceleration_distance_);
     RCLCPP_INFO(
