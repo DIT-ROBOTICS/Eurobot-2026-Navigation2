@@ -580,7 +580,7 @@ docking_server:
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.5
+      camera_aruco_max: 0.4
       camera_aruco_min: 0.19
 
     docks: ['home_dock']
