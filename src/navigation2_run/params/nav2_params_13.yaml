@@ -174,24 +174,24 @@ controller_server:
       obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 252.0
 
-    Fast:   # First version
+    Fast:   # First version 
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
-      iterations: 4 
+      iterations: 1 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 1.2
+      min_obstacle_dist: 0.4  
+      lookahead_dist: 0.5
       w_smooth: 1.0 
       w_obst: 1.0               
-      k_xy: 0.45                   
-      k_w: 2.0             
-      max_v: 0.4               
+      k_xy: 2.4                   
+      k_w: 2.4            
+      max_v: 2.0               
       min_v: 0.0
-      max_acc_v: 1.0            
-      max_w: 2.0                   
-      max_acc_w: 10.0                                      
+      max_acc_v: 10.0             
+      max_w: 3.0                   
+      max_acc_w: 18.0                                       
       max_cost_threshold: 97.0
       blocked_stop_clearance: 0.3
       treat_no_info_as_obstacle: true
@@ -200,10 +200,10 @@ controller_server:
       replan_min_blocked_time: 0.05
       replan_cooldown: 0.05
       slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
-      obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 240.0 
+      stop_obstacle_dist: 0.4
+      obstacle_check_lookahead: 0.8
+      obstacle_check_time_horizon: 1.2
+      obstacle_cost_threshold: 200.0 
 
     Slow: # First version
       plugin: "teb_controller::TebController"
@@ -213,16 +213,16 @@ controller_server:
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
       min_obstacle_dist: 0.25 
-      lookahead_dist: 1.0
+      lookahead_dist: 0.3
       w_smooth: 1.0 
       w_obst: 1.0               
       k_xy: 2.4                   
-      k_w: 2.4            
-      max_v: 2.0               
+      k_w: 2.0            
+      max_v: 1.5               
       min_v: 0.0
-      max_acc_v: 10.0             
-      max_w: 3.0                   
-      max_acc_w: 18.0                                     
+      max_acc_v: 3.0             
+      max_w: 2.4                   
+      max_acc_w: 4.0                                     
       stop_v_eps: 0.05                             
       slowdown_obstacle_dist: 0.6
       stop_obstacle_dist: 0.25
@@ -309,7 +309,7 @@ local_costmap:
       width: 3
       height: 2
       resolution: 0.01
-      robot_radius: 0.19
+      robot_radius: 0.22
       # plugins: ["static_layer", "inflation_layer"]
       plugins: ["static_layer"]
       static_layer:
@@ -325,13 +325,14 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.19
+      robot_radius: 0.22
       resolution: 0.01
       track_unknown_space: false
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
+      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
+      # plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -339,39 +340,39 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
         inflation_radius: 0.19
-      # rival_layer:
-      #   plugin: "custom_path_costmap_plugin::RivalLayer"
-      #   enabled: True
-      #   model_size: 22
-      #   x_cov_threshold: 0.02
-      #   y_cov_threshold: 0.02
-      #   R_sq_threshold: 0.85
-      #   reset_timeout_threshold: 70
-      #   robot_inscribed_radius: 0.3
-      #   external_rival_data_path: "/home/share/data/rival_params.yaml"
-      #   rival_inscribed_radius: 0.22
-      #   halted_inflation_radius: 0.1
-      #   wandering_inflation_radius: 0.12
-      #   moving_inflation_radius: 0.1
-      #   unknown_inflation_radius: 0.12
-      #   halted_cost_scaling_factor: 10.0
-      #   wandering_cost_scaling_factor: 10.0
-      #   moving_cost_scaling_factor: 0.9
-      #   unknown_cost_scaling_factor: 10.0
-      #   max_extend_length: 0.6
-      #   cov_range_max: 0.05385164807134504  # sqrt(0.0029)
-      #   cov_range_min: 0.01414213562373095  # sqrt(0.0002)
-      #   vel_range_max: 1.0
-      #   vel_range_min: 0.0
-      #   inscribed_radius_rate: 0.99
-      #   inflation_radius_rate: 1.005
-      #   debug_mode: 0                       # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
-      #   use_statistic_method: False
-      #   offset_vel_factor_weight_statistic: 0.42
-      #   expand_vel_factor_weight_statistic: 0.42
-      #   offset_vel_factor_weight_localization: 0.42
-      #   expand_vel_factor_weight_localization: 0.42
-      #   safe_distance: 0.5
+      rival_layer:
+        plugin: "custom_path_costmap_plugin::RivalLayer"
+        enabled: True
+        model_size: 22
+        x_cov_threshold: 0.02
+        y_cov_threshold: 0.02
+        R_sq_threshold: 0.85
+        reset_timeout_threshold: 70
+        robot_inscribed_radius: 0.3
+        external_rival_data_path: "/home/share/data/rival_params.yaml"
+        rival_inscribed_radius: 0.22
+        halted_inflation_radius: 0.1
+        wandering_inflation_radius: 0.12
+        moving_inflation_radius: 0.1
+        unknown_inflation_radius: 0.12
+        halted_cost_scaling_factor: 10.0
+        wandering_cost_scaling_factor: 10.0
+        moving_cost_scaling_factor: 0.9
+        unknown_cost_scaling_factor: 10.0
+        max_extend_length: 0.6
+        cov_range_max: 0.05385164807134504  # sqrt(0.0029)
+        cov_range_min: 0.01414213562373095  # sqrt(0.0002)
+        vel_range_max: 1.0
+        vel_range_min: 0.0
+        inscribed_radius_rate: 0.99
+        inflation_radius_rate: 1.005
+        debug_mode: 0                       # 0: off, 1: Print rival state change only, 2: Print rival state change and statistics, 3: Print everything continuously
+        use_statistic_method: False
+        offset_vel_factor_weight_statistic: 0.42
+        expand_vel_factor_weight_statistic: 0.42
+        offset_vel_factor_weight_localization: 0.42
+        expand_vel_factor_weight_localization: 0.42
+        safe_distance: 0.5
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: False
@@ -413,7 +414,7 @@ global_costmap:
             1.9, 0.175, 0.2, 0.15, # Q
             1.85, 0.8, 0.2, 0.15, # R
           ] 
-        inflation_length: 0.19 # distance over which cost is inflated
+        inflation_length: 0.4 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
         keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
