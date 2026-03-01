@@ -15,6 +15,7 @@
 #include "angles/angles.h"
 #include "opennav_docking/docking_server.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "std_msgs/msg/int16.hpp"
 #include "tf2/utils.h"
 
 using namespace std::chrono_literals;
@@ -66,6 +67,9 @@ DockingServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   RCLCPP_INFO(get_logger(), "Controller frequency set to %.4fHz", controller_frequency_);
 
   vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 1);
+
+  // Create lifecycle publisher for docking state indicator
+  docking_pub_ = create_publisher<std_msgs::msg::Int16>("/robot/isDocking", 1);
 
   stop_robot_sub_ = create_subscription<std_msgs::msg::Bool>(
     "/stopRobot", rclcpp::QoS(1).reliable().transient_local(),
@@ -124,6 +128,9 @@ DockingServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   dock_db_->activate();
   navigator_->activate();
   vel_publisher_->on_activate();
+  if (docking_pub_) {
+    docking_pub_->on_activate();
+  }
   docking_action_server_->activate();
   undocking_action_server_->activate();
   curr_dock_type_.clear();
@@ -148,6 +155,10 @@ DockingServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
   dock_db_->deactivate();
   navigator_->deactivate();
   vel_publisher_->on_deactivate();
+
+  if (docking_pub_) {
+    docking_pub_->on_deactivate();
+  }
 
   dyn_params_handler_.reset();
   tf2_listener_.reset();
@@ -280,6 +291,15 @@ void DockingServer::dockRobot()
     rclcpp::Time dock_contact_time;
     controller_->velocityInit(dock_pose.pose);  // ** Set total distance for velocity control
     RCLCPP_INFO(get_logger(), "\033[1;90m Starting docking control loop. \033[0m");
+    // Publish a one-off indicator that docking is starting
+    {
+      std_msgs::msg::Int16 docking_msg;
+      docking_msg.data = 1;
+      RCLCPP_INFO(get_logger(), "\033[1;32menter publish\033[0m");
+      if (docking_pub_) {
+        docking_pub_->publish(docking_msg);
+      }
+    }
     bool dock_stop_ = false;
     while (rclcpp::ok()) {
       try {
