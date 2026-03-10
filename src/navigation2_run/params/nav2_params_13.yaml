@@ -338,8 +338,8 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.19
+        cost_scaling_factor: 1.0
+        inflation_radius: 0.22
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -414,7 +414,7 @@ global_costmap:
             1.9, 0.175, 0.2, 0.15, # Q
             1.85, 0.8, 0.2, 0.15, # R
           ] 
-        inflation_length: 0.4 # distance over which cost is inflated
+        inflation_length: 0.25 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
         keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
@@ -581,7 +581,7 @@ docking_server:
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.6
+      camera_aruco_max: 0.42
       camera_aruco_min: 0.19
 
     docks: ['home_dock']
@@ -600,7 +600,7 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.007
+      max_speed_diff: 0.6
       angular_kp: 0.1
       deceleration_distance: 0.08
       reserved_distance: 0.005
@@ -614,7 +614,7 @@ docking_server:
       linear_kp_accel_vel: 0.12
       linear_ki_accel_vel: 0.08
       linear_kp_decel_dis: 0.25
-      linear_ki_decel_dis: 0.007
+      max_speed_diff: 0.6
       angular_kp: 0.1
       deceleration_distance: 0.07
       reserved_distance: 0.005
@@ -623,29 +623,29 @@ docking_server:
       rival_radius: 0.44
 
     Rush:
-      max_linear_vel: 0.07
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.2
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 0.3
-      linear_ki_decel_dis: 0.01
+      max_linear_vel: 0.3
+      min_linear_vel: 0.01
+      linear_kp_accel_vel: 0.6
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.15
+      max_speed_diff: 0.6
       angular_kp: 0.2
       deceleration_distance: 0.16
-      reserved_distance: 0.005
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.07
-      min_linear_vel: 0.0
-      linear_kp_accel_vel: 0.2
-      linear_ki_accel_vel: 0.1
-      linear_kp_decel_dis: 0.4
-      linear_ki_decel_dis: 0.01
-      angular_kp: 0.2
-      deceleration_distance: 0.16
-      reserved_distance: 0.005
+      max_linear_vel: 0.3
+      min_linear_vel: 0.025
+      linear_kp_accel_vel: 0.4
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.2
+      max_speed_diff: 0.6
+      angular_kp: 0.3
+      deceleration_distance: 0.14
+      reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
