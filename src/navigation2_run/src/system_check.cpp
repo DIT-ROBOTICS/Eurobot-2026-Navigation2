@@ -23,23 +23,11 @@ public:
   const int STATE_READY = 1;
 
   SystemCheck()
-  : Node("system_check"), running_(false), obstacle_check_count_(10)
+  : Node("system_check"), ready_sent_(false)
   {
     are_you_ready_sub_ = this->create_subscription<std_msgs::msg::Bool>(
       "/robot/startup/are_you_ready", 10,
       std::bind(&SystemCheck::areYouReadyCallback, this, std::placeholders::_1));
-
-    costmap_subscription_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
-      "/global_costmap/costmap", rclcpp::QoS(10),
-      [this](const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-          latest_costmap_ = msg;
-      });
-
-    subscription_pose_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      "/final_pose", rclcpp::QoS(10),
-      [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
-          latest_pose_ = msg;
-      });
 
     ready_srv_client_ = this->create_client<btcpp_ros2_interfaces::srv::StartUpSrv>(
       "/robot/startup/ready_signal");
@@ -47,56 +35,31 @@ public:
     navigate_to_pose_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
     dock_robot_client_ = rclcpp_action::create_client<DockRobot>(this, "dock_robot");
 
-    this->declare_parameter("costmap_tolerance", 70);
-    this->get_parameter("costmap_tolerance", costmap_tolerance_);
-    this->declare_parameter("external_rival_data_path", "");
-    this->get_parameter("external_rival_data_path", external_rival_data_path_);
-
     RCLCPP_INFO(this->get_logger(), "\033[1;35m SystemCheck started, waiting for startup plan... \033[0m");
   }
 
 private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr are_you_ready_sub_;
-  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_subscription_;
-  nav_msgs::msg::OccupancyGrid::SharedPtr latest_costmap_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_pose_;
-  nav_msgs::msg::Odometry::SharedPtr latest_pose_;
   rclcpp::Client<btcpp_ros2_interfaces::srv::StartUpSrv>::SharedPtr ready_srv_client_;
   rclcpp_action::Client<NavigateToPose>::SharedPtr navigate_to_pose_client_;
   rclcpp_action::Client<DockRobot>::SharedPtr dock_robot_client_;
-  rclcpp::TimerBase::SharedPtr obstacle_timer_;
-  bool running_;
-  int costmap_tolerance_;
-  std::string external_rival_data_path_;
-  int obstacle_check_count_;
+
+  bool ready_sent_;
 
   void areYouReadyCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
-    if (!msg->data || running_) return;
-    
-    running_ = true;  // Set running state to true to prevent re-entrance
+    if (!msg->data || ready_sent_) return;
+
     RCLCPP_INFO(this->get_logger(), "[NAVIGATION] are_you_ready received, starting system check...");
 
     // Wait for services and action servers
     if (!dependenciesReady()) {
       RCLCPP_WARN(this->get_logger(), "[NAVIGATION] Dependencies not ready");
-      running_ = false; // Reset running state to allow retry
       return;
     }
 
-    // Start obstacle check timer if in obstacle
-    if (inObstacle()) {
-      RCLCPP_WARN(this->get_logger(), "Robot is in obstacles, waiting for manual action...");
-      obstacle_check_count_ = 10;
-
-      if (!obstacle_timer_){
-        obstacle_timer_ = this->create_wall_timer(1s, std::bind(&SystemCheck::obstacleCheckTimer, this));
-      }
-      return;
-    }
-
+    ready_sent_ = true;
     sendReadySignal(GROUP_NAVIGATION, STATE_READY);
-    running_ = false;
   }
 
   bool dependenciesReady() {
@@ -116,23 +79,6 @@ private:
     return true;
   }
 
-  void obstacleCheckTimer()
-  {
-    if (!inObstacle()) {
-      obstacle_timer_->cancel();
-      obstacle_timer_.reset();
-      RCLCPP_INFO(this->get_logger(), "\033[1;32m [NAVIGATION] Obstacle cleared \033[0m");
-      sendReadySignal(GROUP_NAVIGATION, STATE_READY);
-      running_ = false;
-      return;
-    }
-
-    if (obstacle_check_count_-- <= 0) {
-      shrinkRivalRadius();
-      obstacle_check_count_ = 10; // Reset the counter after shrinking
-    }
-  }
-
   // Update sendReadySignal as follows:
   void sendReadySignal(int group, int state)
   {
@@ -146,46 +92,10 @@ private:
             RCLCPP_INFO(this->get_logger(), "\033[1;32m ReadySignal SUCCESS: group=%d \033[0m", response->group);
         } else {
           RCLCPP_WARN(this->get_logger(), "[NAVIGATION] READY rejected");
+          ready_sent_ = true;
         }
       });
   } 
-
-  bool inObstacle() {
-    if (!latest_costmap_ || !latest_pose_) {
-        RCLCPP_WARN(this->get_logger(), "[NAVIGATION] No costmap or pose received yet.");
-        return true;
-    }
-
-    int mapX = static_cast<int>(latest_pose_->pose.pose.position.x * 100.0);
-    int mapY = static_cast<int>(latest_pose_->pose.pose.position.y * 100.0);
-    int width = latest_costmap_->info.width;
-    int index = mapY * width + mapX;
-
-    if (index < 0 || index >= static_cast<int>(latest_costmap_->data.size()))
-      return false;
-
-    return latest_costmap_->data[index] > costmap_tolerance_;
-  }
-
-  void shrinkRivalRadius() {
-    if (external_rival_data_path_.empty()) return;
-
-    try {
-      YAML::Node config = YAML::LoadFile(external_rival_data_path_);
-      YAML::Node node = config["nav_rival_parameters"]["rival_inscribed_radius"];
-      if (!node) return;
-
-      double r = node.as<double>();
-      r = std::max(0.0, r - 0.01); // Decrease radius but not below 0.05
-      config["nav_rival_parameters"]["rival_inscribed_radius"] = r;
-      std::ofstream out(external_rival_data_path_);
-      out << config;
-
-      RCLCPP_INFO(this->get_logger(), "[NAVIGATION] shrink rival_inscribed_radius to %.2f", r);
-    } catch (const std::exception &e) {
-      RCLCPP_WARN(this->get_logger(), "Failed to shrink rival radius %s", e.what());
-    }
-  }
 };
 
 int main(int argc, char **argv)
