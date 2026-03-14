@@ -592,7 +592,7 @@ docking_server:
     
     # dock_database: /my/path/to/dock_database.yaml
 
-    controllers: ["Ordinary", "Gentle", "Rush", "Cam"]
+    controllers: ["Ordinary", "Gentle", "Rush", "Cam", "CamFront"]
 
     Ordinary:
       max_linear_vel: 0.04
@@ -637,6 +637,20 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
+      max_linear_vel: 0.3
+      min_linear_vel: 0.025
+      linear_kp_accel_vel: 0.4
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.2
+      max_speed_diff: 0.6
+      angular_kp: 0.3
+      deceleration_distance: 0.14
+      reserved_distance: 0.0075
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      stop_degree: 120.0
+      rival_radius: 0.44
+
+    CamFront:
       max_linear_vel: 0.3
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
