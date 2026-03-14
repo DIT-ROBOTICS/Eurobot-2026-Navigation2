@@ -92,7 +92,7 @@ private:
             RCLCPP_INFO(this->get_logger(), "\033[1;32m ReadySignal SUCCESS: group=%d \033[0m", response->group);
         } else {
           RCLCPP_WARN(this->get_logger(), "[NAVIGATION] READY rejected");
-          ready_sent_ = true;
+          ready_sent_ = false;
         }
       });
   } 
