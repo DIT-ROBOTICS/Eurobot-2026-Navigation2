@@ -554,7 +554,7 @@ docking_server:
     velocity_smoother_wait: 0.12
     external_rival_data_path: "/home/share/data/rival_params.yaml"
     shrink_nav_rival_radius: 0.05
-    shrink_dock_rival_radius: 0.27
+    shrink_dock_rival_radius: 0.28
     shrink_dock_rival_degree: 60.0
 
     # Types of docks
@@ -637,14 +637,14 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.2
+      max_linear_vel: 0.25
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.2
-      max_speed_diff: 0.5
+      max_speed_diff: 0.56
       angular_kp: 0.3
-      deceleration_distance: 0.11
+      deceleration_distance: 0.08
       reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
