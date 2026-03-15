@@ -637,7 +637,7 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.25
+      max_linear_vel: 0.2
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
