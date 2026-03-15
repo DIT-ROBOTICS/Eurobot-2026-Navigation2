@@ -582,7 +582,7 @@ docking_server:
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
       # the threshold for CameraOnBoard to see ArUco
       camera_aruco_max: 0.42
-      camera_aruco_min: 0.19
+      camera_aruco_min: 0.195
 
     docks: ['home_dock']
     home_dock:
@@ -637,14 +637,14 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.3
+      max_linear_vel: 0.2
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.2
-      max_speed_diff: 0.6
+      max_speed_diff: 0.5
       angular_kp: 0.3
-      deceleration_distance: 0.14
+      deceleration_distance: 0.11
       reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
