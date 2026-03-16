@@ -246,6 +246,16 @@ void DockingServer::dockRobot()
   }
 
   getPreemptedGoalIfRequested(goal, docking_action_server_);
+
+  if (!goal->use_dock_id && goal->dock_pose.pose.position.z == 0.0) {
+    RCLCPP_INFO(get_logger(), "Skipping docking because dock_pose.pose.position.z == 0.0");
+    result->success = true;
+    result->num_retries = 0;
+    publishZeroVelocity();
+    docking_action_server_->succeeded_current(result);
+    return;
+  }
+
   Dock * dock{nullptr};
   num_retries_ = 0;
 
