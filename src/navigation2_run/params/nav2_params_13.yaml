@@ -212,9 +212,9 @@ controller_server:
       iterations: 4 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.6
-      w_smooth: 1.0 
+      min_obstacle_dist: 0.4 
+      lookahead_dist: 0.4 
+      w_smooth: 0.0
       w_obst: 1.0               
       k_xy: 2.7                   
       k_w: 2.4            
@@ -224,17 +224,17 @@ controller_server:
       max_w: 3.0                   
       max_acc_w: 9.0                                     
       stop_v_eps: 0.1                             
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      max_cost_threshold: 97.0
+      max_cost_threshold: 95.0
       blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
+      treat_no_info_as_obstacle: true
       cost_check_stride: 1
       replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
-      obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
-      obstacle_cost_threshold: 252.0
+      replan_cooldown: 0.01
+      slowdown_obstacle_dist: 1.2
+      stop_obstacle_dist: 0.6
+      obstacle_check_lookahead: 0.8
+      obstacle_check_time_horizon: 2.0
+      obstacle_cost_threshold: 150.0 
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
@@ -338,8 +338,8 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 1.0
-        inflation_radius: 0.22
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.21
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -391,30 +391,30 @@ global_costmap:
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
         # keepout_zone_for_hazelnuts: Left(4), Right(4)
         keepout_zone_array: [
-            0.1, 0.8, 0.2, 0.2, # A
-            0.7, 0.1, 0.2, 0.2, # B
-            0.8, 0.8, 0.2, 0.2, # C
-            1.25, 1.45, 0.2, 0.2, # D
+            0.1, 0.8, 0.36, 0.36, # A
+            0.7, 0.1, 0.36, 0.36, # B
+            0.8, 0.8, 0.36, 0.36, # C
+            1.25, 1.45, 0.36, 0.36, # D
             #-----------------------------#
-            1.5, 0.1, 0.2, 0.2, # E
-            1.5, 0.8, 0.2, 0.2, # F
+            1.5, 0.1, 0.36, 0.36, # E
+            1.5, 0.8, 0.36, 0.36, # F
             #-----------------------------#
-            1.75, 1.45, 0.2, 0.2, # G
-            2.2, 0.8, 0.2, 0.2, # H
-            2.3, 0.1, 0.2, 0.2, # I
-            2.9, 0.8, 0.2, 0.2, # J
+            1.75, 1.45, 0.36, 0.36, # G
+            2.2, 0.8, 0.36, 0.36, # H
+            2.3, 0.1, 0.36, 0.36, # I
+            2.9, 0.8, 0.36, 0.36, # J
             #-----------------------------#
             0.175, 0.4, 0.15, 0.2, # K
-            0.175, 1.2, 0.15, 0.2, # L
-            1.1, 0.175, 0.2, 0.15, # M
-            1.15, 0.8, 0.2, 0.15, # N
+            0.175, 1.2, 0.20, 0.2, # L
+            1.1, 0.175, 0.36, 0.36, # M
+            1.15, 0.8, 0.36, 0.36, # N
             #-----------------------------#
             2.825, 0.4, 0.15, 0.2, # O
             2.825, 1.2, 0.15, 0.2, # P
-            1.9, 0.175, 0.2, 0.15, # Q
-            1.85, 0.8, 0.2, 0.15, # R
+            1.9, 0.175, 0.36, 0.36, # Q
+            1.85, 0.8, 0.36, 0.36, # R
           ] 
-        inflation_length: 0.25 # distance over which cost is inflated
+        inflation_length: 0.21 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
         keepout_expand_mode: 0 # 0: Circle, 1: Square
       always_send_full_costmap: True
