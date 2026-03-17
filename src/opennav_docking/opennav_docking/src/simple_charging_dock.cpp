@@ -504,19 +504,30 @@ double SimpleChargingDock::computeExternalDockingDist(const double z)
   
   
 
-  const double min_docking_dist = (camera_aruco_max_ - camera_aruco_min_) * 0.2;  // Minimum staging distance (when marker is far)
-  const double max_docking_dist = (camera_aruco_max_ - camera_aruco_min_) * 0.9;  // Maximum staging distance (when marker is very close)
-  const double z_far = (camera_aruco_max_ + camera_aruco_min_) / 2;              // Z distance considered "far"
-  const double z_close = camera_aruco_min_;           // Z distance considered "close"
+  // const double min_docking_dist = (camera_aruco_max_ - camera_aruco_min_) * 0.2;  // Minimum staging distance (when marker is far)
+  // const double max_docking_dist = (camera_aruco_max_ - camera_aruco_min_) * 0.9;  // Maximum staging distance (when marker is very close)
+  // const double z_far = (camera_aruco_max_ + camera_aruco_min_) / 2;              // Z distance considered "far"
+  // const double z_close = camera_aruco_min_;           // Z distance considered "close"
   
-  // Linear mapping: staging_dist = max when z = z_close, min when z = z_far
-  double slope = (min_docking_dist - max_docking_dist) / (z_far - z_close);
-  double docking_dist = max_docking_dist + slope * (fabs(z) - z_close);
+  // // Linear mapping: staging_dist = max when z = z_close, min when z = z_far
+  // double slope = (min_docking_dist - max_docking_dist) / (z_far - z_close);
+  // double docking_dist = max_docking_dist + slope * (fabs(z) - z_close);
   
-  // Clamp to safe range
-  double  abs_result = std::clamp(docking_dist, 0.0, camera_aruco_max_ - fabs(z));
-  if ( z > 0 ) return abs_result;
-  else return -1.0*abs_result;
+  // // Clamp to safe range
+  // double  abs_result = std::clamp(docking_dist, 0.0, camera_aruco_max_ - fabs(z));
+  // if ( z > 0 ) return abs_result;
+  // else return -1.0*abs_result;
+
+  // For simplicity, all dock for 0.2
+  // but for side 0(only black), only dock for 0.045 since the camera is down
+  if ( cam_side_ == 0 ) {
+    if ( z > 0 ) return 0.045;
+    else return -0.045;
+  }
+  else {
+    if ( z > 0 ) return 2.0;
+    else return -2.0;
+  }
 }
 
 }  // namespace opennav_docking
