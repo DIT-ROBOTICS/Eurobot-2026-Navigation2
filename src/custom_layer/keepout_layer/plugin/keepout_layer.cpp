@@ -168,7 +168,7 @@ namespace keepout_costmap_plugin {
                 break;
             }
             if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
-                if (keepout_expand_mode_ == 1) ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
+                if (keepout_expand_mode_ == 1 || 'A'+i == 'C' || 'A'+i == 'F' || 'A'+i == 'H' || 'A'+i == 'N' || 'A'+i == 'R') ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
                 else ExpandPointWithCircle(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
             }   
         }
