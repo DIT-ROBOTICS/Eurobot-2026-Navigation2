@@ -331,8 +331,8 @@ global_costmap:
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      # plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
-      plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
+      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
+      # plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
