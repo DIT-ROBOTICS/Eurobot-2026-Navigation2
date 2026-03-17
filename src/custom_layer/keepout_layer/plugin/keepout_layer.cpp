@@ -113,7 +113,7 @@ namespace keepout_costmap_plugin {
                         double dy = std::max(0.0, fabs(current_y - zone.y) - zone.lengthY / 2.0);
                         double distance = hypot(dx, dy);
     
-                        double cost = ceil(253 * exp(-cost_scaling_factor * distance));
+                        double cost = ceil(252 * exp(-cost_scaling_factor * distance));
                         cost = std::max(std::min(cost, max_cost), 0.0);
     
                         if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
@@ -148,7 +148,7 @@ namespace keepout_costmap_plugin {
 
                 if (distance > inflation_radius) continue;  
 
-                double cost = ceil(253 * exp(-cost_scaling_factor * distance));
+                double cost = ceil(252 * exp(-cost_scaling_factor * distance));
 
                 cost = std::max(std::min(cost, max_cost), 0.0);
                 if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
