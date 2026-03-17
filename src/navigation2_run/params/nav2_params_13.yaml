@@ -212,7 +212,7 @@ controller_server:
       iterations: 4 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.4 
+      min_obstacle_dist: 0.3 
       lookahead_dist: 0.4 
       w_smooth: 0.0
       w_obst: 1.0               
@@ -231,7 +231,7 @@ controller_server:
       replan_min_blocked_time: 0.20
       replan_cooldown: 0.01
       slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
+      stop_obstacle_dist: 0.3
       obstacle_check_lookahead: 0.8
       obstacle_check_time_horizon: 2.0
       obstacle_cost_threshold: 150.0 
