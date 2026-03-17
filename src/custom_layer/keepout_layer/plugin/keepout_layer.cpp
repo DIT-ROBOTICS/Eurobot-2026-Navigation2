@@ -181,4 +181,4 @@ namespace keepout_costmap_plugin {
 }
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(keepout_costmap_plugin::KeepoutLayer, nav2_costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(keepout_costmap_plugin::KeepoutLayer, nav2_costmap_2d::Layer)                                                                                                                                                                                                   
