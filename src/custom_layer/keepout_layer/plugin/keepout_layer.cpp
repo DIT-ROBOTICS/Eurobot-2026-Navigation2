@@ -113,7 +113,7 @@ namespace keepout_costmap_plugin {
                         double dy = std::max(0.0, fabs(current_y - zone.y) - zone.lengthY / 2.0);
                         double distance = hypot(dx, dy);
     
-                        double cost = ceil(252 * exp(-cost_scaling_factor * distance));
+                        double cost = ceil(253 * exp(-cost_scaling_factor * distance));
                         cost = std::max(std::min(cost, max_cost), 0.0);
     
                         if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
@@ -148,7 +148,7 @@ namespace keepout_costmap_plugin {
 
                 if (distance > inflation_radius) continue;  
 
-                double cost = ceil(252 * exp(-cost_scaling_factor * distance));
+                double cost = ceil(253 * exp(-cost_scaling_factor * distance));
 
                 cost = std::max(std::min(cost, max_cost), 0.0);
                 if (getCost(cell_x, cell_y) != nav2_costmap_2d::NO_INFORMATION) {
@@ -168,7 +168,7 @@ namespace keepout_costmap_plugin {
                 break;
             }
             if(strchr(active_keepout_zones_.c_str(), 'A'+i) != NULL) {
-                if (keepout_expand_mode_ == 1) ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
+                if (keepout_expand_mode_ == 1 || 'A'+i == 'C' || 'A'+i == 'F' || 'A'+i == 'H' || 'A'+i == 'N' || 'A'+i == 'R') ExpandPointWithSquare(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
                 else ExpandPointWithCircle(keepout_zone_array_[i], nav2_costmap_2d::LETHAL_OBSTACLE, inflation_length_, cost_scaling_factor_);
             }   
         }

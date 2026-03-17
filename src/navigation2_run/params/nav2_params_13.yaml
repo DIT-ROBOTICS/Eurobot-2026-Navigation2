@@ -212,7 +212,7 @@ controller_server:
       iterations: 4 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.3 
+      min_obstacle_dist: 0.25 
       lookahead_dist: 0.4 
       w_smooth: 0.0
       w_obst: 1.0               
@@ -231,7 +231,7 @@ controller_server:
       replan_min_blocked_time: 0.20
       replan_cooldown: 0.01
       slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.3
+      stop_obstacle_dist: 0.25
       obstacle_check_lookahead: 0.8
       obstacle_check_time_horizon: 2.0
       obstacle_cost_threshold: 150.0 
@@ -391,28 +391,28 @@ global_costmap:
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
         # keepout_zone_for_hazelnuts: Left(4), Right(4)
         keepout_zone_array: [
-            0.1, 0.8, 0.36, 0.36, # A
-            0.7, 0.1, 0.36, 0.36, # B
+            0.1, 0.8, 0.2, 0.2, # A
+            0.7, 0.1, 0.2, 0.2, # B
             0.8, 0.8, 0.36, 0.36, # C
-            1.25, 1.45, 0.36, 0.36, # D
+            1.25, 1.45, 0.2, 0.2, # D
             #-----------------------------#
-            1.5, 0.1, 0.36, 0.36, # E
+            1.5, 0.1, 0.2, 0.2, # E
             1.5, 0.8, 0.36, 0.36, # F
             #-----------------------------#
-            1.75, 1.45, 0.36, 0.36, # G
+            1.75, 1.45, 0.2, 0.2, # G
             2.2, 0.8, 0.36, 0.36, # H
-            2.3, 0.1, 0.36, 0.36, # I
-            2.9, 0.8, 0.36, 0.36, # J
+            2.3, 0.1, 0.2, 0.2, # I
+            2.9, 0.8, 0.2, 0.2, # J
             #-----------------------------#
             0.175, 0.4, 0.15, 0.2, # K
-            0.175, 1.2, 0.20, 0.2, # L
-            1.1, 0.175, 0.36, 0.36, # M
-            1.15, 0.8, 0.36, 0.36, # N
+            0.175, 1.2, 0.15, 0.2, # L
+            1.1, 0.175, 0.2, 0.15, # M
+            1.15, 0.8, 0.25, 0.2, # N
             #-----------------------------#
             2.825, 0.4, 0.15, 0.2, # O
             2.825, 1.2, 0.15, 0.2, # P
-            1.9, 0.175, 0.36, 0.36, # Q
-            1.85, 0.8, 0.36, 0.36, # R
+            1.9, 0.175, 0.2, 0.15, # Q
+            1.85, 0.8, 0.25, 0.2, # R
           ] 
         inflation_length: 0.21 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
@@ -468,7 +468,7 @@ planner_server:
       # no need to change
       downsample_costmap: false    # set to true to downsample costmap for planning
       downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
-      smooth_path: True     # we prefer doing this by smoother
+      smooth_path: false     # we prefer doing this by smoother
       max_iterations: 200000
       max_on_approach_iterations: 1000
       straight_line_max_skip_points: 500
