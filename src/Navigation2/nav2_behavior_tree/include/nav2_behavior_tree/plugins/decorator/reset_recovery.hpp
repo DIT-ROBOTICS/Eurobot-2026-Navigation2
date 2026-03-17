@@ -69,6 +69,8 @@ private:
   void goalReachedCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
   rclcpp::Node::SharedPtr node_;
+  rclcpp::CallbackGroup::SharedPtr callback_group_;
+  rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr goal_reached_sub_;
   bool goal_reached_;
 };

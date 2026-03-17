@@ -60,10 +60,14 @@ bool SimpleProgressChecker::check(geometry_msgs::msg::PoseStamped & current_pose
   geometry_msgs::msg::Pose2D current_pose2d;
   current_pose2d = nav_2d_utils::poseToPose2D(current_pose.pose);
 
+  RCLCPP_INFO_THROTTLE(rclcpp::get_logger("ProgressChecker"), *clock_, 500, "Checking progress. Current pose: (%.2f, %.2f)",
+    current_pose2d.x, current_pose2d.y);
   if ((!baseline_pose_set_) || (isRobotMovedEnough(current_pose2d))) {
+    RCLCPP_INFO(rclcpp::get_logger("ProgressChecker"), "Progress check passed. Resetting baseline pose.");
     resetBaselinePose(current_pose2d);
     return true;
   }
+  RCLCPP_INFO(rclcpp::get_logger("ProgressChecker"), "Progress check failed. Robot has not moved enough since last baseline pose.");
   return !((clock_->now() - baseline_time_) > time_allowance_);
 }
 

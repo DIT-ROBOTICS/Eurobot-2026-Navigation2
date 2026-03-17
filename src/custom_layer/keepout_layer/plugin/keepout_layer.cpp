@@ -177,8 +177,9 @@ namespace keepout_costmap_plugin {
     void KeepoutLayer::keepoutZoneCallback(const std_msgs::msg::String::SharedPtr msg) {
         // Get the active keepout zones
         active_keepout_zones_ = msg->data;
+        RCLCPP_INFO(rclcpp::get_logger("KeepoutLayer"), "\033[32m[Received keepout zone update: %s\033[0m", active_keepout_zones_.c_str());
     }
 }
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(keepout_costmap_plugin::KeepoutLayer, nav2_costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(keepout_costmap_plugin::KeepoutLayer, nav2_costmap_2d::Layer)                                                                                                                                                                                                   

@@ -1,0 +1,224 @@
+[INFO] [launch]: All log files can be found below /home/user/.ros/log/2026-03-19-22-15-59-947094-DIT-2026-11-23
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [real_launch] ROS_DOMAIN_ID=11. Use nav2_params_11.yaml
+[INFO] [component_container_isolated-1]: process started with pid [36]
+[INFO] [system_check-2]: process started with pid [38]
+[system_check-2] [0m[INFO] [1773929760.666739010] [system_check]: [1;35m SystemCheck started, waiting for startup plan... [0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.816540465] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_map_server/lib/libmap_server_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.848869982] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_map_server::CostmapFilterInfoServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.848927659] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_map_server::MapSaver>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.848932078] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_map_server::MapServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.848935724] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_map_server::MapServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.851920332] [map_server]: 
+[component_container_isolated-1] 	map_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.852221261] [map_server]: Creating[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/map_server' in container 'nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929760.854538190] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_lifecycle_manager/lib/libnav2_lifecycle_manager_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.857084745] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.857107307] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.859025416] [lifecycle_manager_localization]: Creating[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.860802022] [lifecycle_manager_localization]: [34m[1mCreating and initializing lifecycle service clients[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.861270612] [lifecycle_manager_localization]: [34m[1mStarting managed nodes bringup...[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.861293153] [lifecycle_manager_localization]: [34m[1mConfiguring map_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.861381638] [map_server]: Configuring[0m
+[component_container_isolated-1] [INFO] [map_io]: Loading yaml file: /home/user/Eurobot-2026-Navigation2-ws/install/navigation2_run/share/navigation2_run/maps/basic_map.yaml
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/lifecycle_manager_localization' in container 'nav2_container'
+[component_container_isolated-1] [DEBUG] [map_io]: resolution: 0.01
+[component_container_isolated-1] [DEBUG] [map_io]: origin[0]: 0
+[component_container_isolated-1] [DEBUG] [map_io]: origin[1]: 0
+[component_container_isolated-1] [DEBUG] [map_io]: origin[2]: 0
+[component_container_isolated-1] [DEBUG] [map_io]: free_thresh: 0.1
+[component_container_isolated-1] [DEBUG] [map_io]: occupied_thresh: 0.1
+[component_container_isolated-1] [DEBUG] [map_io]: mode: trinary
+[component_container_isolated-1] [DEBUG] [map_io]: negate: 0
+[component_container_isolated-1] [INFO] [map_io]: Loading image_file: /home/user/Eurobot-2026-Navigation2-ws/install/navigation2_run/share/navigation2_run/maps/mat2026.png
+[component_container_isolated-1] [DEBUG] [map_io]: Read map /home/user/Eurobot-2026-Navigation2-ws/install/navigation2_run/share/navigation2_run/maps/mat2026.png: 300 X 200 map @ 0.01 m/cell
+[component_container_isolated-1] [0m[INFO] [1773929760.869146565] [lifecycle_manager_localization]: [34m[1mActivating map_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.869209081] [map_server]: Activating[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.869267309] [map_server]: Creating bond (map_server) to lifecycle manager.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.893980004] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_controller/lib/libcontroller_server_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.905872370] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_controller::ControllerServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.905946908] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_controller::ControllerServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.908353403] [controller_server]: 
+[component_container_isolated-1] 	controller_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.927606407] [controller_server]: Creating controller server[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.930557132] [local_costmap.local_costmap]: 
+[component_container_isolated-1] 	local_costmap lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.938165349] [local_costmap.local_costmap]: Creating Costmap[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/controller_server' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929760.941105885] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_smoother/lib/libsmoother_server_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.946531893] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_smoother::SmootherServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.946611100] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_smoother::SmootherServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.951719018] [smoother_server]: 
+[component_container_isolated-1] 	smoother_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.957294233] [smoother_server]: Creating smoother server[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/smoother_server' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929760.960653155] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_planner/lib/libplanner_server_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.963811255] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_planner::PlannerServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.963904959] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_planner::PlannerServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.968191543] [planner_server]: 
+[component_container_isolated-1] 	planner_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.970385914] [lifecycle_manager_localization]: Server map_server connected with bond.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.970788822] [lifecycle_manager_localization]: [34m[1mManaged nodes are active[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.970810883] [lifecycle_manager_localization]: [34m[1mCreating bond timer...[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.974483527] [planner_server]: Creating[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.980123763] [global_costmap.global_costmap]: 
+[component_container_isolated-1] 	global_costmap lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929760.982882031] [global_costmap.global_costmap]: Creating Costmap[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/planner_server' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929760.989900794] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_behaviors/lib/libbehavior_server_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.001122887] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<behavior_server::BehaviorServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.001206953] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<behavior_server::BehaviorServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.005798874] [behavior_server]: 
+[component_container_isolated-1] 	behavior_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/behavior_server' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.016915805] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_bt_navigator/lib/libbt_navigator_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.024262438] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_bt_navigator::BtNavigator>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.024341505] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_bt_navigator::BtNavigator>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.029913105] [bt_navigator]: 
+[component_container_isolated-1] 	bt_navigator lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.029988344] [bt_navigator]: Creating[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/bt_navigator' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.034957897] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_waypoint_follower/lib/libwaypoint_follower_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.037700206] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_waypoint_follower::WaypointFollower>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.037775105] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_waypoint_follower::WaypointFollower>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.042360544] [waypoint_follower]: 
+[component_container_isolated-1] 	waypoint_follower lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.045098345] [waypoint_follower]: Creating[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/waypoint_follower' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.049022096] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/nav2_velocity_smoother/lib/libvelocity_smoother_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.052800358] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_velocity_smoother::VelocitySmoother>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.052870598] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_velocity_smoother::VelocitySmoother>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.058058706] [velocity_smoother]: 
+[component_container_isolated-1] 	velocity_smoother lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/velocity_smoother' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.061194836] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.061273492] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.066219631] [lifecycle_manager_navigation]: Creating[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.068105040] [lifecycle_manager_navigation]: [34m[1mCreating and initializing lifecycle service clients[0m[0m[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/lifecycle_manager_navigation' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.077333686] [nav2_container]: Load Library: /home/user/Eurobot-2026-Navigation2-ws/install/opennav_docking/lib/libopennav_docking_core.so[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.100714456] [nav2_container]: Found class: rclcpp_components::NodeFactoryTemplate<opennav_docking::DockingServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.100796418] [nav2_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<opennav_docking::DockingServer>[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109150030] [lifecycle_manager_navigation]: [34m[1mStarting managed nodes bringup...[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109215712] [lifecycle_manager_navigation]: [34m[1mConfiguring controller_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109357856] [controller_server]: Configuring controller interface[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109732441] [controller_server]: getting goal checker plugins..[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109886056] [controller_server]: Controller frequency set to 30.0000Hz[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.109930108] [local_costmap.local_costmap]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.111682981] [docking_server]: 
+[component_container_isolated-1] 	docking_server lifecycle node launched. 
+[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
+[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.112592619] [docking_server]: Creating docking_server[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.115030593] [local_costmap.local_costmap]: Using plugin "static_layer"[0m
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/docking_server' in container '/nav2_container'
+[component_container_isolated-1] [0m[INFO] [1773929761.130814274] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.132233247] [local_costmap.local_costmap]: Initialized plugin "static_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.141587557] [local_costmap.local_costmap]: StaticLayer: Resizing costmap to 300 X 200 at 0.010000 m/pix[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.142886207] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.146552550] [controller_server]: Created goal checker : Precise of type nav2_controller::SimpleGoalChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.148615779] [controller_server]: Created goal checker : Unerring of type nav2_controller::SimpleGoalChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.149454776] [controller_server]: Created goal checker : Loose of type nav2_controller::SimpleGoalChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.149694702] [controller_server]: Created goal checker : DidilongGoalChecker of type nav2_controller::SimpleGoalChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.149909721] [controller_server]: Created goal checker : NonStopGoalChecker of type nav2_controller::SimpleGoalChecker[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.150096637] [controller_server]: Controller Server has Precise Unerring Loose DidilongGoalChecker NonStopGoalChecker  goal checkers available.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.159953680] [controller_server]: Created controller : DidilongController of type teb_controller::TebController[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.174856186] [controller_server]: [DidilongController] configured[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.175993356] [controller_server]: Created controller : Fast of type teb_controller::TebController[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.185945956] [controller_server]: [Fast] configured[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.186729860] [controller_server]: Created controller : Slow of type teb_controller::TebController[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.192514064] [controller_server]: [Slow] configured[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.192695641] [controller_server]: Created controller : LinearBoost of type teb_controller::TebController[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.194849759] [controller_server]: [LinearBoost] configured[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.195656256] [controller_server]: Created controller : AngularBoost of type teb_controller::TebController[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.200554275] [controller_server]: [AngularBoost] configured[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.200602515] [controller_server]: Controller Server has DidilongController Fast Slow LinearBoost AngularBoost  controllers available.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.205705485] [lifecycle_manager_navigation]: [34m[1mConfiguring smoother_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.205921465] [smoother_server]: Configuring smoother server[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.212384129] [smoother_server]: Created smoother : simple_smoother of type nav2_smoother::SimpleSmoother[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.214388067] [smoother_server]: Smoother Server has simple_smoother  smoothers available.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.218421873] [lifecycle_manager_navigation]: [34m[1mConfiguring planner_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.218553127] [planner_server]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.218594684] [global_costmap.global_costmap]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.221999593] [global_costmap.global_costmap]: Using plugin "static_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.223905770] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.225117559] [global_costmap.global_costmap]: Initialized plugin "static_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.225153255] [global_costmap.global_costmap]: Using plugin "inflation_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.228641458] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.228688486] [global_costmap.global_costmap]: Using plugin "rival_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.240795664] [RivalLayer]: Initializing RivalLayer[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.248944637] [RivalLayer]: [1;35m Rival inscribed radius is set to 0.520000 [0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.256365568] [global_costmap.global_costmap]: Initialized plugin "rival_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.256412756] [global_costmap.global_costmap]: Using plugin "object_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.274923838] [ObjectLayer]: Initializing ObjectLayer[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.276627279] [ObjectLayer]: ObjectLayer parameter enable 0[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.286620414] [global_costmap.global_costmap]: Initialized plugin "object_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.286666850] [global_costmap.global_costmap]: Using plugin "keepout_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.296289478] [KeepoutLayer]: Initializing KeepoutLayer[0m
+[component_container_isolated-1] [33m[WARN] [1773929761.298581231] [global_costmap.global_costmap]: Frame id: map[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.302221286] [global_costmap.global_costmap]: Initialized plugin "keepout_layer"[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.307138751] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 300 X 200 at 0.010000 m/pix[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.320544559] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner/SmacPlanner2D[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.322089557] [planner_server]: Configuring GridBased of type SmacPlanner2D[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.325384842] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.02, maximum iterations 200000, max on approach iterations 1000, and not allowing unknown traversal.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.325973524] [planner_server]: Planner Server has GridBased  planners available.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.329580768] [lifecycle_manager_navigation]: [34m[1mConfiguring behavior_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.329736357] [behavior_server]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.334007363] [behavior_server]: Creating behavior plugin wait of type nav2_behaviors/Wait[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.336800857] [behavior_server]: Configuring wait[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.339959229] [behavior_server]: Creating behavior plugin escape of type nav2_behaviors/Escape[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.347631677] [behavior_server]: Configuring escape[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.351877767] [behavior_server]: Creating behavior plugin shrink of type nav2_behaviors/Shrink[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.358386706] [behavior_server]: Configuring shrink[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.371075363] [lifecycle_manager_navigation]: [34m[1mConfiguring bt_navigator[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.371199303] [bt_navigator]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.526136030] [lifecycle_manager_navigation]: [34m[1mConfiguring waypoint_follower[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.526300906] [waypoint_follower]: Configuring[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.531823745] [waypoint_follower]: Created waypoint_task_executor : wait_at_waypoint of type nav2_waypoint_follower::WaitAtWaypoint[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.533193447] [lifecycle_manager_navigation]: [34m[1mConfiguring velocity_smoother[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.533394249] [velocity_smoother]: Configuring velocity smoother[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.536437246] [lifecycle_manager_navigation]: [34m[1mConfiguring docking_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.537109163] [docking_server]: Configuring docking_server[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.537369617] [docking_server]: Controller frequency set to 20.0000Hz[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.557588228] [DockController]: [1;35m Ordinary deceleration distance is set to 0.080000 [0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.558040828] [DockController]: [1;35m Ordinary rival radius is set to 0.460000 [0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.558073508] [DockController]: [1;35m Ordinary rival stop degree is set to 120.000000 [0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.596593422] [docking_server]: Created charging dock plugin dock of type opennav_docking::SimpleChargingDock[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.601190263] [docking_server]: ROS_DOMAIN_ID: 11 (expected range)[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607066468] [docking_server]: Loading docks from parameter file.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607554433] [docking_server]: Docking Server has 1 dock types and 1 dock instances available.[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607809547] [lifecycle_manager_navigation]: [34m[1mActivating controller_server[0m[0m[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607920202] [controller_server]: Activating[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607959165] [local_costmap.local_costmap]: Activating[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607975605] [local_costmap.local_costmap]: Checking transform[0m
+[component_container_isolated-1] [0m[INFO] [1773929761.607998918] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929762.109108942] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929762.608557199] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929763.108429241] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929763.608075038] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929764.108435888] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929764.608218031] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929765.108483428] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929765.608079083] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m
+[component_container_isolated-1] [0m[INFO] [1773929766.108414178] [local_costmap.local_costmap]: Timed out waiting for transform from base_footprint to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist[0m

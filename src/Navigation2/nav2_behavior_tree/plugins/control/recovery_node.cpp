@@ -14,6 +14,7 @@
 
 #include <string>
 #include "nav2_behavior_tree/plugins/control/recovery_node.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace nav2_behavior_tree
 {
@@ -47,6 +48,7 @@ BT::NodeStatus RecoveryNode::tick()
       switch (child_status) {
         case BT::NodeStatus::SUCCESS:
           {
+            RCLCPP_INFO(rclcpp::get_logger("RecoveryNode"), "\033[1;32mRecoveryNode: Child 0 SUCCESS\033[0m");
             // reset node and return success when first child returns success
             halt();
             return BT::NodeStatus::SUCCESS;
@@ -54,6 +56,7 @@ BT::NodeStatus RecoveryNode::tick()
 
         case BT::NodeStatus::FAILURE:
           {
+            RCLCPP_INFO(rclcpp::get_logger("RecoveryNode"), "\033[1;31mRecoveryNode: Child 0 FAILURE (retry %d/%d)\033[0m", retry_count_, number_of_retries_);
             if (retry_count_ < number_of_retries_) {
               // halt first child and tick second child in next iteration
               ControlNode::haltChild(0);
@@ -81,6 +84,7 @@ BT::NodeStatus RecoveryNode::tick()
       switch (child_status) {
         case BT::NodeStatus::SUCCESS:
           {
+            RCLCPP_INFO(rclcpp::get_logger("RecoveryNode"), "\033[1;32mRecoveryNode: Child 1 (Recovery) SUCCESS\033[0m");
             // halt second child, increment recovery count, and tick first child in next iteration
             ControlNode::haltChild(1);
             retry_count_++;
@@ -90,6 +94,7 @@ BT::NodeStatus RecoveryNode::tick()
 
         case BT::NodeStatus::FAILURE:
           {
+            RCLCPP_INFO(rclcpp::get_logger("RecoveryNode"), "\033[1;31mRecoveryNode: Child 1 (Recovery) FAILURE\033[0m");
             // reset node and return failure if second child fails
             halt();
             return BT::NodeStatus::FAILURE;
