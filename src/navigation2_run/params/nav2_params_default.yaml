@@ -91,8 +91,16 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
+    goal_checker_plugins:
+      [
+        "Precise",
+        "Unerring",
+        "Loose",
+        "DidilongGoalChecker",
+        "NonStopGoalChecker",
+      ]
+    controller_plugins:
+      ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
 
     # Progress checker parameters
     progress_checker:
@@ -335,7 +343,14 @@ global_costmap:
       lethal_cost_threshold: 10
       unknown_cost_value: 255
       plugins:
-        ["static_layer", "inflation_layer", "sima_layer", "rival_layer", "object_layer", "keepout_layer"]
+        [
+          "static_layer",
+          "inflation_layer",
+          "sima_layer",
+          "rival_layer",
+          "object_layer",
+          "keepout_layer",
+        ]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -352,8 +367,9 @@ global_costmap:
         y_cov_threshold: 0.012
         R_sq_threshold: 0.88
         reset_timeout_threshold: 15
+        sima_ids: [1, 2, 3, 4, 11, 12, 13, 14]
         robot_inscribed_radius: 0.22
-        rival_inscribed_radius: 0.05  
+        rival_inscribed_radius: 0.05
         halted_inflation_radius: 0.03
         wandering_inflation_radius: 0.03
         moving_inflation_radius: 0.03
@@ -379,7 +395,7 @@ global_costmap:
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
-        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
+        auto_reset_with_timeout: True # auto reset when no rival detected for a while
         model_size: 22
         x_cov_threshold: 0.02
         y_cov_threshold: 0.02
@@ -413,7 +429,7 @@ global_costmap:
       object_layer:
         plugin: "Object_costmap_plugin::ObjectLayer"
         enabled: True
-        auto_reset_with_timeout: True  # auto reset when no rival detected for a while
+        auto_reset_with_timeout: True # auto reset when no rival detected for a while
         reset_timeout_threshold: 70
         robot_inscribed_radius: 0.19
         column_inscribed_radius: 0.075
@@ -430,29 +446,83 @@ global_costmap:
         # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
         # keepout_zone_for_hazelnuts: Left(4), Right(4)
         keepout_zone_array: [
-            0.1, 0.8, 0.2, 0.2, # A
-            0.7, 0.1, 0.2, 0.2, # B
-            0.8, 0.8, 0.2, 0.2, # C
-            1.25, 1.45, 0.2, 0.2, # D
+            0.1,
+            0.8,
+            0.2,
+            0.2, # A
+            0.7,
+            0.1,
+            0.2,
+            0.2, # B
+            0.8,
+            0.8,
+            0.2,
+            0.2, # C
+            1.25,
+            1.45,
+            0.2,
+            0.2, # D
             #-----------------------------#
-            1.5, 0.1, 0.2, 0.2, # E
-            1.5, 0.8, 0.2, 0.2, # F
+            1.5,
+            0.1,
+            0.2,
+            0.2, # E
+            1.5,
+            0.8,
+            0.2,
+            0.2, # F
             #-----------------------------#
-            1.75, 1.45, 0.2, 0.2, # G
-            2.2, 0.8, 0.2, 0.2, # H
-            2.3, 0.1, 0.2, 0.2, # I
-            2.9, 0.8, 0.2, 0.2, # J
+            1.75,
+            1.45,
+            0.2,
+            0.2, # G
+            2.2,
+            0.8,
+            0.2,
+            0.2, # H
+            2.3,
+            0.1,
+            0.2,
+            0.2, # I
+            2.9,
+            0.8,
+            0.2,
+            0.2, # J
             #-----------------------------#
-            0.175, 0.4, 0.15, 0.2, # K
-            0.175, 1.2, 0.15, 0.2, # L
-            1.1, 0.175, 0.2, 0.15, # M
-            1.15, 0.8, 0.2, 0.15, # N
+            0.175,
+            0.4,
+            0.15,
+            0.2, # K
+            0.175,
+            1.2,
+            0.15,
+            0.2, # L
+            1.1,
+            0.175,
+            0.2,
+            0.15, # M
+            1.15,
+            0.8,
+            0.2,
+            0.15, # N
             #-----------------------------#
-            2.825, 0.4, 0.15, 0.2, # O
-            2.825, 1.2, 0.15, 0.2, # P
-            1.9, 0.175, 0.2, 0.15, # Q
-            1.85, 0.8, 0.2, 0.15, # R
-          ] 
+            2.825,
+            0.4,
+            0.15,
+            0.2, # O
+            2.825,
+            1.2,
+            0.15,
+            0.2, # P
+            1.9,
+            0.175,
+            0.2,
+            0.15, # Q
+            1.85,
+            0.8,
+            0.2,
+            0.15, # R
+          ]
         inflation_length: 0.19 # distance over which cost is inflated
         cost_scaling_factor: 5.0 # higher value -> steeper cost increase
         keepout_expand_mode: 0 # 0: Circle, 1: Square
@@ -472,27 +542,27 @@ planner_server:
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
     # navfn planner setting
-#     GridBased:
-#       plugin: "nav2_navfn_planner/NavfnPlanner"
-#       tolerance: 0.02
-#       use_astar: True
-#       allow_unknown: false
-#       # ============================
-#       # A* / propagation parameters
-#       # ============================
-#       heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
-#       priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
-#       # ============================
-#       # Obstacle-aware bias
-#       # ============================
-#       obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
-#       obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
-#       # ============================
-#       # Path extraction / fallback
-#       # ============================
-#       plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
-#       min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
-#       potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+    #     GridBased:
+    #       plugin: "nav2_navfn_planner/NavfnPlanner"
+    #       tolerance: 0.02
+    #       use_astar: True
+    #       allow_unknown: false
+    #       # ============================
+    #       # A* / propagation parameters
+    #       # ============================
+    #       heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+    #       priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+    #       # ============================
+    #       # Obstacle-aware bias
+    #       # ============================
+    #       obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+    #       obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+    #       # ============================
+    #       # Path extraction / fallback
+    #       # ============================
+    #       plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+    #       min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+    #       potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
 
     # smac planner setting
     GridBased:
@@ -501,13 +571,13 @@ planner_server:
       use_astar: True
       allow_unknown: false
       # useful parameters
-      cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
-      distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
-      cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
+      cost_travel_multiplier: 10.0 # larger values -> more obstacle avoidance
+      distance_heuristic_weight: 1.0 # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
+      cost_penalty: 1.0 # how much to penalize high cost cells (exponential)
       # no need to change
-      downsample_costmap: false    # set to true to downsample costmap for planning
-      downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
-      smooth_path: True     # we prefer doing this by smoother
+      downsample_costmap: false # set to true to downsample costmap for planning
+      downsampling_factor: 1 # factor by which to downsample costmap (example 2 -> half size in each dimension)
+      smooth_path: True # we prefer doing this by smoother
       max_iterations: 200000
       max_on_approach_iterations: 1000
       straight_line_max_skip_points: 500
@@ -622,7 +692,6 @@ docking_server:
       # the threshold for CameraOnBoard to see ArUco
       camera_aruco_max: 0.3
       camera_aruco_min: 0.19
-
 
     docks: ["home_dock"]
     home_dock:

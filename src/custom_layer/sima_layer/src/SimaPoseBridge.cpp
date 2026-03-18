@@ -1,7 +1,7 @@
-#include <array>
 #include <cmath>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -10,22 +10,33 @@
 
 class SimaPoseBridge : public rclcpp::Node {
 public:
-  SimaPoseBridge()
-  : Node("sima_pose_bridge")
-  {
-    for (std::size_t i = 0; i < kSimaCount; ++i) {
-      const auto idx = std::to_string(i + 1);
+  SimaPoseBridge() : Node("sima_pose_bridge") {
+    sima_ids_ = this->declare_parameter<std::vector<int64_t>>(
+        "sima_ids", std::vector<int64_t>{1, 2, 3, 4});
+    if (sima_ids_.empty()) {
+      sima_ids_ = {1, 2, 3, 4};
+    }
+
+    prev_samples_.assign(sima_ids_.size(), PreviousSample{});
+    pose_subs_.resize(sima_ids_.size());
+    odom_pubs_.resize(sima_ids_.size());
+    distance_pubs_.resize(sima_ids_.size());
+
+    for (std::size_t i = 0; i < sima_ids_.size(); ++i) {
+      const auto idx = std::to_string(sima_ids_[i]);
       const std::string pose_topic = "/sima_" + idx + "/pose/global";
       const std::string odom_topic = "/sima_" + idx + "/odom";
       const std::string distance_topic = "/sima_" + idx + "/distance";
 
       odom_pubs_[i] = create_publisher<nav_msgs::msg::Odometry>(odom_topic, 20);
-      distance_pubs_[i] = create_publisher<std_msgs::msg::Float64>(distance_topic, 20);
-      pose_subs_[i] = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        pose_topic, 20,
-        [this, i](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
-          this->poseCallback(i, msg);
-        });
+      distance_pubs_[i] =
+          create_publisher<std_msgs::msg::Float64>(distance_topic, 20);
+      pose_subs_[i] =
+          create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+              pose_topic, 20,
+              [this,
+               i](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr
+                      msg) { this->poseCallback(i, msg); });
     }
   }
 
@@ -37,22 +48,29 @@ private:
     rclcpp::Time stamp{0, 0, RCL_ROS_TIME};
   };
 
-  static constexpr std::size_t kSimaCount = 4;
+  void poseCallback(
+      std::size_t index,
+      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+    if (index >= prev_samples_.size()) {
+      return;
+    }
 
-  void poseCallback(std::size_t index, const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
-  {
     nav_msgs::msg::Odometry odom;
     odom.header = msg->header;
-    odom.child_frame_id = "sima_" + std::to_string(index + 1) + "/base_link";
+    odom.child_frame_id =
+        "sima_" + std::to_string(sima_ids_[index]) + "/base_link";
     odom.pose = msg->pose;
 
     const double x = msg->pose.pose.position.x;
     const double y = msg->pose.pose.position.y;
-    const rclcpp::Time stamp = msg->header.stamp.sec == 0 && msg->header.stamp.nanosec == 0 ? now() : rclcpp::Time(msg->header.stamp);
+    const rclcpp::Time stamp =
+        msg->header.stamp.sec == 0 && msg->header.stamp.nanosec == 0
+            ? now()
+            : rclcpp::Time(msg->header.stamp);
 
     double vx = 0.0;
     double vy = 0.0;
-    auto & prev = prev_samples_[index];
+    auto &prev = prev_samples_[index];
     if (prev.valid) {
       const double dt = (stamp - prev.stamp).seconds();
       if (dt > 1e-3) {
@@ -76,14 +94,17 @@ private:
     distance_pubs_[index]->publish(distance_msg);
   }
 
-  std::array<PreviousSample, kSimaCount> prev_samples_{};
-  std::array<rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr, kSimaCount> pose_subs_{};
-  std::array<rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr, kSimaCount> odom_pubs_{};
-  std::array<rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr, kSimaCount> distance_pubs_{};
+  std::vector<int64_t> sima_ids_;
+  std::vector<PreviousSample> prev_samples_;
+  std::vector<rclcpp::Subscription<
+      geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr>
+      pose_subs_;
+  std::vector<rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr> odom_pubs_;
+  std::vector<rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr>
+      distance_pubs_;
 };
 
-int main(int argc, char ** argv)
-{
+int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<SimaPoseBridge>());
   rclcpp::shutdown();

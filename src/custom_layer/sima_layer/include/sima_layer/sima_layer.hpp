@@ -1,8 +1,8 @@
 #ifndef SIMA_LAYER_HPP_
 #define SIMA_LAYER_HPP_
 
-#include <array>
 #include <string>
+#include <vector>
 
 #include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layer.hpp"
@@ -20,30 +20,24 @@ public:
   SimaLayer() = default;
 
   void onInitialize() override;
-  void updateBounds(
-    double robot_x, double robot_y, double robot_yaw,
-    double * min_x, double * min_y, double * max_x, double * max_y) override;
-  void updateCosts(
-    nav2_costmap_2d::Costmap2D & master_grid,
-    int min_i, int min_j, int max_i, int max_j) override;
+  void updateBounds(double robot_x, double robot_y, double robot_yaw,
+                    double *min_x, double *min_y, double *max_x,
+                    double *max_y) override;
+  void updateCosts(nav2_costmap_2d::Costmap2D &master_grid, int min_i,
+                   int min_j, int max_i, int max_j) override;
   bool isClearable() override;
   void reset() override;
   void activate() override;
   void deactivate() override;
 
   void handleSetMode(
-    const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-    const std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      const std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
 private:
-  static constexpr std::size_t kSimaCount = 4;
   static constexpr double kSimaSizeScale = 1.0 / 6.0;
 
-  enum class RivalState {
-    HALTED,
-    MOVING,
-    UNKNOWN
-  };
+  enum class RivalState { HALTED, MOVING, UNKNOWN };
 
   struct SimaAgentState {
     double x{0.0};
@@ -57,23 +51,29 @@ private:
     RivalState state{RivalState::UNKNOWN};
   };
 
-  void odomCallback(std::size_t index, const nav_msgs::msg::Odometry::SharedPtr msg);
-  void distanceCallback(std::size_t index, const std_msgs::msg::Float64::SharedPtr msg);
+  void odomCallback(std::size_t index,
+                    const nav_msgs::msg::Odometry::SharedPtr msg);
+  void distanceCallback(std::size_t index,
+                        const std_msgs::msg::Float64::SharedPtr msg);
 
   void updateRadius();
-  void updateAgentState(SimaAgentState & agent);
-  void fieldExpansion(const SimaAgentState & agent);
-  void expandPointWithCircle(
-    double x, double y, double max_cost, double inflation_radius,
-    double cost_scaling_factor, double inscribed_radius);
-  void expandLine(
-    const SimaAgentState & agent, double max_cost, double inflation_radius,
-    double cost_scaling_factor, double inscribed_radius, double extend_length);
+  void updateAgentState(SimaAgentState &agent);
+  void fieldExpansion(const SimaAgentState &agent);
+  void expandPointWithCircle(double x, double y, double max_cost,
+                             double inflation_radius,
+                             double cost_scaling_factor,
+                             double inscribed_radius);
+  void expandLine(const SimaAgentState &agent, double max_cost,
+                  double inflation_radius, double cost_scaling_factor,
+                  double inscribed_radius, double extend_length);
   void logStateChange(std::size_t index, RivalState new_state);
 
-  std::array<SimaAgentState, kSimaCount> agents_{};
-  std::array<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr, kSimaCount> odom_subs_{};
-  std::array<rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr, kSimaCount> distance_subs_{};
+  std::vector<int64_t> sima_ids_;
+  std::vector<SimaAgentState> agents_;
+  std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr>
+      odom_subs_;
+  std::vector<rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr>
+      distance_subs_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_mode_service_;
 
   bool mode_param_{false};
@@ -118,6 +118,6 @@ private:
   double max_y_{2.0};
 };
 
-}  // namespace Sima_costmap_plugin
+} // namespace Sima_costmap_plugin
 
-#endif  // SIMA_LAYER_HPP_
+#endif // SIMA_LAYER_HPP_
