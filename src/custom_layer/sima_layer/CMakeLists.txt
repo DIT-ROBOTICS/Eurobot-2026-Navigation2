@@ -37,9 +37,6 @@ std_msgs)
 add_executable(SimaSim
   src/SimaSim.cpp)
 
-add_executable(SimaPoseBridge
-  src/SimaPoseBridge.cpp)
-
 add_library(sima_layer SHARED
   plugin/sima_layer.cpp)
 
@@ -57,7 +54,6 @@ endif()
 pluginlib_export_plugin_description_file(nav2_costmap_2d sima_layer.xml)
 ament_target_dependencies(sima_layer ${lib_dep_pkgs})
 ament_target_dependencies(SimaSim ${sim_dep_pkgs})
-ament_target_dependencies(SimaPoseBridge ${bridge_dep_pkgs})
 
 install(TARGETS
   sima_layer
@@ -65,7 +61,6 @@ install(TARGETS
 
 install(TARGETS
   SimaSim
-  SimaPoseBridge
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
