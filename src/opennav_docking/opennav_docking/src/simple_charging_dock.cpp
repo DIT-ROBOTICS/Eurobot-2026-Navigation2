@@ -525,8 +525,8 @@ double SimpleChargingDock::computeExternalDockingDist(const double z)
     else return -0.045;
   }
   else {
-    if ( z > 0 ) return 0.2;
-    else return -0.2;
+    if ( z > 0 ) return 0.22;
+    else return -0.22;
   }
 }
 
