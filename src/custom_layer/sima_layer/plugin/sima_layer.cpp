@@ -238,12 +238,6 @@ void SimaLayer::odomCallback(std::size_t index,
   }
 
   auto &agent = agents_[index];
-  if (msg->header.frame_id.empty()) {
-    agent.active = false;
-    agent.state = RivalState::UNKNOWN;
-    return;
-  }
-
   agent.x = msg->pose.pose.position.x;
   agent.y = msg->pose.pose.position.y;
   agent.vx = msg->twist.twist.linear.x;

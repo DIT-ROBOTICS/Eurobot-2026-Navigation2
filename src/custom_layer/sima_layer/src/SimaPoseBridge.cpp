@@ -11,6 +11,7 @@
 class SimaPoseBridge : public rclcpp::Node {
 public:
   SimaPoseBridge() : Node("sima_pose_bridge") {
+    global_frame_ = this->declare_parameter<std::string>("global_frame", "map");
     sima_ids_ = this->declare_parameter<std::vector<int64_t>>(
         "sima_ids", std::vector<int64_t>{1, 2, 3, 4});
     if (sima_ids_.empty()) {
@@ -57,6 +58,12 @@ private:
 
     nav_msgs::msg::Odometry odom;
     odom.header = msg->header;
+    if (odom.header.stamp.sec == 0 && odom.header.stamp.nanosec == 0) {
+      odom.header.stamp = now();
+    }
+    if (odom.header.frame_id.empty()) {
+      odom.header.frame_id = global_frame_;
+    }
     odom.child_frame_id =
         "sima_" + std::to_string(sima_ids_[index]) + "/base_link";
     odom.pose = msg->pose;
@@ -95,6 +102,7 @@ private:
   }
 
   std::vector<int64_t> sima_ids_;
+  std::string global_frame_;
   std::vector<PreviousSample> prev_samples_;
   std::vector<rclcpp::Subscription<
       geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr>
