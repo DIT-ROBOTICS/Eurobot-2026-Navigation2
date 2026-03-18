@@ -63,6 +63,7 @@ void SimaLayer::onInitialize() {
                    rclcpp::ParameterValue(0.20));
   declareParameter("safe_distance", rclcpp::ParameterValue(0.5));
   declareParameter("use_statistic_method", rclcpp::ParameterValue(false));
+  declareParameter("global_frame", rclcpp::ParameterValue(std::string("map")));
   declareParameter("sima_ids",
                    rclcpp::ParameterValue(std::vector<int64_t>{1, 2, 3, 4}));
 
@@ -115,6 +116,7 @@ void SimaLayer::onInitialize() {
                       expand_vel_factor_weight_localization_);
   node->get_parameter(name_ + ".safe_distance", safe_distance_);
   node->get_parameter(name_ + ".use_statistic_method", use_statistic_method_);
+  node->get_parameter(name_ + ".global_frame", global_frame_);
   node->get_parameter(name_ + ".sima_ids", sima_ids_);
 
   if (sima_ids_.empty()) {
@@ -122,25 +124,18 @@ void SimaLayer::onInitialize() {
   }
 
   agents_.assign(sima_ids_.size(), SimaAgentState{});
-  odom_subs_.resize(sima_ids_.size());
-  distance_subs_.resize(sima_ids_.size());
+  pose_subs_.resize(sima_ids_.size());
 
   updateRadius();
 
   for (std::size_t i = 0; i < sima_ids_.size(); ++i) {
     const std::string id = std::to_string(sima_ids_[i]);
-    const std::string odom_topic = "/sima_" + id + "/odom";
-    const std::string distance_topic = "/sima_" + id + "/distance";
-    odom_subs_[i] = node->create_subscription<nav_msgs::msg::Odometry>(
-        odom_topic, 100,
-        [this, i](const nav_msgs::msg::Odometry::SharedPtr msg) {
-          this->odomCallback(i, msg);
-        });
-    distance_subs_[i] = node->create_subscription<std_msgs::msg::Float64>(
-        distance_topic, 100,
-        [this, i](const std_msgs::msg::Float64::SharedPtr msg) {
-          this->distanceCallback(i, msg);
-        });
+    const std::string pose_topic = "/sima_" + id + "/pose/global";
+    pose_subs_[i] = node->create_subscription<
+        geometry_msgs::msg::PoseWithCovarianceStamped>(
+        pose_topic, 100,
+        [this, i](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr
+                      msg) { this->poseCallback(i, msg); });
   }
 
   set_mode_service_ = node->create_service<std_srvs::srv::SetBool>(
@@ -231,26 +226,43 @@ void SimaLayer::handleSetMode(
                                   : "SimaLayer is in default mode";
 }
 
-void SimaLayer::odomCallback(std::size_t index,
-                             const nav_msgs::msg::Odometry::SharedPtr msg) {
+void SimaLayer::poseCallback(
+    std::size_t index,
+    const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
   if (index >= agents_.size()) {
     return;
   }
 
+  if (!msg->header.frame_id.empty() && msg->header.frame_id != global_frame_) {
+    return;
+  }
+
   auto &agent = agents_[index];
-  agent.x = msg->pose.pose.position.x;
-  agent.y = msg->pose.pose.position.y;
-  agent.vx = msg->twist.twist.linear.x;
-  agent.vy = msg->twist.twist.linear.y;
+  const double x = msg->pose.pose.position.x;
+  const double y = msg->pose.pose.position.y;
+  const rclcpp::Time stamp =
+      (msg->header.stamp.sec == 0 && msg->header.stamp.nanosec == 0)
+          ? node_.lock()->now()
+          : rclcpp::Time(msg->header.stamp);
+
+  agent.vx = 0.0;
+  agent.vy = 0.0;
+  if (agent.has_previous_sample) {
+    const double dt = (stamp - agent.last_stamp).seconds();
+    if (dt > 1e-3) {
+      agent.vx = (x - agent.last_x) / dt;
+      agent.vy = (y - agent.last_y) / dt;
+    }
+  }
+
+  agent.x = x;
+  agent.y = y;
+  agent.last_x = x;
+  agent.last_y = y;
+  agent.last_stamp = stamp;
+  agent.has_previous_sample = true;
   agent.pose_received = true;
   agent.distance = std::hypot(agent.x, agent.y);
-}
-
-void SimaLayer::distanceCallback(std::size_t index,
-                                 const std_msgs::msg::Float64::SharedPtr msg) {
-  if (index < agents_.size()) {
-    agents_[index].distance = msg->data;
-  }
 }
 
 void SimaLayer::updateRadius() {

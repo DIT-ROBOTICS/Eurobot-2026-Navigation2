@@ -4,11 +4,10 @@
 #include <string>
 #include <vector>
 
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layer.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/float64.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
 #include <yaml-cpp/yaml.h>
@@ -45,16 +44,19 @@ private:
     double vx{0.0};
     double vy{0.0};
     double distance{1.0};
+    double last_x{0.0};
+    double last_y{0.0};
     bool active{false};
     bool pose_received{false};
+    bool has_previous_sample{false};
     int missed_updates{0};
+    rclcpp::Time last_stamp{0, 0, RCL_ROS_TIME};
     RivalState state{RivalState::UNKNOWN};
   };
 
-  void odomCallback(std::size_t index,
-                    const nav_msgs::msg::Odometry::SharedPtr msg);
-  void distanceCallback(std::size_t index,
-                        const std_msgs::msg::Float64::SharedPtr msg);
+  void poseCallback(
+      std::size_t index,
+      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
   void updateRadius();
   void updateAgentState(SimaAgentState &agent);
@@ -70,10 +72,9 @@ private:
 
   std::vector<int64_t> sima_ids_;
   std::vector<SimaAgentState> agents_;
-  std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr>
-      odom_subs_;
-  std::vector<rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr>
-      distance_subs_;
+  std::vector<rclcpp::Subscription<
+      geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr>
+      pose_subs_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_mode_service_;
 
   bool mode_param_{false};
@@ -111,6 +112,7 @@ private:
   double expand_vel_factor_weight_localization_{0.20};
   double safe_distance_{0.5};
   bool use_statistic_method_{false};
+  std::string global_frame_{"map"};
 
   double min_x_{0.0};
   double min_y_{0.0};
