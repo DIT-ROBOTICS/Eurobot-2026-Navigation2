@@ -4,7 +4,7 @@ bt_navigator:
     global_frame: map
     robot_base_frame: base_footprint
     odom_topic: /local_pose
-    bt_loop_duration: 10
+    bt_loop_duration: 50
     default_server_timeout: 20
     wait_for_service_timeout: 1000
     # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
@@ -643,10 +643,10 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.23
-      min_linear_vel: 0.05
-      linear_kp_accel_vel: 0.9
-      linear_ki_accel_vel: 0.4
+      max_linear_vel: 0.12
+      min_linear_vel: 0.03
+      linear_kp_accel_vel: 0.7
+      linear_ki_accel_vel: 0.3
       linear_kp_decel_dis: 0.12
       max_speed_diff: 0.6
       angular_kp: 0.6
