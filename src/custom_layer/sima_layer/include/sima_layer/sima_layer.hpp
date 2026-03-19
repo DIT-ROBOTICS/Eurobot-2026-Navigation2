@@ -7,6 +7,7 @@
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layer.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
@@ -36,7 +37,7 @@ public:
 private:
   static constexpr double kSimaSizeScale = 1.0 / 6.0;
 
-  enum class RivalState { HALTED, MOVING, UNKNOWN };
+  enum class SimaState { HALTED, MOVING, UNKNOWN };
 
   struct SimaAgentState {
     double x{0.0};
@@ -51,12 +52,14 @@ private:
     bool has_previous_sample{false};
     int missed_updates{0};
     rclcpp::Time last_stamp{0, 0, RCL_ROS_TIME};
-    RivalState state{RivalState::UNKNOWN};
+    SimaState state{SimaState::UNKNOWN};
   };
 
   void poseCallback(
-      std::size_t index,
-      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+      std::size_t index, const nav_msgs::msg::Odometry::SharedPtr msg);
+  void poseCallback(std::size_t index,
+                    const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr
+                        msg);
 
   void updateRadius();
   void updateAgentState(SimaAgentState &agent);
@@ -68,10 +71,12 @@ private:
   void expandLine(const SimaAgentState &agent, double max_cost,
                   double inflation_radius, double cost_scaling_factor,
                   double inscribed_radius, double extend_length);
-  void logStateChange(std::size_t index, RivalState new_state);
+  void logStateChange(std::size_t index, SimaState new_state);
 
   std::vector<int64_t> sima_ids_;
   std::vector<SimaAgentState> agents_;
+  std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr>
+      odom_subs_;
   std::vector<rclcpp::Subscription<
       geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr>
       pose_subs_;

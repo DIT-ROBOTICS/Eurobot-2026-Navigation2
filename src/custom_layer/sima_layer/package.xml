@@ -3,7 +3,7 @@
 <package format="3">
   <name>sima_layer</name>
   <version>2.0.0</version>
-  <description>This package provides custom costmap layers for rival prediction</description>
+  <description>This package provides custom costmap layers for sima prediction</description>
   <maintainer email="rabbit025879@gmail.com">Tu123</maintainer>
   <license>Apache-2.0</license>
 
