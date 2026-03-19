@@ -9,6 +9,8 @@ while [ -h "$SCRIPT_SOURCE" ]; do
   [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR"
+DOCKER_DEPLOY_DIR="${DOCKER_DEPLOY_DIR:-$PROJECT_DIR/docker/deploy}"
 
 CONTAINER_NAME="${CONTAINER_NAME:-navigation2-vnc}"
 SESSION_NAME="${SESSION_NAME:-real-dock-loop}"
@@ -24,6 +26,7 @@ Usage:
   ./real_tmux_loop.sh
 
 Environment overrides:
+  DOCKER_DEPLOY_DIR  Host path to docker/deploy
   CONTAINER_NAME  Docker container to exec into (default: navigation2-vnc)
   SESSION_NAME    tmux session name (default: real-dock-loop)
   WORKSPACE_DIR   Workspace path inside container
@@ -160,6 +163,15 @@ worker() {
     fi
 
     goal_index=$((goal_index + 1))
+
+    if (( goal_index % 2 == 0 )); then
+      echo "Two docking goals finished. Restarting real_launch.py."
+      tmux send-keys -t "${session_name}:0.0" C-c
+      sleep 2
+      tmux send-keys -t "${session_name}:0.0" "cd '$workspace_dir' && source install/setup.bash && ros2 launch navigation2_run real_launch.py" C-m
+      echo "Waiting ${startup_delay}s for real_launch startup before the next docking request."
+      sleep "$startup_delay"
+    fi
   done
 
   if [[ "$stopped_due_to_error" == "1" ]]; then
@@ -176,15 +188,26 @@ main() {
   require_command docker
   require_command tmux
 
-  if ! docker ps --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
-    echo "Container '$CONTAINER_NAME' is not running." >&2
-    echo "Set CONTAINER_NAME if your container uses a different name." >&2
+  if [[ ! -d "$DOCKER_DEPLOY_DIR" ]]; then
+    echo "docker/deploy directory not found: $DOCKER_DEPLOY_DIR" >&2
     exit 1
   fi
 
   if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
     echo "tmux session '$SESSION_NAME' already exists." >&2
     echo "Use a different SESSION_NAME or kill the old session first." >&2
+    exit 1
+  fi
+
+  (
+    cd "$DOCKER_DEPLOY_DIR"
+    docker compose down
+    docker compose up -d navigation-vnc
+  )
+
+  if ! docker ps --format '{{.Names}}' | grep -Fxq "$CONTAINER_NAME"; then
+    echo "Container '$CONTAINER_NAME' is not running after docker compose up." >&2
+    echo "Set CONTAINER_NAME if your container uses a different name." >&2
     exit 1
   fi
 
