@@ -351,11 +351,11 @@ global_costmap:
         reset_timeout_threshold: 15
         sima_ids: [1, 2, 3, 4, 11, 12, 13, 14]
         robot_inscribed_radius: 0.0
-        rival_inscribed_radius: 0.1
+        rival_inscribed_radius: 0.10
         halted_inflation_radius: 0.2
         wandering_inflation_radius: 0.2
         moving_inflation_radius: 0.2
-        unknown_inflation_radius: 0.2
+        unknown_inflation_radius: 0.05
         halted_cost_scaling_factor: 5.0
         wandering_cost_scaling_factor: 5.0
         moving_cost_scaling_factor: 5.0
@@ -366,7 +366,7 @@ global_costmap:
         vel_range_max: 0.4
         vel_range_min: 0.0
         inscribed_radius_rate: 0.98
-        inflation_radius_rate: 1.0
+        inflation_radius_rate: 5.0
         debug_mode: 0
         use_statistic_method: false
         offset_vel_factor_weight_statistic: 0.25
