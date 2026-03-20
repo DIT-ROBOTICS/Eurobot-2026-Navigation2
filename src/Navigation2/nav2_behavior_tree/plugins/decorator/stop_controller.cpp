@@ -44,10 +44,19 @@ namespace nav2_behavior_tree
       cmd_vel.linear.x = 0.0;
       cmd_vel.angular.z = 0.0;
       cmd_vel_pub->publish(cmd_vel);
-      RCLCPP_INFO(node_->get_logger(), "\033[1;31m running in stop_controller \033[0m");
+      RCLCPP_INFO(node_->get_logger(), "\033[1;31m running in stop_controller (BLOCKING) \033[0m");
       return BT::NodeStatus::FAILURE;
     }
-    return child_node_->executeTick();
+    
+    BT::NodeStatus status = child_node_->executeTick();
+    
+    if (status == BT::NodeStatus::SUCCESS) {
+        RCLCPP_INFO(node_->get_logger(), "\033[1;32mStopController returning SUCCESS\033[0m");
+    } else if (status == BT::NodeStatus::FAILURE) {
+        RCLCPP_INFO(node_->get_logger(), "\033[1;31mStopController returning FAILURE\033[0m");
+    }
+    
+    return status;
   }
 }  // namespace nav2_behavior_tree
 

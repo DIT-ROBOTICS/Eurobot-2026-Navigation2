@@ -40,6 +40,7 @@ void ComputePathToPoseAction::on_tick()
 BT::NodeStatus ComputePathToPoseAction::on_success()
 {
   setOutput("path", result_.result->path);
+  RCLCPP_INFO(node_->get_logger(), "\033[1;32mComputePathToPose: SUCCESS\033[0m");
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -47,6 +48,7 @@ BT::NodeStatus ComputePathToPoseAction::on_aborted()
 {
   nav_msgs::msg::Path empty_path;
   setOutput("path", empty_path);
+  RCLCPP_INFO(node_->get_logger(), "\033[1;31mComputePathToPose: ABORTED\033[0m");
   return BT::NodeStatus::FAILURE;
 }
 
@@ -54,6 +56,7 @@ BT::NodeStatus ComputePathToPoseAction::on_cancelled()
 {
   nav_msgs::msg::Path empty_path;
   setOutput("path", empty_path);
+  RCLCPP_INFO(node_->get_logger(), "\033[1;33mComputePathToPose: CANCELLED\033[0m");
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -61,6 +64,7 @@ void ComputePathToPoseAction::halt()
 {
   nav_msgs::msg::Path empty_path;
   setOutput("path", empty_path);
+  RCLCPP_INFO(node_->get_logger(), "\033[1;33mComputePathToPose: HALTED\033[0m");
   BtActionNode::halt();
 }
 

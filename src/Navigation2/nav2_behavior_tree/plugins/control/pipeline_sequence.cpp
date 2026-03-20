@@ -17,6 +17,7 @@
 #include <string>
 
 #include "nav2_behavior_tree/plugins/control/pipeline_sequence.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace nav2_behavior_tree
 {
@@ -39,6 +40,7 @@ BT::NodeStatus PipelineSequence::tick()
     auto status = children_nodes_[i]->executeTick();
     switch (status) {
       case BT::NodeStatus::FAILURE:
+        RCLCPP_INFO(rclcpp::get_logger("PipelineSequence"), "\033[1;31mPipelineSequence: Child %zu FAILURE\033[0m", i);
         ControlNode::haltChildren();
         last_child_ticked_ = 0;  // reset
         return status;
@@ -61,6 +63,7 @@ BT::NodeStatus PipelineSequence::tick()
     }
   }
   // Wrap up.
+  RCLCPP_INFO(rclcpp::get_logger("PipelineSequence"), "\033[1;32mPipelineSequence: All children SUCCESS\033[0m");
   ControlNode::haltChildren();
   last_child_ticked_ = 0;  // reset
   return BT::NodeStatus::SUCCESS;

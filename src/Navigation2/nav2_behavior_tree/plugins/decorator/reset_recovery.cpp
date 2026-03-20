@@ -66,7 +66,15 @@ BT::NodeStatus ResetRecovery::tick()
   }
 
   // Execute child node
-  return child_node_->executeTick();
+  BT::NodeStatus status = child_node_->executeTick();
+  
+  if (status == BT::NodeStatus::SUCCESS) {
+    RCLCPP_INFO(node_->get_logger(), "\033[1;32mResetRecovery returning SUCCESS\033[0m");
+  } else if (status == BT::NodeStatus::FAILURE) {
+    RCLCPP_INFO(node_->get_logger(), "\033[1;31mResetRecovery returning FAILURE\033[0m");
+  }
+  
+  return status;
 }
 
 void ResetRecovery::goalReachedCallback(const std_msgs::msg::Bool::SharedPtr msg)
