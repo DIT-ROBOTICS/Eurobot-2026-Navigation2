@@ -98,8 +98,8 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.03
-      movement_time_allowance: 3.0
+      required_movement_radius: 0.01
+      movement_time_allowance: 6.0
 
     # Goal checker parameters
     Precise:
@@ -121,7 +121,7 @@ controller_server:
     Loose:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.03
+      xy_goal_tolerance: 0.05
       yaw_goal_tolerance: 0.07
       xy_debounce_threshold: 1
       yaw_debounce_threshold: 1
@@ -210,16 +210,16 @@ controller_server:
       dt_ref: 0.05                
       resample_ds: 0.05
       iterations: 4 
-      goal_xy_stop_dist: 0.03   
+      goal_xy_stop_dist: 0.03  
       goal_heading_switch_dist: 5.0
       min_obstacle_dist: 0.25 
       lookahead_dist: 0.4 
       w_smooth: 0.0
       w_obst: 1.0               
-      k_xy: 2.7                   
-      k_w: 2.4            
+      k_xy: 5.0                   
+      k_w: 3.0            
       max_v: 1.5               
-      min_v: 0.0
+      min_v: 0.02
       max_acc_v: 4.5             
       max_w: 3.0                   
       max_acc_w: 9.0                                     
@@ -230,11 +230,11 @@ controller_server:
       cost_check_stride: 1
       replan_min_blocked_time: 0.20
       replan_cooldown: 0.01
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.25
-      obstacle_check_lookahead: 0.8
+      slowdown_obstacle_dist: 0.7
+      stop_obstacle_dist: 0.2
+      obstacle_check_lookahead: 0.4
       obstacle_check_time_horizon: 2.0
-      obstacle_cost_threshold: 150.0 
+      obstacle_cost_threshold: 240.0 
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
@@ -624,13 +624,13 @@ docking_server:
 
     Rush:
       max_linear_vel: 0.3
-      min_linear_vel: 0.01
+      min_linear_vel: 0.03
       linear_kp_accel_vel: 0.6
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.15
       max_speed_diff: 0.6
       angular_kp: 0.2
-      deceleration_distance: 0.16
+      deceleration_distance: 0.08
       reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0

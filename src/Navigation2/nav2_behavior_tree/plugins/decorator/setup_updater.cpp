@@ -11,6 +11,7 @@ namespace nav2_behavior_tree
         node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 
         isGoalUpdated = false;
+        waiting_for_service_ = false;
         // Create client to shrink's service
         shrink_client_ = node_->create_client<std_srvs::srv::SetBool>(
             "/shrink/doneShrink",
@@ -19,22 +20,15 @@ namespace nav2_behavior_tree
 
     void SetupUpdater::requestShrinkBack()
     {
-        if (!shrink_client_->wait_for_service(std::chrono::milliseconds(100))) {
-            RCLCPP_ERROR(node_->get_logger(), "Shrink service not available, waiting...");
+        if (!shrink_client_->wait_for_service(std::chrono::milliseconds(0))) {
+            RCLCPP_ERROR(node_->get_logger(), "Shrink service not available");
+            waiting_for_service_ = false;
         } else {
             auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
             request->data = true;  // Instruct shrink to call setToOriginal()
-            auto result = shrink_client_->async_send_request(request);
-            if (rclcpp::spin_until_future_complete(node_, result) == rclcpp::FutureReturnCode::SUCCESS) {
-                auto response = result.get();
-                if (response->success)
-                    RCLCPP_INFO(node_->get_logger(), "Shrink request sent successfully");
-                else
-                    RCLCPP_ERROR(node_->get_logger(), "Shrink service call failed");
-            }
-            else {
-                RCLCPP_ERROR(node_->get_logger(), "Failed to send shrink service call");
-            }
+            future_result_ = shrink_client_->async_send_request(request).share();
+            waiting_for_service_ = true;
+            RCLCPP_INFO(node_->get_logger(), "Async shrink request sent...");
         }
     }
 
@@ -57,6 +51,21 @@ namespace nav2_behavior_tree
         setOutput("goalUpdated", isGoalUpdated);
         if(isGoalUpdated){
             requestShrinkBack();
+        }
+
+        if (waiting_for_service_) {
+            auto status = future_result_.wait_for(std::chrono::milliseconds(0));
+            if (status == std::future_status::ready) {
+                auto response = future_result_.get();
+                if (response && response->success) {
+                    RCLCPP_INFO(node_->get_logger(), "Shrink request finished successfully");
+                } else {
+                    RCLCPP_ERROR(node_->get_logger(), "Shrink service call failed or timed out");
+                }
+                waiting_for_service_ = false;
+            } else {
+                return BT::NodeStatus::RUNNING;
+            }
         }
 
         return child_node_->executeTick();

@@ -31,6 +31,8 @@ namespace nav2_behavior_tree
             std::vector<geometry_msgs::msg::PoseStamped> incomming_goal_list;
             geometry_msgs::msg::PoseStamped current_goal;
             std::vector<geometry_msgs::msg::PoseStamped> current_goal_list;
+            bool waiting_for_service_{false};
+            std::shared_future<std::shared_ptr<std_srvs::srv::SetBool::Response>> future_result_;
             void requestShrinkBack();
             bool goalUpdated();
     };
