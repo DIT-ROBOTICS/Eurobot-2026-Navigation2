@@ -629,7 +629,8 @@ docking_server:
       rival_radius: 0.44
 
     Cam:
-      max_linear_vel: 0.12
+      max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
+      # max_linear_vel: 0.25 # when cam has high update rate ( > 10 )
       min_linear_vel: 0.03
       linear_kp_accel_vel: 0.7
       linear_ki_accel_vel: 0.3
