@@ -5,7 +5,8 @@ namespace nav2_behavior_tree
     SetupUpdater::SetupUpdater(
         const std::string & name,
         const BT::NodeConfiguration & conf)
-        : BT::DecoratorNode(name, conf)
+        : BT::DecoratorNode(name, conf),
+          request_start_time_(0, 0, RCL_ROS_TIME)
     {
         // Retrieve node from the blackboard
         node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
@@ -36,6 +37,7 @@ namespace nav2_behavior_tree
             request->data = true;  // Instruct shrink to call setToOriginal()
             future_result_ = shrink_client_->async_send_request(request).share();
             waiting_for_service_ = true;
+            request_start_time_ = node_->now();
             RCLCPP_INFO(node_->get_logger(), "Async shrink request sent...");
         }
     }
@@ -75,11 +77,29 @@ namespace nav2_behavior_tree
                 }
                 waiting_for_service_ = false;
             } else {
-                return BT::NodeStatus::RUNNING;
+                // Check for timeout
+                if ((node_->now() - request_start_time_).seconds() > timeout_) {
+                    RCLCPP_WARN(node_->get_logger(), "Shrink request timed out after %.1f seconds. Proceeding anyway.", timeout_);
+                    waiting_for_service_ = false;
+                } else {
+                    // RCLCPP_DEBUG(node_->get_logger(), "SetupUpdater: Still waiting for shrink service...");
+                    return BT::NodeStatus::RUNNING;
+                }
             }
         }
 
-        return child_node_->executeTick();
+        BT::NodeStatus child_status = child_node_->executeTick();
+        
+        // Log status for debugging
+        if (child_status == BT::NodeStatus::RUNNING) {
+            // RCLCPP_DEBUG(node_->get_logger(), "SetupUpdater returning RUNNING (child is running)");
+        } else if (child_status == BT::NodeStatus::SUCCESS) {
+            RCLCPP_INFO(node_->get_logger(), "\033[1;32mSetupUpdater returning SUCCESS\033[0m");
+        } else if (child_status == BT::NodeStatus::FAILURE) {
+            RCLCPP_INFO(node_->get_logger(), "\033[1;31mSetupUpdater returning FAILURE\033[0m");
+        }
+
+        return child_status;
     }
 }
 

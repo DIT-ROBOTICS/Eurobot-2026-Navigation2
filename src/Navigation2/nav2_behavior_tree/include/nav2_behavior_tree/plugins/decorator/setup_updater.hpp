@@ -35,6 +35,8 @@ namespace nav2_behavior_tree
             std::shared_future<std::shared_ptr<std_srvs::srv::SetBool::Response>> future_result_;
             rclcpp::CallbackGroup::SharedPtr callback_group_;
             rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
+            rclcpp::Time request_start_time_;
+            double timeout_{2.0}; // seconds
             void requestShrinkBack();
             bool goalUpdated();
     };
