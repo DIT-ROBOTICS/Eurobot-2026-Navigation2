@@ -33,6 +33,8 @@ namespace nav2_behavior_tree
             std::vector<geometry_msgs::msg::PoseStamped> current_goal_list;
             bool waiting_for_service_{false};
             std::shared_future<std::shared_ptr<std_srvs::srv::SetBool::Response>> future_result_;
+            rclcpp::CallbackGroup::SharedPtr callback_group_;
+            rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
             void requestShrinkBack();
             bool goalUpdated();
     };

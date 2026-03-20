@@ -12,10 +12,18 @@ namespace nav2_behavior_tree
 
         isGoalUpdated = false;
         waiting_for_service_ = false;
-        // Create client to shrink's service
+
+        // Setup callback group and executor for independent processing
+        callback_group_ = node_->create_callback_group(
+            rclcpp::CallbackGroupType::MutuallyExclusive,
+            false);
+        callback_group_executor_.add_callback_group(callback_group_, node_->get_node_base_interface());
+
+        // Create client to shrink's service with the dedicated callback group
         shrink_client_ = node_->create_client<std_srvs::srv::SetBool>(
             "/shrink/doneShrink",
-            rmw_qos_profile_services_default);
+            rmw_qos_profile_services_default,
+            callback_group_);
     }
 
     void SetupUpdater::requestShrinkBack()
@@ -47,6 +55,9 @@ namespace nav2_behavior_tree
 
     inline BT::NodeStatus SetupUpdater::tick()
     {
+        // Process callbacks for the client independently
+        callback_group_executor_.spin_some();
+
         isGoalUpdated = goalUpdated();
         setOutput("goalUpdated", isGoalUpdated);
         if(isGoalUpdated){
