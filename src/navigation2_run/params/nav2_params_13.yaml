@@ -147,10 +147,10 @@ controller_server:
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
-      iterations: 4 
+      iterations: 4
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
+      min_obstacle_dist: 0.25
       lookahead_dist: 0.7
       w_smooth: 1.0 
       w_obst: 1.0               
@@ -180,11 +180,11 @@ controller_server:
       max_linear_vel: 1.1
       max_angular_vel: 12.0
       linear_kp: 2.2
-      angular_kp: 3.7
+      angular_kp: 4.5
       transform_tolerance: 0.1
       look_ahead_distance: 0.2
-      speed_decade: 0.125
-      costmap_tolerance: 95 # rival is 98
+      speed_decade: 0.15
+      costmap_tolerance: 80 # rival is 98
       keep_planning: false
       spin_delay_threshold: 0.5
       rival_slowdown_radius: 0.5   
@@ -205,7 +205,7 @@ controller_server:
       k_xy: 5.0                   
       k_w: 3.0            
       max_v: 1.5               
-      min_v: 0.02
+      min_v: 0.0
       max_acc_v: 4.5             
       max_w: 3.0                   
       max_acc_w: 9.0                                     
@@ -220,7 +220,7 @@ controller_server:
       stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
       obstacle_check_time_horizon: 2.0
-      obstacle_cost_threshold: 240.0 
+      obstacle_cost_threshold: 150.0 
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
@@ -325,7 +325,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.21
+        inflation_radius: 0.25
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
