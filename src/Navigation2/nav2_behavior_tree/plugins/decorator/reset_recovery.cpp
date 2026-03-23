@@ -29,12 +29,21 @@ ResetRecovery::ResetRecovery(
   // Get the ROS node from the blackboard
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
 
+  // Setup callback group and executor for independent processing
+  callback_group_ = node_->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive,
+    false);
+  callback_group_executor_.add_callback_group(callback_group_, node_->get_node_base_interface());
+
   // Create subscription to goal_reached topic
   if (node_) {
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = callback_group_;
     goal_reached_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
       "goal_reached",
       10,
-      std::bind(&ResetRecovery::goalReachedCallback, this, std::placeholders::_1));
+      std::bind(&ResetRecovery::goalReachedCallback, this, std::placeholders::_1),
+      sub_options);
 
     RCLCPP_INFO(node_->get_logger(), "ResetRecovery: Subscribed to /goal_reached topic");
   } else {
@@ -47,6 +56,9 @@ ResetRecovery::ResetRecovery(
 
 BT::NodeStatus ResetRecovery::tick()
 {
+  // Process any pending callbacks in our executor
+  callback_group_executor_.spin_some();
+
   // Reset current_child_idx if goal was reached (thread-safe)
   if (goal_reached_) {
     setOutput("current_child_idx", 0);
@@ -54,7 +66,15 @@ BT::NodeStatus ResetRecovery::tick()
   }
 
   // Execute child node
-  return child_node_->executeTick();
+  BT::NodeStatus status = child_node_->executeTick();
+  
+  if (status == BT::NodeStatus::SUCCESS) {
+    RCLCPP_INFO(node_->get_logger(), "\033[1;32mResetRecovery returning SUCCESS\033[0m");
+  } else if (status == BT::NodeStatus::FAILURE) {
+    RCLCPP_INFO(node_->get_logger(), "\033[1;31mResetRecovery returning FAILURE\033[0m");
+  }
+  
+  return status;
 }
 
 void ResetRecovery::goalReachedCallback(const std_msgs::msg::Bool::SharedPtr msg)

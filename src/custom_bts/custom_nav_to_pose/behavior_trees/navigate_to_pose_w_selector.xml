@@ -9,13 +9,11 @@
                 <RateController hz="5">
                   <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
                 </RateController>
-                <RateController hz="3">
-                  <Sequence>
-                        <ControllerSelector topic_name="/controller_type" default_controller="Slow" selected_controller="{controller}"/>
-                        <GoalCheckerSelector topic_name="/goal_checker_type" default_goal_checker="Loose" selected_goal_checker="{goal_checker}"/>
-                        <FollowPath path="{path}" controller_id="{controller}" goal_checker_id="{goal_checker}"/>
-                  </Sequence>
-                </RateController>
+                <Sequence>
+                    <ControllerSelector topic_name="/controller_type" default_controller="Fast" selected_controller="{controller}"/>
+                    <GoalCheckerSelector topic_name="/goal_checker_type" default_goal_checker="Loose" selected_goal_checker="{goal_checker}"/>
+                    <FollowPath path="{path}" controller_id="{controller}" goal_checker_id="{goal_checker}"/>
+                </Sequence>
               </PipelineSequence>
             </RetryUntilSuccessful>
             <ReactiveFallback name="RecoveryFallback">

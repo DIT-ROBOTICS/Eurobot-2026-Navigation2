@@ -5,11 +5,10 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <utility>
 #include <algorithm>
 #include <cmath>
 #include <limits>
-
-#include <Eigen/Core>
 
 #include "nav2_core/controller.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -75,25 +74,15 @@ private:
     static double yawFromQuat(const geometry_msgs::msg::Quaternion & q);
     static double normAngle(double a);
 
-    // band build + optimize
+    // band build
     void initTimedElasticBand(const nav_msgs::msg::Path & plan);
-    void optimizeBandOnce(const nav2_costmap_2d::Costmap2D & cm);
+    void optimizeBandOnceGlobal();
 
-    // cost terms
-    Eigen::Vector2d obstacleRepulsion(
-        const nav2_costmap_2d::Costmap2D & cm, double x, double y) const;
-    unsigned char costAt(
-        const nav2_costmap_2d::Costmap2D & cm, double x, double y) const;
-    double minObstacleDistance(
-        const nav2_costmap_2d::Costmap2D & cm, double x, double y,
-        double search_radius) const;
-    double minObstacleDistanceOnBand(
-        const nav2_costmap_2d::Costmap2D & cm, size_t start_idx,
-        double arc_len, double search_radius) const;
     // global occupancy grid helpers
     bool worldToMap(
         const nav_msgs::msg::OccupancyGrid & grid, double wx, double wy,
         unsigned int & mx, unsigned int & my) const;
+    std::pair<double, double> obstacleRepulsionGlobal(double x, double y) const;
     unsigned char costAtGlobal(double x, double y) const;
     double minObstacleDistanceGlobal(double x, double y, double search_radius) const;
     double minObstacleDistanceOnBandGlobal(size_t start_idx, double arc_len, double search_radius) const;
@@ -128,12 +117,11 @@ private:
 
     // pubs
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr teb_path_pub_;
-    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr global_path_pub_;
+    rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
     // parameters (band)
     double dt_ref_{0.1};
     double resample_ds_{0.05};
     int iterations_{2};
-
     // obstacle
     double min_obstacle_dist_{0.25};
     double w_smooth_{1.0};
@@ -178,8 +166,6 @@ private:
 
     double stop_v_eps_{0.05};             
     double blocked_stop_clearance_{0.5};
-    unsigned char maxCostOnBand(const nav2_costmap_2d::Costmap2D & cm) const;
-
     double replan_min_blocked_time_{0.3};
     double replan_cooldown_{0.6};
     rclcpp::Time blocked_since_;

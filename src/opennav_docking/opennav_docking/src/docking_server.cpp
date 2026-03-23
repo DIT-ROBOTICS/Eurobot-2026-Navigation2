@@ -276,9 +276,11 @@ void DockingServer::dockRobot()
     {
       RCLCPP_INFO(get_logger(), "\033[1;32m Robot already within pre-staging pose tolerance for dock \033[0m");
     } else {
+      RCLCPP_INFO(get_logger(), "Navigating to staging pose at (%0.2f, %0.2f)", initial_staging_pose.pose.position.x,
+        initial_staging_pose.pose.position.y);
       navigator_->goToPose(
         initial_staging_pose, rclcpp::Duration::from_seconds(goal->max_staging_time));
-      // RCLCPP_INFO(get_logger(), "Successful navigation to staging pose");
+      RCLCPP_INFO(get_logger(), "Successful navigation to staging pose");
     }
 
     if (!goal->use_dock_id && goal->dock_pose.pose.position.z == 0.0) {
@@ -322,10 +324,7 @@ void DockingServer::dockRobot()
             result->success = true;
             result->num_retries = num_retries_;
             stashDockData(goal->use_dock_id, dock, true);
-            publishZeroVelocity();
             docking_action_server_->succeeded_current(result);
-            publishZeroVelocity();
-            publishZeroVelocity();
             publishZeroVelocity();
           }
         }
