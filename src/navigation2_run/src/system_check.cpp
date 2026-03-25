@@ -63,19 +63,34 @@ private:
   }
 
   bool dependenciesReady() {
-    // Check if the service and action servers are available
-    if (!ready_srv_client_->wait_for_service(0s)) {
-      RCLCPP_WARN(this->get_logger(), "Ready service not available after waiting");
+    // Wait for the service and action servers to become available
+    auto timeout = 5s;
+    auto timeout_sec = static_cast<long>(std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
+
+    if (!ready_srv_client_->wait_for_service(timeout)) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Ready service not available after waiting for %ld seconds",
+        timeout_sec);
       return false;
     }
-    if (!navigate_to_pose_client_->wait_for_action_server(0s)) {
-      RCLCPP_WARN(this->get_logger(), "NavigateToPose action server not available after waiting");
+
+    if (!navigate_to_pose_client_->wait_for_action_server(timeout)) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "NavigateToPose action server not available after waiting for %ld seconds",
+        timeout_sec);
       return false;
     }
-    if (!dock_robot_client_->wait_for_action_server(0s)) {
-      RCLCPP_WARN(this->get_logger(), "DockRobot action server not available after waiting");
+
+    if (!dock_robot_client_->wait_for_action_server(timeout)) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "DockRobot action server not available after waiting for %ld seconds",
+        timeout_sec);
       return false;
     }
+
     return true;
   }
 
