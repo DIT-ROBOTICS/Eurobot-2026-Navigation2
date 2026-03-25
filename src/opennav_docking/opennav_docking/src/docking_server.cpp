@@ -246,6 +246,8 @@ void DockingServer::dockRobot()
   }
 
   getPreemptedGoalIfRequested(goal, docking_action_server_);
+
+
   Dock * dock{nullptr};
   num_retries_ = 0;
 
@@ -281,6 +283,15 @@ void DockingServer::dockRobot()
       RCLCPP_INFO(get_logger(), "Successful navigation to staging pose");
     }
 
+    if (!goal->use_dock_id && goal->dock_pose.pose.position.z == 0.0) {
+      RCLCPP_INFO(get_logger(), "\033[1;32mSkipping docking, dock_pose.pose.position.z == 0.0\033[0m");
+      result->success = true;
+      result->num_retries = 0;
+      publishZeroVelocity();
+      docking_action_server_->succeeded_current(result);
+      return;
+    }
+
     // Construct initial estimate of where the dock is located in fixed_frame
     auto dock_pose = utils::getDockPoseStamped(dock, rclcpp::Time(0));
     tf2_buffer_->transform(dock_pose, dock_pose, fixed_frame_);
@@ -297,7 +308,7 @@ void DockingServer::dockRobot()
     {
       std_msgs::msg::Int16 docking_msg;
       docking_msg.data = 1;
-      RCLCPP_INFO(get_logger(), "\033[1;32menter publish\033[0m");
+      // RCLCPP_INFO(get_logger(), "\033[1;32menter publish\033[0m");
       if (docking_pub_) {
         docking_pub_->publish(docking_msg);
       }
