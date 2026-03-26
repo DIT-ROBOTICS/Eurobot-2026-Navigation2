@@ -9,6 +9,15 @@ NavTypeSelector::NavTypeSelector(std::shared_ptr<rclcpp_lifecycle::LifecycleNode
     controller_function_pub_ = node_->create_publisher<std_msgs::msg::String>("/controller_function", rclcpp::QoS(10).reliable().transient_local());
     dock_controller_selector_pub_ = node_->create_publisher<std_msgs::msg::String>("/dock_controller_type", rclcpp::QoS(10).reliable().transient_local());
 
+    dock_side_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
+        "/robot/dock_side", 10,
+        [this](const std_msgs::msg::Int16::SharedPtr msg) {
+            dock_side_ = msg->data;
+            if (dock_side_ < 0 || dock_side_ > 3) {
+                RCLCPP_WARN(node_->get_logger(), "/robot/dock_side:%d is not in valid range: 0-3", dock_side_);
+            }
+        });
+
     node_->declare_parameter("external_rival_data_path", "");
     node_->get_parameter("external_rival_data_path", external_rival_data_path_);
     node_->declare_parameter("shrink_nav_rival_radius", 0.05);
@@ -79,7 +88,12 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
     } else if(strstr(mode.c_str(), "rush") != nullptr) {
         dock_controller_selector_msg_.data = "Rush";
     } else if(strstr(mode.c_str(), "cam") != nullptr) {
-        dock_controller_selector_msg_.data = "Cam";
+        if ( dock_side_ == 0 ) {
+            dock_controller_selector_msg_.data = "CamFront";
+        }
+        else {
+            dock_controller_selector_msg_.data = "Cam";
+        }
     } else {
         dock_controller_selector_msg_.data = "Ordinary";
     }

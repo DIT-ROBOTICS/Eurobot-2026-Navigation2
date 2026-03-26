@@ -40,7 +40,7 @@ def generate_launch_description():
         description='Publishing rate in Hz'
     )
 
-    publish_rate_arg = DeclareLaunchArgument(
+    dock_side_arg = DeclareLaunchArgument(
         'dock_side',
         default_value='0',
         description='Use which side of camera to dock'
@@ -64,5 +64,6 @@ def generate_launch_description():
         goal_x_arg,
         goal_y_arg,
         publish_rate_arg,
+        dock_side_arg,
         camera_offset_publisher_node,
     ])

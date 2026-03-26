@@ -643,6 +643,21 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
 
+    CamFront:
+      max_linear_vel: 0.23
+      min_linear_vel: 0.05
+      linear_kp_accel_vel: 0.9
+      linear_ki_accel_vel: 0.4
+      linear_kp_decel_dis: 0.12
+      max_speed_diff: 0.6
+      angular_kp: 0.6
+      deceleration_distance: 0.08
+      reserved_distance: 0.008
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      stop_degree: 120.0
+      rival_radius: 0.44
+
+
 final_pose_bridge:
   ros__parameters:
     # twist_topic: "/driving_duaiduaiduai"

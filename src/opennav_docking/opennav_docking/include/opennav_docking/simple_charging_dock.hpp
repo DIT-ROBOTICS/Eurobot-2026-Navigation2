@@ -110,7 +110,7 @@ public:
 protected:
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state);
   void resetDockPoseSubscription();
-  double computeExternalDockingDist(const double z); 
+  double computeExternalDockingDist(const double z ); 
   // z is diff of aruco_center and robot pose to do mission
 
   // Optionally subscribe to a detected dock pose topic
