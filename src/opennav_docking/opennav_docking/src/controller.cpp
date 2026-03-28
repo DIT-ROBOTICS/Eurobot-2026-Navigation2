@@ -215,15 +215,15 @@ double Controller::ExtractVelocity(const double & velocity, const double & remai
     switch (state) {
         case VelocityState::ACCELERATION:
             Acceleration(vel, remaining_distance, state);
-            // RCLCPP_INFO_ONCE(logger_, "Accelerating");
+            RCLCPP_INFO_ONCE(logger_, "Accelerating");
             break;
         case VelocityState::CONSTANT:
             ConstantVelocity(vel, remaining_distance, state);
-            // RCLCPP_INFO_ONCE(logger_, "Constant velocity");
+            RCLCPP_INFO_ONCE(logger_, "Constant velocity");
             break;
         case VelocityState::DECELERATION:
             Deceleration(vel, remaining_distance, state);
-            // RCLCPP_INFO_ONCE(logger_, "Decelerating");
+            RCLCPP_INFO_ONCE(logger_, "Decelerating");
             break;
     }
 
@@ -285,7 +285,7 @@ void Controller::Deceleration(double & vel, const double & remaining_distance, V
     } else {
         vel = raw_vel;
     }
-    RCLCPP_INFO(logger_, "[Deceleration] raw_vel: %f, previous_speed: %f, max_delta: %f, vel: %f", raw_vel, previous_speed_, max_delta, vel);
+    // RCLCPP_INFO(logger_, "[Deceleration] raw_vel: %f, previous_speed: %f, max_delta: %f, vel: %f", raw_vel, previous_speed_, max_delta, vel);
     previous_speed_ = vel;
     previous_time_ = now;
 

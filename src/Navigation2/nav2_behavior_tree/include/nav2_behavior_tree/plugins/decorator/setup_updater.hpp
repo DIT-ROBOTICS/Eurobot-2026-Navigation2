@@ -31,6 +31,12 @@ namespace nav2_behavior_tree
             std::vector<geometry_msgs::msg::PoseStamped> incomming_goal_list;
             geometry_msgs::msg::PoseStamped current_goal;
             std::vector<geometry_msgs::msg::PoseStamped> current_goal_list;
+            bool waiting_for_service_{false};
+            std::shared_future<std::shared_ptr<std_srvs::srv::SetBool::Response>> future_result_;
+            rclcpp::CallbackGroup::SharedPtr callback_group_;
+            rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
+            rclcpp::Time request_start_time_;
+            double timeout_{2.0}; // seconds
             void requestShrinkBack();
             bool goalUpdated();
     };

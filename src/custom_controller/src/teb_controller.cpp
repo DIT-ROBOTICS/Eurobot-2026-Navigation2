@@ -48,7 +48,6 @@ void TebController::configure(
     node->declare_parameter(name_ + ".dt_ref", dt_ref_);
     node->declare_parameter(name_ + ".resample_ds", resample_ds_);
     node->declare_parameter(name_ + ".iterations", iterations_);
-
     node->declare_parameter(name_ + ".min_obstacle_dist", min_obstacle_dist_);
     node->declare_parameter(name_ + ".w_smooth", w_smooth_);
     node->declare_parameter(name_ + ".w_obst", w_obst_);
@@ -84,7 +83,6 @@ void TebController::configure(
     node->get_parameter(name_ + ".dt_ref", dt_ref_);
     node->get_parameter(name_ + ".resample_ds", resample_ds_);
     node->get_parameter(name_ + ".iterations", iterations_);
-
     node->get_parameter(name_ + ".min_obstacle_dist", min_obstacle_dist_);
     node->get_parameter(name_ + ".w_smooth", w_smooth_);
     node->get_parameter(name_ + ".w_obst", w_obst_);
@@ -122,7 +120,6 @@ void TebController::configure(
     iterations_ = std::max(0, iterations_);
     min_obstacle_dist_ = std::max(0.05, min_obstacle_dist_);
     step_size_ = clamp(step_size_, 0.001, 0.2);
-
     lookahead_dist_ = std::max(0.02, lookahead_dist_);
     max_v_ = std::max(0.01, max_v_);
     max_w_ = std::max(0.01, max_w_);
@@ -138,7 +135,7 @@ void TebController::configure(
     // Lifecycle publisher (RViz debug)
     teb_path_pub_ = node->create_publisher<nav_msgs::msg::Path>(name_ + "/teb_path", rclcpp::SystemDefaultsQoS());
     // Mirror the custom_controller topic name for RViz
-    global_path_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 5);
+    global_plan_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 5);
     global_costmap_sub_ = node->create_subscription<nav_msgs::msg::OccupancyGrid>(
         "/global_costmap/costmap",
         rclcpp::QoS(10),
@@ -155,7 +152,7 @@ void TebController::cleanup()
     global_plan_ = nav_msgs::msg::Path{};
     has_plan_ = false;
     teb_path_pub_.reset();
-    global_path_pub_.reset();
+    global_plan_pub_.reset();
 
     last_stamp_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
     blocked_since_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
@@ -166,29 +163,28 @@ void TebController::cleanup()
 void TebController::activate()
 {
     if (teb_path_pub_) teb_path_pub_->on_activate();
-    if (global_path_pub_) global_path_pub_->on_activate();
+    if (global_plan_pub_) global_plan_pub_->on_activate();
 }
 
 void TebController::deactivate()
 {
     if (teb_path_pub_) teb_path_pub_->on_deactivate();
-    if (global_path_pub_) global_path_pub_->on_deactivate();
+    if (global_plan_pub_) global_plan_pub_->on_deactivate();
 }
 
 void TebController::setPlan(const nav_msgs::msg::Path & path)
 {
     std::scoped_lock lk(mtx_);
     global_plan_ = path;
+    RCLCPP_INFO(logger_, "[%s] received global plan with %zu poses", name_.c_str(), path.poses.size());
 
-    if (global_path_pub_ && global_path_pub_->is_activated()) {
-        auto msg = std::make_unique<nav_msgs::msg::Path>(global_plan_);
-        global_plan_.header.stamp = path.header.stamp;
-        global_plan_.header.frame_id = path.header.frame_id;
-        global_path_pub_->publish(std::move(msg));
+    if (global_plan_pub_ && global_plan_pub_->is_activated()) {
+        global_plan_pub_->publish(global_plan_);
     }
 
     initTimedElasticBand(global_plan_);
     has_plan_ = (teb_band_.size() >= 2);
+    RCLCPP_INFO(logger_, "[%s] initialized teb band with %zu states (has_plan=%d)", name_.c_str(), teb_band_.size(), has_plan_);
 }
 
 void TebController::setSpeedLimit(const double & speed_limit, const bool & percentage)
@@ -203,6 +199,7 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
     if (plan.poses.size() < 2) return;
 
     // cumulative arc-length
+    RCLCPP_INFO(logger_, "[TEB Controller]: Cumaltive arc-length started.");
     const auto & poses = plan.poses;
     std::vector<double> s(poses.size(), 0.0);
     for (size_t i = 1; i < poses.size(); ++i) {
@@ -210,6 +207,8 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
         const auto & b = poses[i].pose.position;
         s[i] = s[i - 1] + std::hypot(b.x - a.x, b.y - a.y);
     }
+    RCLCPP_INFO(logger_, "[TEB Controller]: Cumaltive arc-length finished.");
+
     const double total = s.back();
     if (total < 1e-6) return;
 
@@ -219,6 +218,7 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
     size_t j = 0;
     teb_band_.reserve(N);
 
+    RCLCPP_INFO(logger_, "[TEB Controller]: Resampling started.");
     for (size_t k = 0; k < N; ++k) {
         const double sk = ds * k;
         while (j + 1 < s.size() && s[j + 1] < sk) j++;
@@ -238,55 +238,16 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
         st.dt = dt_ref_;
         teb_band_.push_back(st);
     }
-
+    RCLCPP_INFO(logger_, "[TEB Controller]: Resampling finished. N = %zu, ds = %f", teb_band_.size(), ds);
     // theta from segment direction
+    RCLCPP_INFO(logger_, "[TEB Controller]: Theta assignment started.");
     for (size_t i = 0; i + 1 < teb_band_.size(); ++i) {
         const double dx = teb_band_[i + 1].x - teb_band_[i].x;
         const double dy = teb_band_[i + 1].y - teb_band_[i].y;
         teb_band_[i].theta = std::atan2(dy, dx);
     }
     teb_band_.back().theta = teb_band_[teb_band_.size() - 2].theta;
-}
-
-Eigen::Vector2d TebController::obstacleRepulsion(
-    const nav2_costmap_2d::Costmap2D & cm, double x, double y) const
-{
-    unsigned int mx, my;
-    if (!cm.worldToMap(x, y, mx, my)) return Eigen::Vector2d::Zero();
-
-    const double res = cm.getResolution();
-    const int r = std::max(1, (int)std::ceil(min_obstacle_dist_ / res));
-
-    Eigen::Vector2d force(0.0, 0.0);
-
-    for (int dy = -r; dy <= r; ++dy) {
-        for (int dx = -r; dx <= r; ++dx) {
-        const int ix = (int)mx + dx;
-        const int iy = (int)my + dy;
-        if (ix < 0 || iy < 0) continue;
-        if ((unsigned)ix >= cm.getSizeInCellsX()) continue;
-        if ((unsigned)iy >= cm.getSizeInCellsY()) continue;
-
-        const unsigned char c = cm.getCost(ix, iy);
-        if (c < nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE) continue;
-
-        double wx, wy;
-        cm.mapToWorld(ix, iy, wx, wy);
-
-        const double vx = x - wx;
-        const double vy = y - wy;
-        const double d = std::hypot(vx, vy);
-        if (d < 1e-6 || d > min_obstacle_dist_) continue;
-
-        // repulsion potential (steeper near obstacles)
-        double gain = (1.0 / d - 1.0 / min_obstacle_dist_);
-        gain = gain * gain;
-        force += gain * Eigen::Vector2d(vx / d, vy / d);
-        }
-    }
-
-    if (force.norm() < 1e-9) return Eigen::Vector2d::Zero();
-    return force.normalized();
+    RCLCPP_INFO(logger_, "[TEB Controller]: Theta assignment finished.");
 }
 
 bool TebController::worldToMap(
@@ -308,14 +269,6 @@ bool TebController::worldToMap(
     return true;
 }
 
-unsigned char TebController::costAt(
-    const nav2_costmap_2d::Costmap2D & cm, double x, double y) const
-{
-    unsigned int mx, my;
-    if (!cm.worldToMap(x, y, mx, my)) return nav2_costmap_2d::NO_INFORMATION;
-    return cm.getCost(mx, my);
-}
-
 unsigned char TebController::costAtGlobal(double x, double y) const
 {
     auto grid = latest_global_costmap_;
@@ -334,38 +287,6 @@ unsigned char TebController::costAtGlobal(double x, double y) const
     return static_cast<unsigned char>(raw);
 }
 
-double TebController::minObstacleDistance(
-    const nav2_costmap_2d::Costmap2D & cm, double x, double y,
-    double search_radius) const
-{
-    unsigned int mx, my;
-    if (!cm.worldToMap(x, y, mx, my)) return std::numeric_limits<double>::infinity();
-
-    const double res = cm.getResolution();
-    const int r = std::max(1, (int)std::ceil(search_radius / res));
-    double best = std::numeric_limits<double>::infinity();
-
-    for (int dy = -r; dy <= r; ++dy) {
-        for (int dx = -r; dx <= r; ++dx) {
-            const int ix = (int)mx + dx;
-            const int iy = (int)my + dy;
-            if (ix < 0 || iy < 0) continue;
-            if ((unsigned)ix >= cm.getSizeInCellsX()) continue;
-            if ((unsigned)iy >= cm.getSizeInCellsY()) continue;
-
-            const unsigned char c = cm.getCost(ix, iy);
-            if (c < obstacle_cost_threshold_) continue;
-
-            double wx, wy;
-            cm.mapToWorld(ix, iy, wx, wy);
-            const double d = std::hypot(x - wx, y - wy);
-            best = std::min(best, d);
-        }
-    }
-
-    return best;
-}
-
 double TebController::minObstacleDistanceGlobal(double x, double y, double search_radius) const
 {
     auto grid = latest_global_costmap_;
@@ -382,6 +303,7 @@ double TebController::minObstacleDistanceGlobal(double x, double y, double searc
     const unsigned int w = grid->info.width;
     const unsigned int h = grid->info.height;
 
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000,"[TEB Controller]: Min obstacle distance calculation started in minObstacleDistanceGlobal.");
     for (int dy = -r; dy <= r; ++dy) {
         for (int dx = -r; dx <= r; ++dx) {
             const int ix = (int)mx_center + dx;
@@ -406,31 +328,7 @@ double TebController::minObstacleDistanceGlobal(double x, double y, double searc
         }
     }
 
-    return best;
-}
-
-double TebController::minObstacleDistanceOnBand(
-    const nav2_costmap_2d::Costmap2D & cm, size_t start_idx,
-    double arc_len, double search_radius) const
-{
-    if (teb_band_.empty()) return std::numeric_limits<double>::infinity();
-    if (start_idx >= teb_band_.size()) start_idx = teb_band_.size() - 1;
-
-    double best = std::numeric_limits<double>::infinity();
-    double acc = 0.0;
-    for (size_t i = start_idx; i + 1 < teb_band_.size(); ++i) {
-        const auto & a = teb_band_[i];
-        const auto & b = teb_band_[i + 1];
-        const double seg = std::hypot(b.x - a.x, b.y - a.y);
-        best = std::min(best, minObstacleDistance(cm, a.x, a.y, search_radius));
-        best = std::min(best, minObstacleDistance(cm, b.x, b.y, search_radius));
-
-        if (seg > 1e-9) {
-            acc += seg;
-            if (acc >= arc_len) break;
-        }
-    }
-
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation finished in minObstacleDistanceGlobal.");
     return best;
 }
 
@@ -442,6 +340,8 @@ double TebController::minObstacleDistanceOnBandGlobal(
 
     double best = std::numeric_limits<double>::infinity();
     double acc = 0.0;
+
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation started in minObstacleDistanceOnBandGlobal.");
     for (size_t i = start_idx; i + 1 < teb_band_.size(); ++i) {
         const auto & a = teb_band_[i];
         const auto & b = teb_band_[i + 1];
@@ -454,6 +354,7 @@ double TebController::minObstacleDistanceOnBandGlobal(
             if (acc >= arc_len) break;
         }
     }
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation finished in minObstacleDistanceOnBandGlobal.");
 
     return best;
 }
@@ -466,6 +367,7 @@ unsigned char TebController::maxCostOnBandGlobal() const
     unsigned char mc = 0;
     unsigned int mx, my;
 
+    RCLCPP_INFO(logger_, "[TEB Controller]: Max cost on band calculation started in maxCostOnBandGlobal.");
     for (size_t i = 0; i < teb_band_.size(); i += (size_t)cost_check_stride_) {
         const double wx = teb_band_[i].x;
         const double wy = teb_band_[i].y;
@@ -488,71 +390,9 @@ unsigned char TebController::maxCostOnBandGlobal() const
         }
         mc = std::max(mc, c);
     }
+    RCLCPP_INFO(logger_, "[TEB Controller]: Max cost on band calculation finished in maxCostOnBandGlobal.");
 
     return mc;
-}
-
-unsigned char TebController::maxCostOnBand(const nav2_costmap_2d::Costmap2D & cm) const
-{
-    if (teb_band_.empty()) return 0;
-
-    unsigned char mc = 0;
-    unsigned int mx, my;
-
-    for (size_t i = 0; i < teb_band_.size(); i += (size_t)cost_check_stride_) {
-        const double wx = teb_band_[i].x;
-        const double wy = teb_band_[i].y;
-
-        if (!cm.worldToMap(wx, wy, mx, my)) {
-            mc = std::max<unsigned char>(mc, nav2_costmap_2d::NO_INFORMATION);
-            continue;
-        }
-
-        const unsigned char c = cm.getCost(mx, my);
-        if (!treat_no_info_as_obstacle_ && c == nav2_costmap_2d::NO_INFORMATION) {
-            continue;
-        }
-        mc = std::max(mc, c);
-    }
-
-    return mc;
-}
-
-void TebController::optimizeBandOnce(const nav2_costmap_2d::Costmap2D & cm)
-{
-    if (teb_band_.size() < 3) return;
-
-    std::vector<TebState> next = teb_band_;
-
-    // keep endpoints fixed
-    for (size_t i = 1; i + 1 < teb_band_.size(); ++i) {
-        const auto & prev = teb_band_[i - 1];
-        const auto & cur = teb_band_[i];
-        const auto & nxt = teb_band_[i + 1];
-
-        // smoothness: move toward midpoint
-        const double midx = 0.5 * (prev.x + nxt.x);
-        const double midy = 0.5 * (prev.y + nxt.y);
-        Eigen::Vector2d smooth(midx - cur.x, midy - cur.y);
-
-        // obstacle repulsion
-        Eigen::Vector2d obst = obstacleRepulsion(cm, cur.x, cur.y);
-
-        Eigen::Vector2d dp = w_smooth_ * smooth + w_obst_ * obst;
-
-        next[i].x += dp.x() * step_size_;
-        next[i].y += dp.y() * step_size_;
-    }
-
-    // refresh theta from positions
-    for (size_t i = 0; i + 1 < next.size(); ++i) {
-        const double dx = next[i + 1].x - next[i].x;
-        const double dy = next[i + 1].y - next[i].y;
-        next[i].theta = std::atan2(dy, dx);
-    }
-    next.back().theta = next[next.size() - 2].theta;
-
-    teb_band_.swap(next);
 }
 
 bool TebController::findClosestIndex(const geometry_msgs::msg::PoseStamped & pose, size_t & out_idx) const
@@ -565,6 +405,7 @@ bool TebController::findClosestIndex(const geometry_msgs::msg::PoseStamped & pos
     double best = 1e100;
     size_t bi = 0;
 
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Finding closest index started in findClosestIndex.");
     for (size_t i = 0; i < teb_band_.size(); ++i) {
         const double dx = teb_band_[i].x - px;
         const double dy = teb_band_[i].y - py;
@@ -574,7 +415,7 @@ bool TebController::findClosestIndex(const geometry_msgs::msg::PoseStamped & pos
         bi = i;
         }
     }
-
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Finding closest index finished in findClosestIndex.");
     out_idx = bi;
     return true;
 }
@@ -588,6 +429,7 @@ bool TebController::sampleLookaheadTargetArc(
     if (start_idx >= teb_band_.size()) start_idx = teb_band_.size() - 1;
 
     double acc = 0.0;
+    RCLCPP_INFO(logger_, "[TEB Controller]: Sampling lookahead target started in sampleLookaheadTargetArc.");
     for (size_t i = start_idx; i + 1 < teb_band_.size(); ++i) {
         const auto & a = teb_band_[i];
         const auto & b = teb_band_[i + 1];
@@ -602,6 +444,7 @@ bool TebController::sampleLookaheadTargetArc(
         }
         acc += seg;
     }
+    RCLCPP_INFO(logger_, "[TEB Controller]: Sampling lookahead target finished in sampleLookaheadTargetArc.");
 
     tx = teb_band_.back().x;
     ty = teb_band_.back().y;
@@ -610,8 +453,7 @@ bool TebController::sampleLookaheadTargetArc(
 
 void TebController::publishTebPath()
 {
-    if ((!teb_path_pub_ || !teb_path_pub_->is_activated()) &&
-        (!global_path_pub_ || !global_path_pub_->is_activated())) {
+    if (!teb_path_pub_ || !teb_path_pub_->is_activated()) {
         return;
     }
 
@@ -619,6 +461,7 @@ void TebController::publishTebPath()
     p.header = global_plan_.header;
     p.poses.reserve(teb_band_.size());
 
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Publishing TEB path started in publishTebPath.");
     for (const auto & st : teb_band_) {
         geometry_msgs::msg::PoseStamped ps;
         ps.header = p.header;
@@ -632,12 +475,10 @@ void TebController::publishTebPath()
 
         p.poses.push_back(ps);
     }
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Publishing TEB path finished in publishTebPath.");
 
     if (teb_path_pub_ && teb_path_pub_->is_activated()) {
         teb_path_pub_->publish(p);
-    }
-    if (global_path_pub_ && global_path_pub_->is_activated()) {
-        global_path_pub_->publish(p);
     }
 }
 
@@ -663,6 +504,7 @@ bool TebController::shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & n
     }
 
     last_replan_time_ = now;
+    RCLCPP_INFO(logger_, "[%s] replan allowed after blocked duration %.3fs", name_.c_str(), blocked_sec);
     return true;
 }
 
@@ -679,6 +521,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     cmd.header.frame_id = costmap_ros_->getBaseFrameID();
 
     if (!has_plan_ || teb_band_.size() < 2) {
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] no valid teb plan, publishing zero velocity", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
@@ -686,58 +529,49 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     }
 
     // Correct GoalChecker signature
-    if (goal_checker &&
-        goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity))
+    if (goal_checker && goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity))
     {
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] goal checker reported goal reached", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
         return cmd;
     }
 
-    const auto * cm = costmap_ros_->getCostmap();
     auto global_grid = latest_global_costmap_;
-    const bool use_global_costmap = static_cast<bool>(global_grid);
-    if (!cm && !use_global_costmap) {
+    if (!global_grid) {
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] global costmap is unavailable, publishing zero velocity", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
         return cmd;
     }
 
-    // lightweight optimization on local costmap if available
-    if (cm) {
-        for (int k = 0; k < iterations_; ++k) {
-            optimizeBandOnce(*cm);
-        }
-    }
-
-    const unsigned char mc = use_global_costmap ? maxCostOnBandGlobal()
-                                                : maxCostOnBand(*cm);
+    const unsigned char mc = maxCostOnBandGlobal();
     const bool cost_bad = (mc >= (unsigned char)std::lround(max_cost_threshold_));
 
     // closest index on band
     size_t closest = 0;
     findClosestIndex(pose, closest);
     const double arc_window = std::max(lookahead_dist_, blocked_stop_clearance_ * 2.0);
-    double clearance = std::numeric_limits<double>::infinity();
-    if (cm) {
-        clearance = minObstacleDistanceOnBand(*cm, closest, arc_window, blocked_stop_clearance_);
-    } else if (use_global_costmap) {
-        clearance = minObstacleDistanceOnBandGlobal(closest, arc_window, blocked_stop_clearance_);
-    }
+    const double clearance = minObstacleDistanceOnBandGlobal(closest, arc_window, blocked_stop_clearance_);
     const bool blocked_and_close = cost_bad && (clearance <= blocked_stop_clearance_);
 
     const double v_cur = std::hypot(velocity.linear.x, velocity.linear.y);
     const bool slow_enough = (v_cur <= stop_v_eps_);
 
     if (blocked_and_close) {
+        RCLCPP_INFO_THROTTLE(
+            logger_, *clock_, 1000,
+            "[%s] blocked_and_close: max_cost=%u threshold=%.1f clearance=%.3f blocked_stop_clearance=%.3f speed=%.3f",
+            name_.c_str(), mc, max_cost_threshold_, clearance, blocked_stop_clearance_, v_cur);
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
 
         publishTebPath();
         if (slow_enough && shouldTriggerReplan(true, now)) {
+            RCLCPP_INFO(logger_, "[%s] throwing replan because path cost is too high and robot is nearly stopped", name_.c_str());
             throw nav2_core::PlannerException("TEB: max_cost exceeded and speed low -> replan");
         }
         return cmd;
@@ -772,8 +606,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     double vx = k_xy_ * dx_b;
     double vy = k_xy_ * dy_b;
 
-    const unsigned char pose_cost = use_global_costmap ? costAtGlobal(px, py)
-                                                       : costAt(*cm, px, py);
+    const unsigned char pose_cost = costAtGlobal(px, py);
     const bool pose_collision = (pose_cost >= obstacle_cost_threshold_);
 
     // Near goal: stop translation to avoid overshoot
@@ -833,10 +666,10 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     // If any band point within check_arc is high-cost, mark path blocked
     bool path_blocked = false;
     double acc_arc = 0.0;
+    RCLCPP_INFO(logger_, "[TEB Controller]: Checking path blockage started in computeVelocityCommands.");
     for (size_t i = closest; i < teb_band_.size(); ++i) {
         const auto & st = teb_band_[i];
-        const unsigned char c = use_global_costmap ? costAtGlobal(st.x, st.y)
-                                                   : costAt(*cm, st.x, st.y);
+        const unsigned char c = costAtGlobal(st.x, st.y);
         if (c >= obstacle_cost_threshold_) {
             path_blocked = true;
             break;
@@ -846,25 +679,33 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
             if (acc_arc >= check_arc) break;
         }
     }
+    RCLCPP_INFO(logger_, "[TEB Controller]: Checking path blockage finished in computeVelocityCommands.");
 
     // Slow down / stop based on obstacle distance along band or robot pose
-    const double min_obst_path = use_global_costmap ?
-        minObstacleDistanceOnBandGlobal(closest, check_arc, slowdown_obstacle_dist_) :
-        minObstacleDistanceOnBand(*cm, closest, check_arc, slowdown_obstacle_dist_);
-    const double obst_pose_dist = use_global_costmap ?
-        minObstacleDistanceGlobal(px, py, slowdown_obstacle_dist_) :
-        minObstacleDistance(*cm, px, py, slowdown_obstacle_dist_);
+    const double min_obst_path =
+        minObstacleDistanceOnBandGlobal(closest, check_arc, slowdown_obstacle_dist_);
+    const double obst_pose_dist =
+        minObstacleDistanceGlobal(px, py, slowdown_obstacle_dist_);
     double obst_dist = std::min(min_obst_path, obst_pose_dist);
     if (pose_collision) obst_dist = 0.0;
 
     bool request_replan = false;
+    RCLCPP_INFO(logger_, "[TEB CONTROLLER]: Check blocked started in computeVelocityCommands");
     if (path_blocked || obst_dist <= stop_obstacle_dist_) {
+        RCLCPP_INFO_THROTTLE(
+            logger_, *clock_, 1000,
+            "[%s] request_replan path_blocked=%d obst_dist=%.3f stop_obstacle_dist=%.3f pose_collision=%d check_arc=%.3f closest=%zu",
+            name_.c_str(), path_blocked, obst_dist, stop_obstacle_dist_, pose_collision, check_arc, closest);
         vx = 0.0;
         vy = 0.0;
         vmag = 0.0;
         w = 0.0;
         request_replan = true;
     } else if (std::isfinite(obst_dist) && obst_dist <= slowdown_obstacle_dist_) {
+        RCLCPP_INFO_THROTTLE(
+            logger_, *clock_, 1000,
+            "[%s] slowing down for obstacle: obst_dist=%.3f slowdown_obstacle_dist=%.3f stop_obstacle_dist=%.3f",
+            name_.c_str(), obst_dist, slowdown_obstacle_dist_, stop_obstacle_dist_);
         const double alpha = (obst_dist - stop_obstacle_dist_) /
                              std::max(1e-6, slowdown_obstacle_dist_ - stop_obstacle_dist_);
         const double scale = clamp(alpha, 0.0, 1.0);
@@ -872,7 +713,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         vy *= scale;
         vmag *= scale;
     }
-
+    RCLCPP_INFO(logger_, "[TEB CONTROLLER]: Check blocked finished in computeVelocityCommands");
     // Accel limiting on vx, vy, w
     if (last_stamp_.nanoseconds() != 0) {
         const double dt = (now - last_stamp_).seconds();
@@ -890,6 +731,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     last_vy_ = vy;
     last_w_ = w;
 
+    RCLCPP_INFO(logger_, "[TEB CONTROLLER]: Check replan started in computeVelocityCommands");
     const bool replan_ready = shouldTriggerReplan(request_replan, now);
     if (request_replan) {
         cmd.twist.linear.x = 0.0;
@@ -897,15 +739,25 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         cmd.twist.angular.z = 0.0;
         publishTebPath();
         if (replan_ready) {
+            RCLCPP_INFO(
+                logger_,
+                "[%s] throwing replan: request_replan=1 path_blocked=%d obst_dist=%.3f pose_cost=%u max_band_cost=%u",
+                name_.c_str(), path_blocked, obst_dist, pose_cost, mc);
             throw nav2_core::PlannerException("TEB: path blocked or obstacle too close -> replan");
         }
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] request_replan active but waiting for replan cooldown / blocked duration", name_.c_str());
         return cmd;
     }
-
+    RCLCPP_INFO(logger_, "[TEB CONTROLLER]: Check replan finished in computeVelocityCommands");
+    RCLCPP_INFO_THROTTLE(
+        logger_, *clock_, 1000,
+        "[%s] cmd vx=%.3f vy=%.3f wz=%.3f closest=%zu goal_dist=%.3f pose_cost=%u band_max_cost=%u obst_dist=%.3f",
+        name_.c_str(), vx, vy, w, closest, goal_dist, pose_cost, mc, obst_dist);
     cmd.twist.linear.x = vx;
     cmd.twist.linear.y = vy;
     cmd.twist.angular.z = w;
-
+    
+    RCLCPP_INFO(logger_, "[TEB CONTROLLER]: publish teb path in computeVelocityCommands");
     publishTebPath();
     return cmd;
 }
