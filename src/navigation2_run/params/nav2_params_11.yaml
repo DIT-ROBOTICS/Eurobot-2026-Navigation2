@@ -98,8 +98,8 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.03
-      movement_time_allowance: 3.0
+      required_movement_radius: 0.01
+      movement_time_allowance: 6.0
 
     # Goal checker parameters
     Precise:
@@ -174,22 +174,53 @@ controller_server:
       obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 252.0
 
+    # Fast:
+    #   plugin: "custom_controller::CustomController"
+    #   external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_fast_params.yaml"
+    #   max_linear_vel: 1.1
+    #   max_angular_vel: 12.0
+    #   linear_kp: 2.2
+    #   angular_kp: 3.7
+    #   transform_tolerance: 0.1
+    #   look_ahead_distance: 0.2
+    #   speed_decade: 0.125
+    #   costmap_tolerance: 95 # rival is 98
+    #   keep_planning: false
+    #   spin_delay_threshold: 0.5
+    #   rival_slowdown_radius: 0.5   
+    #   rival_decay: 0.5            
+    #   non_stop_min_vel: 0.3
+
     Fast:
-      plugin: "custom_controller::CustomController"
-      external_velocity_data_path: "$(find-pkg-share navigation2_run)/params/dynamic_params/nav_fast_params.yaml"
-      max_linear_vel: 1.1
-      max_angular_vel: 12.0
-      linear_kp: 2.2
-      angular_kp: 3.7
-      transform_tolerance: 0.1
-      look_ahead_distance: 0.2
-      speed_decade: 0.125
-      costmap_tolerance: 95 # rival is 98
-      keep_planning: false
-      spin_delay_threshold: 0.5
-      rival_slowdown_radius: 0.5   
-      rival_decay: 0.5            
-      non_stop_min_vel: 0.3
+      plugin: "teb_controller::TebController"
+      dt_ref: 0.05                
+      resample_ds: 0.05
+      iterations: 4 
+      goal_xy_stop_dist: 0.03   
+      goal_heading_switch_dist: 5.0
+      min_obstacle_dist: 0.2 
+      lookahead_dist: 0.4
+      w_smooth: 1.0
+      w_obst: 1.0               
+      k_xy: 2.8                   
+      k_w: 3.2            
+      max_v: 1.2               
+      min_v: 0.0
+      max_acc_v: 3.6             
+      max_w: 4.0                   
+      max_acc_w: 12.0                                     
+      stop_v_eps: 0.1                             
+      max_cost_threshold: 95.0
+      blocked_stop_clearance: 0.25
+      treat_no_info_as_obstacle: true
+      cost_check_stride: 1
+      replan_min_blocked_time: 0.20
+      replan_cooldown: 0.01
+      slowdown_obstacle_dist: 0.7
+      stop_obstacle_dist: 0.2
+      obstacle_check_lookahead: 0.4
+      obstacle_check_time_horizon: 2.0
+      obstacle_cost_threshold: 150.0 
 
     Slow: # First version
       plugin: "teb_controller::TebController"
@@ -198,27 +229,27 @@ controller_server:
       iterations: 4 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.4
-      w_smooth: 0.0
+      min_obstacle_dist: 0.2 
+      lookahead_dist: 0.3
+      w_smooth: 1.0
       w_obst: 1.0               
       k_xy: 2.0                   
-      k_w: 2.4            
-      max_v: 0.9               
+      k_w: 2.0            
+      max_v: 1.0               
       min_v: 0.0
-      max_acc_v: 1.8             
-      max_w: 2.0                   
-      max_acc_w: 6.0                                     
-      stop_v_eps: 0.03                             
+      max_acc_v: 2.0             
+      max_w: 2.5                   
+      max_acc_w: 5.0                                     
+      stop_v_eps: 0.06                             
       max_cost_threshold: 95.0
       blocked_stop_clearance: 0.25
       treat_no_info_as_obstacle: true
       cost_check_stride: 1
       replan_min_blocked_time: 0.20
       replan_cooldown: 0.01
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.3
-      obstacle_check_lookahead: 0.8
+      slowdown_obstacle_dist: 0.7
+      stop_obstacle_dist: 0.2
+      obstacle_check_lookahead: 0.4
       obstacle_check_time_horizon: 2.0
       obstacle_cost_threshold: 150.0 
 
@@ -295,7 +326,7 @@ local_costmap:
       width: 3
       height: 2
       resolution: 0.01
-      robot_radius: 0.19
+      robot_radius: 0.3
       # plugins: ["static_layer", "inflation_layer"]
       plugins: ["static_layer"]
       static_layer:
@@ -311,13 +342,13 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: False
-      robot_radius: 0.19
+      robot_radius: 0.3
       resolution: 0.01
       track_unknown_space: false
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      plugins: ["static_layer", "inflation_layer", "sima_layer", "rival_layer", "object_layer", "keepout_layer"]
+      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
       # plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -325,41 +356,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.19
-      sima_layer:
-        plugin: "Sima_costmap_plugin::SimaLayer"
-        enabled: true
-        auto_reset_with_timeout: true
-        model_size: 16
-        x_cov_threshold: 0.012
-        y_cov_threshold: 0.012
-        R_sq_threshold: 0.88
-        reset_timeout_threshold: 15
-        sima_ids: [1, 2, 3, 4, 11, 12, 13, 14]
-        robot_inscribed_radius: 0.0
-        rival_inscribed_radius: 0.10
-        halted_inflation_radius: 0.2
-        wandering_inflation_radius: 0.2
-        moving_inflation_radius: 0.2
-        unknown_inflation_radius: 0.05
-        halted_cost_scaling_factor: 5.0
-        wandering_cost_scaling_factor: 5.0
-        moving_cost_scaling_factor: 5.0
-        unknown_cost_scaling_factor: 15.0
-        max_extend_length: 0.06
-        cov_range_max: 0.02
-        cov_range_min: 0.006
-        vel_range_max: 0.4
-        vel_range_min: 0.0
-        inscribed_radius_rate: 0.98
-        inflation_radius_rate: 5.0
-        debug_mode: 0
-        use_statistic_method: false
-        offset_vel_factor_weight_statistic: 0.25
-        expand_vel_factor_weight_statistic: 0.25
-        offset_vel_factor_weight_localization: 0.25
-        expand_vel_factor_weight_localization: 0.25
-        safe_distance: 0.12
+        inflation_radius: 0.21
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -404,12 +401,6 @@ global_costmap:
         board_inflation_radius: 0.1
         obstacle_inflation_radius: 0.1
         cost_scaling_factor: 10.0
-      keepout_layer:
-        plugin: "keepout_costmap_plugin::KeepoutLayer"
-        enabled: True
-        # keepout_zone_array: [X, Y, lengthX, lengthY]
-        # keepout_zone_for_pantry: Left(4), Mid(2), Right(4)
-        # keepout_zone_for_hazelnuts: Left(4), Right(4)
       keepout_layer:
         plugin: "keepout_costmap_plugin::KeepoutLayer"
         enabled: True
@@ -494,7 +485,7 @@ planner_server:
       # no need to change
       downsample_costmap: false    # set to true to downsample costmap for planning
       downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
-      smooth_path: true     # we prefer doing this by smoother
+      smooth_path: false     # we prefer doing this by smoother
       max_iterations: 200000
       max_on_approach_iterations: 1000
       straight_line_max_skip_points: 500
