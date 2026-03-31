@@ -185,7 +185,7 @@ void SimpleChargingDock::configure(
       rclcpp::QoS(10).reliable().transient_local(),
       [this](const std_msgs::msg::String::SharedPtr msg) {
         // bool was_cam_mode = dock_w_cam_;
-        if ( msg->data == "Cam" ) {
+        if ( msg->data == "Cam" || msg->data == "CamFront" ) {
           dock_w_cam_ = true;
           // if ( !was_cam_mode ) {
           //   resetDockPoseSubscription();
