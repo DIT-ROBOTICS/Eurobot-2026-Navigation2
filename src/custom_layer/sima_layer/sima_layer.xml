@@ -1,0 +1,5 @@
+<library path="sima_layer">
+    <class type="Sima_costmap_plugin::SimaLayer" base_class_type="nav2_costmap_2d::Layer">
+        <description>This layer provides a custom costmap for sima prediction</description>
+    </class>
+</library>
