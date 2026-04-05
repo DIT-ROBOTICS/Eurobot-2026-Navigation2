@@ -96,6 +96,10 @@ void SimpleChargingDock::configure(
   nav2_util::declare_parameter_if_not_declared(
     node_, name + ".base_frame", rclcpp::ParameterValue("base_link"));
 
+  // Locked pose detection parameter
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_threshold", rclcpp::ParameterValue(10));
+
   node_->get_parameter(name + ".use_battery_status", use_battery_status_);
   // node_->get_parameter(name + ".use_external_detection_pose", use_external_detection_pose_);
   node_->get_parameter(name + ".external_detection_timeout", external_detection_timeout_);
@@ -120,6 +124,7 @@ void SimpleChargingDock::configure(
   node_->get_parameter(name + ".staging_y_offset", staging_y_offset_);
   node_->get_parameter(name + ".staging_yaw_offset", staging_yaw_offset_);
   node_->get_parameter(name + ".base_frame", base_frame_);
+  node_->get_parameter(name + ".lock_threshold", lock_threshold_);
 
   // Setup filter
   double filter_coef;
@@ -172,6 +177,14 @@ void SimpleChargingDock::configure(
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
     [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
+      if (is_locked_) {
+        return;
+      }
+      lock_counter_++;
+      if (lock_counter_ >= lock_threshold_) {
+        is_locked_ = true;
+        RCLCPP_INFO(node_->get_logger(), "Dock pose locked in after %d frames", lock_counter_);
+      }
       use_external_detection_pose_ = true;
       if ( dock_w_cam_ ) {
         detected_dock_pose_ = *pose;
@@ -240,12 +253,19 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
 {
   // reset_flag_ = false;
   // reset_timer_flag_ = false;
+  lock_counter_ = 0;
+  is_locked_ = false;
+
   if (dock_type.find("cam") != std::string::npos) {
     dock_w_cam_ = true;
   } else {
     dock_w_cam_ = false;
     use_external_detection_pose_ = false;
   }
+
+  // Reset the lock counter at the start of a docking run
+  lock_counter_ = 0;
+  is_locked_ = false;
 
   // ** If not using detection, set the dock pose as the given dock pose estimate
   if (!use_external_detection_pose_ || !dock_w_cam_ ) {

@@ -196,6 +196,11 @@ protected:
   double camera_aruco_max_;  // The farthest dist the camera can see ArUco
   double camera_aruco_min_;  // The closest dist
 
+  // Lock-in state for detected pose
+  int lock_counter_;
+  int lock_threshold_;
+  bool is_locked_;
+
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;
 };
