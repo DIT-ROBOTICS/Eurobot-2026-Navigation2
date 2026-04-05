@@ -200,6 +200,13 @@ protected:
   int lock_counter_;
   int lock_threshold_;
   bool is_locked_;
+  double lock_sum_x_;
+  double lock_sum_y_;
+  double lock_sum_z_;
+  double lock_sum_sin_yaw_;
+  double lock_sum_cos_yaw_;
+  std::string lock_frame_id_;
+  rclcpp::Time lock_latest_stamp_;
 
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;
