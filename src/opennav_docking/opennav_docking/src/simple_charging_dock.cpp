@@ -213,12 +213,12 @@ void SimpleChargingDock::configure(
         lock_frame_id_ = pose->header.frame_id;
       }
 
-      const double yaw = tf2::getYaw(pose->pose.orientation);
+      const double sample_yaw = tf2::getYaw(pose->pose.orientation);
       lock_sum_x_ += pose->pose.position.x;
       lock_sum_y_ += pose->pose.position.y;
       lock_sum_z_ += pose->pose.position.z;
-      lock_sum_sin_yaw_ += std::sin(yaw);
-      lock_sum_cos_yaw_ += std::cos(yaw);
+      lock_sum_sin_yaw_ += std::sin(sample_yaw);
+      lock_sum_cos_yaw_ += std::cos(sample_yaw);
       lock_counter_++;
       lock_latest_stamp_ = rclcpp::Time(pose->header.stamp);
 
