@@ -8,6 +8,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
@@ -41,6 +42,7 @@ set(dependencies
   rclcpp_lifecycle
   rclcpp_components
   std_msgs
+  std_srvs
   sensor_msgs
   visualization_msgs
   nav2_util

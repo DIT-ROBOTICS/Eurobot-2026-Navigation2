@@ -292,6 +292,12 @@ void SimpleChargingDock::configure(
     "filtered_dock_pose", 1);
   staging_pose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>("staging_pose", 1);
 
+  reset_lock_state_service_ = node_->create_service<std_srvs::srv::Trigger>(
+    "/reset_dock_lock_state",
+    std::bind(
+      &SimpleChargingDock::resetDockLockStateService, this,
+      std::placeholders::_1, std::placeholders::_2));
+
   // Subscribe to final_pose_nav topic
   final_pose_nav_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/final_pose", 10,
@@ -310,11 +316,8 @@ void SimpleChargingDock::configure(
 }
 
 
-geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
-  const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
+void SimpleChargingDock::resetLockState()
 {
-  // reset_flag_ = false;
-  // reset_timer_flag_ = false;
   lock_counter_ = 0;
   is_locked_ = false;
   use_external_detection_pose_ = false;
@@ -325,6 +328,15 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   lock_sum_cos_yaw_ = 0.0;
   lock_frame_id_.clear();
   lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+}
+
+
+geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
+  const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
+{
+  // reset_flag_ = false;
+  // reset_timer_flag_ = false;
+  resetLockState();
 
   if (dock_type.find("cam") != std::string::npos) {
     dock_w_cam_ = true;
@@ -558,6 +570,17 @@ bool SimpleChargingDock::disableCharging()
 bool SimpleChargingDock::hasStoppedCharging()
 {
   return !isCharging();
+}
+
+void SimpleChargingDock::resetDockLockStateService(
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  (void)request;
+  resetLockState();
+  response->success = true;
+  response->message = "SimpleChargingDock lock state reset";
+  RCLCPP_INFO(node_->get_logger(), "%s", response->message.c_str());
 }
 
 void SimpleChargingDock::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state)
