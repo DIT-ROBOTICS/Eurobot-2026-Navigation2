@@ -625,6 +625,21 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
 
+
+    Cam:
+      max_linear_vel: 0.15
+      min_linear_vel: 0.08
+      linear_kp_accel_vel: 0.6
+      linear_ki_accel_vel: 0.2
+      linear_kp_decel_dis: 0.15
+      max_speed_diff: 0.3
+      angular_kp: 0.4
+      deceleration_distance: 0.08
+      reserved_distance: 0.0065
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      stop_degree: 120.0
+      rival_radius: 0.44
+
     Gentle:
       max_linear_vel: 0.15
       min_linear_vel: 0.08
@@ -653,20 +668,20 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
 
-    Cam:
-      max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
-      # max_linear_vel: 0.25 # when cam has high update rate ( > 10 )
-      min_linear_vel: 0.03
-      linear_kp_accel_vel: 0.7
-      linear_ki_accel_vel: 0.3
-      linear_kp_decel_dis: 0.12
-      max_speed_diff: 0.6
-      angular_kp: 0.6
-      deceleration_distance: 0.08
-      reserved_distance: 0.008
-      external_rival_data_path: "/home/share/data/rival_params.yaml"
-      stop_degree: 120.0
-      rival_radius: 0.44
+    # Cam:
+    #   max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
+    #   # max_linear_vel: 0.25 # when cam has high update rate ( > 10 )
+    #   min_linear_vel: 0.03
+    #   linear_kp_accel_vel: 0.7
+    #   linear_ki_accel_vel: 0.3
+    #   linear_kp_decel_dis: 0.12
+    #   max_speed_diff: 0.6
+    #   angular_kp: 0.6
+    #   deceleration_distance: 0.08
+    #   reserved_distance: 0.008
+    #   external_rival_data_path: "/home/share/data/rival_params.yaml"
+    #   stop_degree: 120.0
+    #   rival_radius: 0.44
 
     CamFront:
       max_linear_vel: 0.23
