@@ -328,6 +328,9 @@ void DockingServer::dockRobot()
     auto dock_pose = utils::getDockPoseStamped(dock, rclcpp::Time(0));
     tf2_buffer_->transform(dock_pose, dock_pose, fixed_frame_);
 
+    // Ask dock plugin to clear previous lock/perception state before initial perception
+    requestResetDockLockState();
+
     // Get initial detection of dock before proceeding to move
     doInitialPerception(dock, dock_pose);
     // RCLCPP_INFO(get_logger(), "Successful initial dock detection");
@@ -336,9 +339,6 @@ void DockingServer::dockRobot()
     rclcpp::Time dock_contact_time;
     controller_->velocityInit(dock_pose.pose);  // ** Set total distance for velocity control
     RCLCPP_INFO(get_logger(), "\033[1;90m Starting docking control loop. \033[0m");
-
-    // Ask dock plugin to clear previous lock/perception state before initial perception
-    requestResetDockLockState();
     // Publish a one-off indicator that docking is starting
     {
       std_msgs::msg::Int16 docking_msg;

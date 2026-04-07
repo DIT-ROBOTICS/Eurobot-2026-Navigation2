@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <cmath>
+#include <algorithm>
 
 #include "nav2_util/node_utils.hpp"
 #include "opennav_docking/simple_charging_dock.hpp"
@@ -98,7 +99,19 @@ void SimpleChargingDock::configure(
 
   // Locked pose detection parameter
   nav2_util::declare_parameter_if_not_declared(
-    node_, name + ".lock_threshold", rclcpp::ParameterValue(10));
+    node_, name + ".use_adaptive_lock_threshold", rclcpp::ParameterValue(true));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_rate_low_hz", rclcpp::ParameterValue(6.0));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_rate_high_hz", rclcpp::ParameterValue(15.0));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_threshold_low_rate", rclcpp::ParameterValue(4));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_threshold_mid_rate", rclcpp::ParameterValue(8));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_threshold_high_rate", rclcpp::ParameterValue(12));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".detection_rate_ema_alpha", rclcpp::ParameterValue(0.2));
 
   node_->get_parameter(name + ".use_battery_status", use_battery_status_);
   // node_->get_parameter(name + ".use_external_detection_pose", use_external_detection_pose_);
@@ -124,7 +137,13 @@ void SimpleChargingDock::configure(
   node_->get_parameter(name + ".staging_y_offset", staging_y_offset_);
   node_->get_parameter(name + ".staging_yaw_offset", staging_yaw_offset_);
   node_->get_parameter(name + ".base_frame", base_frame_);
-  node_->get_parameter(name + ".lock_threshold", lock_threshold_);
+  node_->get_parameter(name + ".use_adaptive_lock_threshold", use_adaptive_lock_threshold_);
+  node_->get_parameter(name + ".lock_rate_low_hz", lock_rate_low_hz_);
+  node_->get_parameter(name + ".lock_rate_high_hz", lock_rate_high_hz_);
+  node_->get_parameter(name + ".lock_threshold_low_rate", lock_threshold_low_rate_);
+  node_->get_parameter(name + ".lock_threshold_mid_rate", lock_threshold_mid_rate_);
+  node_->get_parameter(name + ".lock_threshold_high_rate", lock_threshold_high_rate_);
+  node_->get_parameter(name + ".detection_rate_ema_alpha", detection_rate_ema_alpha_);
 
   // Setup filter
   double filter_coef;
@@ -153,6 +172,10 @@ void SimpleChargingDock::configure(
   lock_sum_cos_yaw_ = 0.0;
   lock_frame_id_.clear();
   lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_adaptive_lock_level_ = -1;
+  has_detection_arrival_time_ = false;
+  last_detection_arrival_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  detection_rate_ema_hz_ = 0.0;
 
   if (use_battery_status_) {
     battery_sub_ = node_->create_subscription<sensor_msgs::msg::BatteryState>(
@@ -186,11 +209,26 @@ void SimpleChargingDock::configure(
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
     [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
-      if (is_locked_) {
-        use_external_detection_pose_ = true;
+      if (!dock_w_cam_) {
         return;
       }
-      if (!dock_w_cam_) {
+
+      if (!use_adaptive_lock_threshold_) {
+        // Non-adaptive behavior: always consume latest detected pose (no lock window).
+        detected_dock_pose_ = *pose;
+        detected_dock_pose_prev_ = *pose;
+        use_external_detection_pose_ = true;
+        is_locked_ = false;
+        lock_counter_ = 0;
+        return;
+      }
+
+      if (is_locked_) {
+        // Keep locked pose value but refresh timestamp so freshness timeout
+        // reflects ongoing detections.
+        lock_latest_stamp_ = rclcpp::Time(pose->header.stamp);
+        detected_dock_pose_.header.stamp = pose->header.stamp;
+        use_external_detection_pose_ = true;
         return;
       }
 
@@ -214,6 +252,22 @@ void SimpleChargingDock::configure(
       }
 
       const double sample_yaw = tf2::getYaw(pose->pose.orientation);
+      const rclcpp::Time arrival_time = node_->now();
+      if (has_detection_arrival_time_) {
+        const double dt = (arrival_time - last_detection_arrival_time_).seconds();
+        if (dt > 1e-4) {
+          const double inst_rate_hz = 1.0 / dt;
+          const double alpha = std::clamp(detection_rate_ema_alpha_, 0.0, 1.0);
+          if (detection_rate_ema_hz_ <= 1e-6) {
+            detection_rate_ema_hz_ = inst_rate_hz;
+          } else {
+            detection_rate_ema_hz_ = alpha * inst_rate_hz + (1.0 - alpha) * detection_rate_ema_hz_;
+          }
+        }
+      }
+      last_detection_arrival_time_ = arrival_time;
+      has_detection_arrival_time_ = true;
+
       lock_sum_x_ += pose->pose.position.x;
       lock_sum_y_ += pose->pose.position.y;
       lock_sum_z_ += pose->pose.position.z;
@@ -222,7 +276,7 @@ void SimpleChargingDock::configure(
       lock_counter_++;
       lock_latest_stamp_ = rclcpp::Time(pose->header.stamp);
 
-      const int effective_lock_threshold = lock_threshold_ > 0 ? lock_threshold_ : 1;
+      const int effective_lock_threshold = getAdaptiveLockThreshold();
       if (lock_counter_ >= effective_lock_threshold) {
         geometry_msgs::msg::PoseStamped averaged_pose;
         averaged_pose.header.frame_id = lock_frame_id_;
@@ -328,6 +382,36 @@ void SimpleChargingDock::resetLockState()
   lock_sum_cos_yaw_ = 0.0;
   lock_frame_id_.clear();
   lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  has_detection_arrival_time_ = false;
+  last_detection_arrival_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  detection_rate_ema_hz_ = 0.0;
+  last_adaptive_lock_level_ = -1;
+}
+
+int SimpleChargingDock::getAdaptiveLockThreshold()
+{
+  int level = 0;
+  int selected_threshold = lock_threshold_low_rate_;
+
+  if (detection_rate_ema_hz_ >= lock_rate_high_hz_) {
+    level = 2;
+    selected_threshold = lock_threshold_high_rate_;
+  } else if (detection_rate_ema_hz_ >= lock_rate_low_hz_) {
+    level = 1;
+    selected_threshold = lock_threshold_mid_rate_;
+  }
+
+  const int effective_threshold = selected_threshold > 0 ? selected_threshold : 1;
+  if (level != last_adaptive_lock_level_) {
+    const char * label = (level == 2) ? "HIGH" : ((level == 1) ? "MID" : "LOW");
+    RCLCPP_INFO(
+      node_->get_logger(),
+      "Adaptive lock_threshold level=%s, measured_rate=%.2fHz, threshold=%d",
+      label, detection_rate_ema_hz_, effective_threshold);
+    last_adaptive_lock_level_ = level;
+  }
+
+  return effective_threshold;
 }
 
 

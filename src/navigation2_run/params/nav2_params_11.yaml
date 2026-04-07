@@ -589,6 +589,13 @@ docking_server:
       use_battery_status: false
       use_stall_detection: false
       base_frame: "base_footprint"
+      use_adaptive_lock_threshold: true
+      lock_rate_low_hz: 5.0
+      lock_rate_high_hz: 20.0
+      lock_threshold_low_rate: 10
+      lock_threshold_mid_rate: 30
+      lock_threshold_high_rate: 1000000000
+      detection_rate_ema_alpha: 0.5
       # External detection parameters (for camera-based docking)
       external_detection_timeout: 1.0
       external_detection_translation_x: 0.0

@@ -118,7 +118,7 @@ protected:
   void resetDockLockStateService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-  void resetDockPoseSubscription();
+  int getAdaptiveLockThreshold();
   double computeExternalDockingDist(const double z ); 
   // z is diff of aruco_center and robot pose to do mission
 
@@ -208,7 +208,17 @@ protected:
 
   // Lock-in state for detected pose
   int lock_counter_;
-  int lock_threshold_;
+  bool use_adaptive_lock_threshold_;
+  double lock_rate_low_hz_;
+  double lock_rate_high_hz_;
+  int lock_threshold_low_rate_;
+  int lock_threshold_mid_rate_;
+  int lock_threshold_high_rate_;
+  int last_adaptive_lock_level_;
+  bool has_detection_arrival_time_;
+  rclcpp::Time last_detection_arrival_time_;
+  double detection_rate_ema_hz_;
+  double detection_rate_ema_alpha_;
   bool is_locked_;
   double lock_sum_x_;
   double lock_sum_y_;
