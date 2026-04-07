@@ -143,36 +143,36 @@ controller_server:
       yaw_debounce_threshold: 1
 
     # Controller parameters
-    DidilongController:  # first version
+    CheckIn:  # very slow, for checkin
       plugin: "teb_controller::TebController"
       dt_ref: 0.05                
       resample_ds: 0.05
       iterations: 4 
       goal_xy_stop_dist: 0.03   
       goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.7
-      w_smooth: 1.0 
+      min_obstacle_dist: 0.2 
+      lookahead_dist: 0.2
+      w_smooth: 1.0
       w_obst: 1.0               
-      k_xy: 0.35                   
-      k_w: 2.0             
-      max_v: 0.4               
+      k_xy: 2.0                   
+      k_w: 2.0            
+      max_v: 0.6               
       min_v: 0.0
-      max_acc_v: 1.2             
-      max_w: 0.75                   
-      max_acc_w: 1.5                                      
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
+      max_acc_v: 1.5             
+      max_w: 2.0                   
+      max_acc_w: 5.0                                     
+      stop_v_eps: 0.04                             
+      max_cost_threshold: 95.0
+      blocked_stop_clearance: 0.25
       treat_no_info_as_obstacle: true
       cost_check_stride: 1
-      stop_v_eps: 0.05
-      replan_min_blocked_time: 0.05
-      replan_cooldown: 0.05
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
-      obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 252.0
+      replan_min_blocked_time: 0.20
+      replan_cooldown: 0.01
+      slowdown_obstacle_dist: 0.7
+      stop_obstacle_dist: 0.2
+      obstacle_check_lookahead: 0.4
+      obstacle_check_time_horizon: 2.0
+      obstacle_cost_threshold: 150.0 
 
     # Fast:
     #   plugin: "custom_controller::CustomController"
