@@ -222,16 +222,18 @@ void SimpleChargingDock::configure(
         lock_counter_ = 0;
         return;
       }
+      use_external_detection_pose_ = true;
 
       if (is_locked_) {
         // Keep locked pose value but refresh timestamp so freshness timeout
         // reflects ongoing detections.
         lock_latest_stamp_ = rclcpp::Time(pose->header.stamp);
         detected_dock_pose_.header.stamp = pose->header.stamp;
-        use_external_detection_pose_ = true;
         return;
       }
 
+      detected_dock_pose_ = *pose;
+      detected_dock_pose_prev_ = detected_dock_pose_;
       if (lock_counter_ == 0) {
         lock_frame_id_ = pose->header.frame_id;
       }
@@ -328,7 +330,6 @@ void SimpleChargingDock::configure(
 
         detected_dock_pose_ = averaged_pose;
         detected_dock_pose_prev_ = averaged_pose;
-        use_external_detection_pose_ = true;
         is_locked_ = true;
 
         RCLCPP_INFO(
