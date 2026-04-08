@@ -265,7 +265,7 @@ void DockingServer::dockRobot()
         goal->dock_pose.pose.position.x, goal->dock_pose.pose.position.y);
       RCLCPP_INFO(
         get_logger(),
-        "\033[1;35m Recieved z is %0.3f \033[0m", goal->dock_pose.pose.position.);
+        "\033[1;35m Recieved z is %0.3f \033[0m", goal->dock_pose.pose.position.z);
       dock = generateGoalDock(goal);
     }
 
