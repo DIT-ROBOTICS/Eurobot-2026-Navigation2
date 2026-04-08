@@ -217,6 +217,8 @@ protected:
   int last_adaptive_lock_level_;
   bool has_detection_arrival_time_;
   rclcpp::Time last_detection_arrival_time_;
+  int detection_rate_window_count_;
+  double detection_rate_window_dt_sum_sec_;
   double detection_rate_ema_hz_;
   double detection_rate_ema_alpha_;
   bool is_locked_;

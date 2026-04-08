@@ -175,6 +175,8 @@ void SimpleChargingDock::configure(
   last_adaptive_lock_level_ = -1;
   has_detection_arrival_time_ = false;
   last_detection_arrival_time_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
+  detection_rate_window_count_ = 0;
+  detection_rate_window_dt_sum_sec_ = 0.0;
   detection_rate_ema_hz_ = 0.0;
 
   if (use_battery_status_) {
@@ -276,6 +278,7 @@ void SimpleChargingDock::configure(
       if (has_detection_arrival_time_) {
         const double dt = (arrival_time - last_detection_arrival_time_).seconds();
         if (dt > 1e-4) {
+          constexpr int kRateWindowSamples = 5;
           bool accept_sample = true;
           if (detection_rate_ema_hz_ > 1e-6) {
             // Reject unrealistically short inter-arrival bursts caused by DDS queue drain,
@@ -287,16 +290,25 @@ void SimpleChargingDock::configure(
           }
 
           if (accept_sample) {
-            const double alpha = std::clamp(detection_rate_ema_alpha_, 0.0, 1.0);
-            if (detection_rate_ema_hz_ <= 1e-6) {
-              detection_rate_ema_hz_ = 1.0 / dt;
-            } else {
-              // EMA in period domain is more stable than frequency-domain EMA.
-              const double ema_period_sec = 1.0 / detection_rate_ema_hz_;
-              const double new_ema_period_sec =
-                alpha * dt + (1.0 - alpha) * ema_period_sec;
-              detection_rate_ema_hz_ =
-                1.0 / std::max(new_ema_period_sec, 1e-4);
+            // Collect 5 accepted inter-arrival samples, compute one rate,
+            // then smooth rates over time.
+            detection_rate_window_dt_sum_sec_ += dt;
+            detection_rate_window_count_++;
+            if (detection_rate_window_count_ >= kRateWindowSamples) {
+              const double window_dt = std::max(detection_rate_window_dt_sum_sec_, 1e-4);
+              const double window_rate_hz =
+                static_cast<double>(detection_rate_window_count_) / window_dt;
+
+              const double alpha = std::clamp(detection_rate_ema_alpha_, 0.0, 1.0);
+              if (detection_rate_ema_hz_ <= 1e-6) {
+                detection_rate_ema_hz_ = window_rate_hz;
+              } else {
+                detection_rate_ema_hz_ =
+                  alpha * window_rate_hz + (1.0 - alpha) * detection_rate_ema_hz_;
+              }
+
+              detection_rate_window_count_ = 0;
+              detection_rate_window_dt_sum_sec_ = 0.0;
             }
           }
         }
@@ -419,6 +431,8 @@ void SimpleChargingDock::resetLockState()
   lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   has_detection_arrival_time_ = false;
   last_detection_arrival_time_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
+  detection_rate_window_count_ = 0;
+  detection_rate_window_dt_sum_sec_ = 0.0;
   detection_rate_ema_hz_ = 0.0;
   last_adaptive_lock_level_ = -1;
 }
