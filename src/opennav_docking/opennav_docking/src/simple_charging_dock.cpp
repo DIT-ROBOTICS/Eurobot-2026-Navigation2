@@ -278,7 +278,7 @@ void SimpleChargingDock::configure(
       if (has_detection_arrival_time_) {
         const double dt = (arrival_time - last_detection_arrival_time_).seconds();
         if (dt > 1e-4) {
-          constexpr int kRateWindowSamples = 5;
+          constexpr int kRateWindowSamples = 3;
           bool accept_sample = true;
           if (detection_rate_ema_hz_ > 1e-6) {
             // Reject unrealistically short inter-arrival bursts caused by DDS queue drain,
@@ -306,7 +306,10 @@ void SimpleChargingDock::configure(
                 detection_rate_ema_hz_ =
                   alpha * window_rate_hz + (1.0 - alpha) * detection_rate_ema_hz_;
               }
-
+                RCLCPP_INFO(
+                node_->get_logger(),
+                "\033[35mDetection rate window: %.2f Hz\033[0m",
+                window_rate_hz);
               detection_rate_window_count_ = 0;
               detection_rate_window_dt_sum_sec_ = 0.0;
             }
@@ -459,6 +462,12 @@ int SimpleChargingDock::getAdaptiveLockThreshold()
       label, detection_rate_ema_hz_, effective_threshold);
     last_adaptive_lock_level_ = level;
   }
+
+  RCLCPP_INFO(
+    node_->get_logger(),
+    "\033[95m[DEBUG] getAdaptiveLockThreshold: level=%d, detection_rate_ema_hz_=%.2f, effective_threshold=%d\033[0m",
+    level, detection_rate_ema_hz_, effective_threshold);
+
 
   return effective_threshold;
 }
