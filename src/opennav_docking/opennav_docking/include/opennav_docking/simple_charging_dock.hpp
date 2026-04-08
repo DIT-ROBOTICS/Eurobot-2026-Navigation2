@@ -217,6 +217,7 @@ protected:
   double lock_sum_cos_yaw_;
   std::string lock_frame_id_;
   rclcpp::Time lock_latest_stamp_;
+  rclcpp::Time last_lock_input_stamp_;
 
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;
