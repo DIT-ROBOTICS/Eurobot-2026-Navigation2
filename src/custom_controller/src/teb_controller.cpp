@@ -668,6 +668,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         const double r = max_v_ / std::max(1e-9, vmag);
         vx *= r;
         vy *= r;
+        w *= r;
         vmag = max_v_;
     }
 
@@ -676,13 +677,31 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         const double r = min_v_ / vmag;
         vx *= r;
         vy *= r;
+        w *= r;
     }
 
     if (enable_rival_slowdown_ && has_rival_pose_) {
         const double rival_dx = latest_rival_pose_.pose.pose.position.x - px;
         const double rival_dy = latest_rival_pose_.pose.pose.position.y - py;
         const double rival_distance = std::hypot(rival_dx, rival_dy);
-        if (rival_distance <= rival_stop_distance_) {
+        const double goal_rival_dx = latest_rival_pose_.pose.pose.position.x - gx;
+        const double goal_rival_dy = latest_rival_pose_.pose.pose.position.y - gy;
+        const double goal_rival_distance = std::hypot(goal_rival_dx, goal_rival_dy);
+        const double rival_dx_b = c * rival_dx + s * rival_dy;
+        const double rival_dy_b = -s * rival_dx + c * rival_dy;
+        const bool moving_away_from_rival = ((vx * rival_dx_b + vy * rival_dy_b) < 0.0);
+        const bool allow_escape_from_rival_stop =
+            (rival_distance <= rival_stop_distance_) &&
+            (goal_rival_distance > rival_stop_distance_) &&
+            moving_away_from_rival;
+
+        if (allow_escape_from_rival_stop) {
+            rival_stop_since_ = rclcpp::Time(0, 0, now.get_clock_type());
+            RCLCPP_INFO_THROTTLE(
+                logger_, *clock_, 1000,
+                "[%s] allowing motion inside rival stop zone: rival_distance=%.3f goal_rival_distance=%.3f stop_distance=%.3f moving_away=1",
+                name_.c_str(), rival_distance, goal_rival_distance, rival_stop_distance_);
+        } else if (rival_distance <= rival_stop_distance_) {
             if (rival_stop_since_.nanoseconds() == 0) {
                 rival_stop_since_ = now;
             }
@@ -696,6 +715,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
             }
             vx = 0.0;
             vy = 0.0;
+            w = 0.0;
             vmag = 0.0;
             RCLCPP_INFO_THROTTLE(
                 logger_, *clock_, 1000,
