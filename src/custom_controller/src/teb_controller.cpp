@@ -57,6 +57,11 @@ void TebController::configure(
     node->declare_parameter(name_ + ".obstacle_check_lookahead", obstacle_check_lookahead_);
     node->declare_parameter(name_ + ".obstacle_check_time_horizon", obstacle_check_time_horizon_);
     node->declare_parameter(name_ + ".obstacle_cost_threshold", obstacle_cost_threshold_);
+    node->declare_parameter(name_ + ".enable_rival_slowdown", enable_rival_slowdown_);
+    node->declare_parameter(name_ + ".rival_slowdown_dist", rival_slowdown_dist_);
+    node->declare_parameter(name_ + ".rival_min_speed_scale", rival_min_speed_scale_);
+    node->declare_parameter(name_ + ".rival_close_distance", rival_close_distance_);
+    node->declare_parameter(name_ + ".rival_stop_distance", rival_stop_distance_);
 
     node->declare_parameter(name_ + ".lookahead_dist", lookahead_dist_);
     node->declare_parameter(name_ + ".k_xy", k_xy_);
@@ -92,6 +97,11 @@ void TebController::configure(
     node->get_parameter(name_ + ".obstacle_check_lookahead", obstacle_check_lookahead_);
     node->get_parameter(name_ + ".obstacle_check_time_horizon", obstacle_check_time_horizon_);
     node->get_parameter(name_ + ".obstacle_cost_threshold", obstacle_cost_threshold_);
+    node->get_parameter(name_ + ".enable_rival_slowdown", enable_rival_slowdown_);
+    node->get_parameter(name_ + ".rival_slowdown_dist", rival_slowdown_dist_);
+    node->get_parameter(name_ + ".rival_min_speed_scale", rival_min_speed_scale_);
+    node->get_parameter(name_ + ".rival_close_distance", rival_close_distance_);
+    node->get_parameter(name_ + ".rival_stop_distance", rival_stop_distance_);
 
     node->get_parameter(name_ + ".lookahead_dist", lookahead_dist_);
     node->get_parameter(name_ + ".k_xy", k_xy_);
@@ -124,6 +134,16 @@ void TebController::configure(
     max_v_ = std::max(0.01, max_v_);
     max_w_ = std::max(0.01, max_w_);
     min_v_ = std::max(0.0, min_v_);
+    rival_slowdown_dist_ = std::max(0.0, rival_slowdown_dist_);
+    rival_min_speed_scale_ = clamp(rival_min_speed_scale_, 0.0, 1.0);
+    rival_close_distance_ = std::max(0.0, rival_close_distance_);
+    rival_stop_distance_ = std::max(0.0, rival_stop_distance_);
+    if (rival_slowdown_dist_ < rival_close_distance_) {
+        rival_slowdown_dist_ = rival_close_distance_;
+    }
+    if (rival_close_distance_ < rival_stop_distance_) {
+        rival_close_distance_ = rival_stop_distance_;
+    }
 
     max_cost_threshold_ = clamp(max_cost_threshold_, 0.0, 255.0);
     cost_check_stride_ = std::max(1, cost_check_stride_);
@@ -142,6 +162,14 @@ void TebController::configure(
         [this](const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
             latest_global_costmap_ = msg;
         });
+    rival_pose_sub_ = node->create_subscription<nav_msgs::msg::Odometry>(
+        "/rhino_pose",
+        rclcpp::QoS(10),
+        [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
+            std::scoped_lock lk(mtx_);
+            latest_rival_pose_ = *msg;
+            has_rival_pose_ = true;
+        });
     RCLCPP_INFO(logger_, "[%s] configured", name_.c_str());
 }
 
@@ -153,6 +181,10 @@ void TebController::cleanup()
     has_plan_ = false;
     teb_path_pub_.reset();
     global_plan_pub_.reset();
+    rival_pose_sub_.reset();
+    global_costmap_sub_.reset();
+    has_rival_pose_ = false;
+    latest_rival_pose_ = nav_msgs::msg::Odometry{};
 
     last_stamp_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
     blocked_since_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
@@ -639,6 +671,42 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         const double r = min_v_ / vmag;
         vx *= r;
         vy *= r;
+    }
+
+    if (enable_rival_slowdown_ && has_rival_pose_) {
+        const double rival_dx = latest_rival_pose_.pose.pose.position.x - px;
+        const double rival_dy = latest_rival_pose_.pose.pose.position.y - py;
+        const double rival_distance = std::hypot(rival_dx, rival_dy);
+        if (rival_distance <= rival_stop_distance_) {
+            vx = 0.0;
+            vy = 0.0;
+            vmag = 0.0;
+            RCLCPP_INFO_THROTTLE(
+                logger_, *clock_, 1000,
+                "[%s] rival stop active: rival_distance=%.3f stop_distance=%.3f",
+                name_.c_str(), rival_distance, rival_stop_distance_);
+        } else if (rival_distance < rival_slowdown_dist_ && vmag > 1e-6) {
+            double rival_scale = 1.0;
+            if (rival_distance <= rival_close_distance_) {
+                rival_scale = rival_min_speed_scale_;
+            } else {
+                const double t = clamp(
+                    (rival_distance - rival_close_distance_) / std::max(1e-6, rival_slowdown_dist_ - rival_close_distance_), 0.0, 1.0);
+                rival_scale = rival_min_speed_scale_ + (1.0 - rival_min_speed_scale_) * t;
+            }
+            const double limited_v = max_v_ * rival_scale;
+            if (vmag > limited_v) {
+                const double r = limited_v / std::max(1e-9, vmag);
+                vx *= r;
+                vy *= r;
+                vmag = limited_v;
+            }
+            RCLCPP_INFO_THROTTLE(
+                logger_, *clock_, 1000,
+                "[%s] rival slowdown active: rival_distance=%.3f slowdown_dist=%.3f close_distance=%.3f stop_distance=%.3f speed_scale=%.3f limited_v=%.3f",
+                name_.c_str(), rival_distance, rival_slowdown_dist_, rival_close_distance_,
+                rival_stop_distance_, rival_scale, limited_v);
+        }
     }
 
     w = clamp(w, -max_w_, max_w_);

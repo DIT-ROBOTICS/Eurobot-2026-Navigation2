@@ -18,6 +18,7 @@
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
 #include "tf2_ros/buffer.h"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -107,6 +108,7 @@ private:
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
     std::string name_;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr global_costmap_sub_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr rival_pose_sub_;
 
     std::mutex mtx_;
 
@@ -114,6 +116,8 @@ private:
   std::vector<TebState> teb_band_;
   bool has_plan_{false};
   nav_msgs::msg::OccupancyGrid::SharedPtr latest_global_costmap_;
+  nav_msgs::msg::Odometry latest_rival_pose_;
+  bool has_rival_pose_{false};
 
     // pubs
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr teb_path_pub_;
@@ -132,6 +136,11 @@ private:
     double obstacle_check_lookahead_{0.5};
     double obstacle_check_time_horizon_{1.0};
     double obstacle_cost_threshold_{nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE};
+    bool enable_rival_slowdown_{true};
+    double rival_slowdown_dist_{0.4};
+    double rival_min_speed_scale_{0.5};
+    double rival_close_distance_{0.5};
+    double rival_stop_distance_{0.35};
 
     // tracking (holonomic)
     double lookahead_dist_{0.25};
