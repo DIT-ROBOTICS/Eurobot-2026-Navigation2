@@ -93,7 +93,7 @@ controller_server:
     failure_tolerance: 0.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["Precise", "Unerring", "Loose", "DidilongGoalChecker", "NonStopGoalChecker"]
-    controller_plugins: ["DidilongController", "Fast", "Slow", "LinearBoost", "AngularBoost"]
+    controller_plugins: ["CheckIn", "Fast", "Slow", "LinearBoost", "AngularBoost"]
 
     # Progress checker parameters
     progress_checker:
@@ -229,9 +229,9 @@ controller_server:
       obstacle_cost_threshold: 150.0 
       enable_rival_slowdown: true
       rival_slowdown_dist: 1.0
-      rival_min_speed_scale: 0.55
+      rival_min_speed_scale: 0.5
       rival_close_distance: 0.65
-      rival_stop_distance: 0.55
+      rival_stop_distance: 0.5
       rival_stop_timeout: 3.0
 
     Slow: # First version
@@ -266,7 +266,7 @@ controller_server:
       obstacle_cost_threshold: 150.0
       enable_rival_slowdown: true
       rival_slowdown_dist: 1.0
-      rival_min_speed_scale: 0.75
+      rival_min_speed_scale: 0.8
       rival_close_distance: 0.6
       rival_stop_distance: 0.48
       rival_stop_timeout: 3.0 
