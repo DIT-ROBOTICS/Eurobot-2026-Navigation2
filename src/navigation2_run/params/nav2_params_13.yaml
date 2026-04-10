@@ -371,7 +371,7 @@ global_costmap:
         inflation_radius: 0.21
       sima_layer:
         plugin: "Sima_costmap_plugin::SimaLayer"
-        enabled: true
+        enabled: True
         auto_reset_with_timeout: true
         model_size: 16
         x_cov_threshold: 0.012
