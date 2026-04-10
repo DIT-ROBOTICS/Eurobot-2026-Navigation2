@@ -260,6 +260,17 @@ public:
 
         // check if, after invoking spin_some(), we finally received the result
         if (!goal_result_available_) {
+          // Safety: fail if waiting too long for a result (prevents infinite RUNNING)
+          auto result_elapsed =
+            (node_->now() - time_goal_sent_).template to_chrono<std::chrono::milliseconds>();
+          if (result_elapsed > server_timeout_ * 2) {
+            RCLCPP_WARN(
+              node_->get_logger(),
+              "Timed out waiting for result from action server for %s (%.1fs elapsed)",
+              action_name_.c_str(), result_elapsed.count() / 1000.0);
+            future_goal_handle_.reset();
+            return BT::NodeStatus::FAILURE;
+          }
           // Yield this Action, returning RUNNING
           return BT::NodeStatus::RUNNING;
         }

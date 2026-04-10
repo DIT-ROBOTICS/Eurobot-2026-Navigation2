@@ -35,6 +35,9 @@ void ComputePathToPoseAction::on_tick()
   if (getInput("start", goal_.start)) {
     goal_.use_start = true;
   }
+  RCLCPP_INFO(node_->get_logger(),
+    "\033[1;36mComputePathToPose: sending goal to planner (%.2f, %.2f) with planner_id='%s'\033[0m",
+    goal_.goal.pose.position.x, goal_.goal.pose.position.y, goal_.planner_id.c_str());
 }
 
 BT::NodeStatus ComputePathToPoseAction::on_success()
