@@ -24,6 +24,7 @@
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/int16.hpp"
+#include "std_srvs/srv/trigger.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
@@ -107,8 +108,16 @@ public:
    */
   virtual bool hasStoppedCharging();
 
+  /**
+   * @brief Reset lock and perception state used by camera-based docking.
+   */
+  void resetLockState();
+
 protected:
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state);
+  void resetDockLockStateService(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void resetDockPoseSubscription();
   double computeExternalDockingDist(const double z ); 
   // z is diff of aruco_center and robot pose to do mission
@@ -118,6 +127,7 @@ protected:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr dock_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr filtered_dock_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr staging_pose_pub_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_lock_state_service_;
 
   // subscribe to dock controller, to enable cam or not
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr dock_controller_selector_sub_;
@@ -195,6 +205,19 @@ protected:
   // Camera ArUco detection distance thresholds
   double camera_aruco_max_;  // The farthest dist the camera can see ArUco
   double camera_aruco_min_;  // The closest dist
+
+  // Lock-in state for detected pose
+  int lock_counter_;
+  int lock_threshold_;
+  bool is_locked_;
+  double lock_sum_x_;
+  double lock_sum_y_;
+  double lock_sum_z_;
+  double lock_sum_sin_yaw_;
+  double lock_sum_cos_yaw_;
+  std::string lock_frame_id_;
+  rclcpp::Time lock_latest_stamp_;
+  rclcpp::Time last_lock_input_stamp_;
 
   rclcpp_lifecycle::LifecycleNode::SharedPtr node_;
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;

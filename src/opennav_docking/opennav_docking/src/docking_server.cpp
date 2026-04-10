@@ -114,6 +114,8 @@ DockingServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
     return nav2_util::CallbackReturn::FAILURE;
   }
 
+  reset_dock_lock_client_ = create_client<std_srvs::srv::Trigger>("/reset_dock_lock_state");
+
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -181,6 +183,7 @@ DockingServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
   curr_dock_type_.clear();
   controller_.reset();
   vel_publisher_.reset();
+  reset_dock_lock_client_.reset();
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -189,6 +192,32 @@ DockingServer::on_shutdown(const rclcpp_lifecycle::State &)
 {
   RCLCPP_INFO(get_logger(), "Shutting down %s", get_name());
   return nav2_util::CallbackReturn::SUCCESS;
+}
+
+void DockingServer::requestResetDockLockState()
+{
+  if (!reset_dock_lock_client_) {
+    RCLCPP_WARN(get_logger(), "Reset dock lock client is not initialized");
+    return;
+  }
+
+  if (!reset_dock_lock_client_->service_is_ready()) {
+    RCLCPP_WARN(get_logger(), "Service /reset_dock_lock_state is not ready");
+    return;
+  }
+
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  auto future = reset_dock_lock_client_->async_send_request(
+    request,
+    [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture response_future) {
+      const auto response = response_future.get();
+      if (response->success) {
+        RCLCPP_INFO(get_logger(), "Dock lock reset acknowledged: %s", response->message.c_str());
+      } else {
+        RCLCPP_WARN(get_logger(), "Dock lock reset rejected: %s", response->message.c_str());
+      }
+    });
+  (void)future;
 }
 
 template<typename ActionT>
@@ -307,11 +336,13 @@ void DockingServer::dockRobot()
     rclcpp::Time dock_contact_time;
     controller_->velocityInit(dock_pose.pose);  // ** Set total distance for velocity control
     RCLCPP_INFO(get_logger(), "\033[1;90m Starting docking control loop. \033[0m");
+
+    // Ask dock plugin to clear previous lock/perception state before initial perception
+    requestResetDockLockState();
     // Publish a one-off indicator that docking is starting
     {
       std_msgs::msg::Int16 docking_msg;
       docking_msg.data = 1;
-      // RCLCPP_INFO(get_logger(), "\033[1;32menter publish\033[0m");
       if (docking_pub_) {
         docking_pub_->publish(docking_msg);
       }

@@ -96,6 +96,10 @@ void SimpleChargingDock::configure(
   nav2_util::declare_parameter_if_not_declared(
     node_, name + ".base_frame", rclcpp::ParameterValue("base_link"));
 
+  // Locked pose detection parameter
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".lock_threshold", rclcpp::ParameterValue(10));
+
   node_->get_parameter(name + ".use_battery_status", use_battery_status_);
   // node_->get_parameter(name + ".use_external_detection_pose", use_external_detection_pose_);
   node_->get_parameter(name + ".external_detection_timeout", external_detection_timeout_);
@@ -120,6 +124,7 @@ void SimpleChargingDock::configure(
   node_->get_parameter(name + ".staging_y_offset", staging_y_offset_);
   node_->get_parameter(name + ".staging_yaw_offset", staging_yaw_offset_);
   node_->get_parameter(name + ".base_frame", base_frame_);
+  node_->get_parameter(name + ".lock_threshold", lock_threshold_);
 
   // Setup filter
   double filter_coef;
@@ -139,6 +144,16 @@ void SimpleChargingDock::configure(
   dock_offset_z_ = 0.0;
   reset_flag_ = false;
   domain_id_ = 50;
+  lock_counter_ = 0;
+  is_locked_ = false;
+  lock_sum_x_ = 0.0;
+  lock_sum_y_ = 0.0;
+  lock_sum_z_ = 0.0;
+  lock_sum_sin_yaw_ = 0.0;
+  lock_sum_cos_yaw_ = 0.0;
+  lock_frame_id_.clear();
+  lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_lock_input_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
 
   if (use_battery_status_) {
     battery_sub_ = node_->create_subscription<sensor_msgs::msg::BatteryState>(
@@ -172,11 +187,16 @@ void SimpleChargingDock::configure(
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
     [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
-      use_external_detection_pose_ = true;
-      if ( dock_w_cam_ ) {
-        detected_dock_pose_ = *pose;
-        detected_dock_pose_prev_ = detected_dock_pose_;
+      if (!dock_w_cam_) {
+        return;
       }
+      detected_dock_pose_ = *pose;
+      if (is_locked_) {
+        // Keep lock fresh while continuing to receive detections.
+        lock_latest_stamp_ = rclcpp::Time(pose->header.stamp);
+        detected_dock_pose_.header.stamp = pose->header.stamp;
+      }
+      use_external_detection_pose_ = true;
   });
 
   // Subscribe to dock controller selector
@@ -217,6 +237,12 @@ void SimpleChargingDock::configure(
     "filtered_dock_pose", 1);
   staging_pose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseStamped>("staging_pose", 1);
 
+  reset_lock_state_service_ = node_->create_service<std_srvs::srv::Trigger>(
+    "/reset_dock_lock_state",
+    std::bind(
+      &SimpleChargingDock::resetDockLockStateService, this,
+      std::placeholders::_1, std::placeholders::_2));
+
   // Subscribe to final_pose_nav topic
   final_pose_nav_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/final_pose", 10,
@@ -235,11 +261,29 @@ void SimpleChargingDock::configure(
 }
 
 
+void SimpleChargingDock::resetLockState()
+{
+  lock_counter_ = 0;
+  is_locked_ = false;
+  use_external_detection_pose_ = false;
+  lock_sum_x_ = 0.0;
+  lock_sum_y_ = 0.0;
+  lock_sum_z_ = 0.0;
+  lock_sum_sin_yaw_ = 0.0;
+  lock_sum_cos_yaw_ = 0.0;
+  lock_frame_id_.clear();
+  lock_latest_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  last_lock_input_stamp_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+}
+
+
 geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
 {
   // reset_flag_ = false;
   // reset_timer_flag_ = false;
+  resetLockState();
+
   if (dock_type.find("cam") != std::string::npos) {
     dock_w_cam_ = true;
   } else {
@@ -307,6 +351,78 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
   if ( !dock_w_cam_ ) {
     use_external_detection_pose_ = false;
   }
+
+  if (dock_w_cam_ && !is_locked_) {
+    // Accumulate lock window in getRefinedPose (instead of subscription callback).
+    const rclcpp::Time current_stamp(detected_dock_pose_.header.stamp);
+    if (!detected_dock_pose_.header.frame_id.empty() && current_stamp != last_lock_input_stamp_) {
+      if (lock_counter_ == 0) {
+        lock_frame_id_ = detected_dock_pose_.header.frame_id;
+      }
+
+      // Reset accumulation if detector frame changes mid-window.
+      if (!lock_frame_id_.empty() && detected_dock_pose_.header.frame_id != lock_frame_id_) {
+        RCLCPP_WARN(
+          node_->get_logger(),
+          "detected_dock_pose frame changed during lock averaging (%s -> %s). Resetting average window.",
+          lock_frame_id_.c_str(), detected_dock_pose_.header.frame_id.c_str());
+        lock_counter_ = 0;
+        lock_sum_x_ = 0.0;
+        lock_sum_y_ = 0.0;
+        lock_sum_z_ = 0.0;
+        lock_sum_sin_yaw_ = 0.0;
+        lock_sum_cos_yaw_ = 0.0;
+        lock_frame_id_ = detected_dock_pose_.header.frame_id;
+      }
+
+      const double sample_yaw = tf2::getYaw(detected_dock_pose_.pose.orientation);
+      lock_sum_x_ += detected_dock_pose_.pose.position.x;
+      lock_sum_y_ += detected_dock_pose_.pose.position.y;
+      lock_sum_z_ += detected_dock_pose_.pose.position.z;
+      lock_sum_sin_yaw_ += std::sin(sample_yaw);
+      lock_sum_cos_yaw_ += std::cos(sample_yaw);
+      lock_counter_++;
+      lock_latest_stamp_ = current_stamp;
+      last_lock_input_stamp_ = current_stamp;
+
+      const int effective_lock_threshold = lock_threshold_ > 0 ? lock_threshold_ : 1;
+      if (lock_counter_ >= effective_lock_threshold) {
+        geometry_msgs::msg::PoseStamped averaged_pose;
+        averaged_pose.header.frame_id = lock_frame_id_;
+        averaged_pose.header.stamp = lock_latest_stamp_;
+
+        const double sample_count = static_cast<double>(lock_counter_);
+        averaged_pose.pose.position.x = lock_sum_x_ / sample_count;
+        averaged_pose.pose.position.y = lock_sum_y_ / sample_count;
+        averaged_pose.pose.position.z = lock_sum_z_ / sample_count;
+
+        const double mean_yaw = std::atan2(lock_sum_sin_yaw_, lock_sum_cos_yaw_);
+        tf2::Quaternion orientation;
+        orientation.setEuler(0.0, 0.0, mean_yaw);
+        averaged_pose.pose.orientation = tf2::toMsg(orientation);
+
+        detected_dock_pose_ = averaged_pose;
+        detected_dock_pose_prev_ = averaged_pose;
+        use_external_detection_pose_ = true;
+        is_locked_ = true;
+
+        RCLCPP_INFO(
+          node_->get_logger(),
+          "Dock pose locked in after %d frames (averaged), frame=%s, x=%.3f, y=%.3f, yaw(rad)=%.3f",
+          lock_counter_,
+          detected_dock_pose_.header.frame_id.c_str(),
+          detected_dock_pose_.pose.position.x,
+          detected_dock_pose_.pose.position.y,
+          tf2::getYaw(detected_dock_pose_.pose.orientation));
+      }
+    }
+  }
+
+  // if ( dock_w_cam_ && !detected_dock_pose_.header.frame_id.empty()) {
+  //   // Allow using the latest camera detection even before lock.
+  //   use_external_detection_pose_ = true;
+  // }
+
   // ** If using not detection, set the dock pose to the static fixed-frame version
   if (!use_external_detection_pose_) {
     if(detected_dock_pose_prev_.header.frame_id.empty()) {
@@ -472,6 +588,17 @@ bool SimpleChargingDock::disableCharging()
 bool SimpleChargingDock::hasStoppedCharging()
 {
   return !isCharging();
+}
+
+void SimpleChargingDock::resetDockLockStateService(
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  (void)request;
+  resetLockState();
+  response->success = true;
+  response->message = "SimpleChargingDock lock state reset";
+  RCLCPP_INFO(node_->get_logger(), "%s", response->message.c_str());
 }
 
 void SimpleChargingDock::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state)
