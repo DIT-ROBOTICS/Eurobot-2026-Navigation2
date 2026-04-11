@@ -12,19 +12,24 @@
 #include "std_srvs/srv/set_bool.hpp"
 
 #include <yaml-cpp/yaml.h>
+#include <vector>
 
 // Circular Queue for rival's path      |front| ____ <--- ____ |rear|
 class CircularQueue {
     public:
         CircularQueue() {}
-        ~CircularQueue() {
-            delete[] queue_;
-        }
+        ~CircularQueue() = default;
 
         void init(int size) {
+            if (size <= 0) {
+                size = 1;
+            }
+
             size_ = size;
-                
-            queue_ = new std::pair<double, double>[size_];
+            front_ = 0;
+            rear_ = size_ - 1;
+            first_cycle_ = true;
+            queue_.assign(size_, std::make_pair(0.0, 0.0));
             for(int i = 0; i < size_; i++) {
                 queue_[i] = std::make_pair(0.0, 0.0);
             }
@@ -60,16 +65,14 @@ class CircularQueue {
         int front_ = 0;
         int rear_ = size_ - 1;
         bool first_cycle_ = true;
-        std::pair<double, double> *queue_;
+        std::vector<std::pair<double, double>> queue_;
 };
 
 namespace custom_path_costmap_plugin {
     class RivalLayer : public nav2_costmap_2d::CostmapLayer {
         public:
             RivalLayer() {}
-            ~RivalLayer() {
-                rival_path_.~CircularQueue();
-            }
+            ~RivalLayer() = default;
 
             // Functions from Layers
             void onInitialize() override;
@@ -132,13 +135,13 @@ namespace custom_path_costmap_plugin {
             double v_from_localization_y_ = 0.0;
             
             int direction_ = 1;
-            double rival_distance_;
-            double vel_factor_;
+            double rival_distance_ = 1.0;
+            double vel_factor_ = 0.0;
             double offset_vel_factor_weight_statistic_;
             double expand_vel_factor_weight_statistic_;
             double offset_vel_factor_weight_localization_;
             double expand_vel_factor_weight_localization_;
-            double position_offset_;
+            double position_offset_ = 0.0;
             double safe_distance_;
             // Enum for rival's state
             enum class RivalState {
@@ -163,9 +166,10 @@ namespace custom_path_costmap_plugin {
 
             // Functions for update radius
             void updateRadius();
-            double rival_inscribed_radius_prev_;
+            double rival_inscribed_radius_prev_ = 0.0;
 
             // Rival pose subscibtion
+            rclcpp::CallbackGroup::SharedPtr rival_sub_callback_group_;
             rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr rival_distance_sub_;
             void rivalDistanceCallback(const std_msgs::msg::Float64::SharedPtr msg);
       

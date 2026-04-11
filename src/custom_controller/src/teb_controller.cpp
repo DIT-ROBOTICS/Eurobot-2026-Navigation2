@@ -7,6 +7,14 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "nav2_core/exceptions.hpp"
 
+// Logging disabled in this file by request.
+#undef RCLCPP_INFO
+#undef RCLCPP_INFO_THROTTLE
+#undef RCLCPP_DEBUG_THROTTLE
+#define RCLCPP_INFO(...)
+#define RCLCPP_INFO_THROTTLE(...)
+#define RCLCPP_DEBUG_THROTTLE(...)
+
 namespace teb_controller
 {
 
