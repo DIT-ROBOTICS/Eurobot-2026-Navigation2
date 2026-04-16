@@ -56,3 +56,7 @@ cmake-build-debug/
 doc/html/
 .DS_Store/nav2_log.txt
 nav2_log.txt
+
+
+# dock_pose records
+*.csv

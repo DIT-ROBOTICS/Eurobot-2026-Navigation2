@@ -125,6 +125,11 @@ install(FILES test/test_dock_file.yaml
   DESTINATION share/${PROJECT_NAME}/
 )
 
+install(PROGRAMS
+  dock_records/scripts/plot_dock_pose_history.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   find_package(ament_cmake_gtest REQUIRED)

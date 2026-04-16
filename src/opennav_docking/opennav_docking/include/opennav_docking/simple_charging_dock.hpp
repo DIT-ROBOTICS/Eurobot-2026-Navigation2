@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -57,7 +58,7 @@ public:
   /**
    * @brief Method to cleanup resources used on shutdown.
    */
-  virtual void cleanup() {}
+  virtual void cleanup();
 
   /**
    * @brief Method to active Behavior and any threads involved in execution.
@@ -110,6 +111,7 @@ public:
 protected:
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state);
   void resetDockPoseSubscription();
+  void recordDockPoseHistory(const geometry_msgs::msg::PoseStamped & dock_pose);
   double computeExternalDockingDist(const double z ); 
   // z is diff of aruco_center and robot pose to do mission
 
@@ -188,6 +190,11 @@ protected:
   // this is only set here, there is no param for this
   // Flag to ignore orientation from detected_dock_pose
   const bool ignore_detected_orientation_ = 0;
+
+  // Dock pose history file logging
+  std::string dock_pose_history_file_path_;
+  bool dock_pose_history_suffix_datetime_;
+  std::ofstream dock_pose_history_file_;
 
 
   double dock_offset_z_; // Stores the z-offset value from the original dock goal

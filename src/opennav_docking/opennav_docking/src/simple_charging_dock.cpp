@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include <cmath>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
 #include "nav2_util/node_utils.hpp"
 #include "opennav_docking/simple_charging_dock.hpp"
@@ -96,6 +99,11 @@ void SimpleChargingDock::configure(
   nav2_util::declare_parameter_if_not_declared(
     node_, name + ".base_frame", rclcpp::ParameterValue("base_link"));
 
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".dock_pose_history_file_path", rclcpp::ParameterValue(""));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".dock_pose_history_suffix_datetime", rclcpp::ParameterValue(false));
+
   node_->get_parameter(name + ".use_battery_status", use_battery_status_);
   // node_->get_parameter(name + ".use_external_detection_pose", use_external_detection_pose_);
   node_->get_parameter(name + ".external_detection_timeout", external_detection_timeout_);
@@ -120,6 +128,53 @@ void SimpleChargingDock::configure(
   node_->get_parameter(name + ".staging_y_offset", staging_y_offset_);
   node_->get_parameter(name + ".staging_yaw_offset", staging_yaw_offset_);
   node_->get_parameter(name + ".base_frame", base_frame_);
+  node_->get_parameter(name + ".dock_pose_history_file_path", dock_pose_history_file_path_);
+  node_->get_parameter(name + ".dock_pose_history_suffix_datetime", dock_pose_history_suffix_datetime_);
+
+  if (dock_pose_history_file_.is_open()) {
+    dock_pose_history_file_.flush();
+    dock_pose_history_file_.close();
+  }
+
+  if (!dock_pose_history_file_path_.empty()) {
+    std::string output_file_path = dock_pose_history_file_path_;
+    if (dock_pose_history_suffix_datetime_) {
+      const auto now = std::chrono::system_clock::now();
+      const std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+      std::tm tm_now;
+#ifdef _WIN32
+      localtime_s(&tm_now, &now_c);
+#else
+      localtime_r(&now_c, &tm_now);
+#endif
+      char time_buf[32];
+      std::strftime(time_buf, sizeof(time_buf), "%Y%m%d_%H%M%S", &tm_now);
+
+      const std::string suffix = std::string("_") + time_buf;
+      const auto slash_pos = output_file_path.find_last_of("/\\");
+      const auto dot_pos = output_file_path.find_last_of('.');
+      if (dot_pos != std::string::npos && (slash_pos == std::string::npos || dot_pos > slash_pos)) {
+        output_file_path.insert(dot_pos, suffix);
+      } else {
+        output_file_path += suffix;
+      }
+    }
+
+    dock_pose_history_file_.open(output_file_path, std::ios::out | std::ios::trunc);
+    if (!dock_pose_history_file_.is_open()) {
+      RCLCPP_ERROR(
+        node_->get_logger(),
+        "Failed to open dock pose history file: %s",
+        output_file_path.c_str());
+    } else {
+      dock_pose_history_file_path_ = output_file_path;
+      dock_pose_history_file_ << "time_sec,time_ns,frame_id,x,y,z,yaw_rad\n";
+      RCLCPP_INFO(
+        node_->get_logger(),
+        "Dock pose history logging enabled: %s",
+        dock_pose_history_file_path_.c_str());
+    }
+  }
 
   // Setup filter
   double filter_coef;
@@ -235,9 +290,51 @@ void SimpleChargingDock::configure(
 }
 
 
+void SimpleChargingDock::cleanup()
+{
+  if (dock_pose_history_file_.is_open()) {
+    dock_pose_history_file_.flush();
+    dock_pose_history_file_.close();
+    if (node_) {
+      RCLCPP_INFO(
+        node_->get_logger(),
+        "Dock pose history logging disabled: %s",
+        dock_pose_history_file_path_.c_str());
+    }
+  }
+}
+
+
+
+void SimpleChargingDock::recordDockPoseHistory(const geometry_msgs::msg::PoseStamped & dock_pose)
+{
+  if (!dock_pose_history_file_.is_open()) {
+    return;
+  }
+
+  geometry_msgs::msg::PoseStamped sample = dock_pose;
+  const auto stamp = rclcpp::Time(sample.header.stamp);
+  const double stamp_sec = stamp.seconds();
+  const int64_t stamp_ns = stamp.nanoseconds();
+
+  dock_pose_history_file_
+    << std::fixed << std::setprecision(9)
+    << stamp_sec << ","
+    << stamp_ns << ","
+    << sample.header.frame_id << ","
+    << sample.pose.position.x << ","
+    << sample.pose.position.y << ","
+    << sample.pose.position.z << ","
+    << tf2::getYaw(sample.pose.orientation) << "\n";
+}
+
+
 geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
 {
+
+  // Keep data durable if docking is interrupted unexpectedly.
+  dock_pose_history_file_.flush();
   // reset_flag_ = false;
   // reset_timer_flag_ = false;
   if (dock_type.find("cam") != std::string::npos) {
@@ -254,6 +351,7 @@ geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
     // dock_pose_.header.frame_id = frame;
     // dock_pose_.pose = pose;
     detected_dock_pose_prev_.header.frame_id = frame;
+    detected_dock_pose_prev_.header.stamp = node_->now();
     detected_dock_pose_prev_.pose = pose;
   }
 
@@ -315,6 +413,8 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
       // RCLCPP_WARN(node_->get_logger(), "No f");
     dock_pose_pub_->publish(detected_dock_pose_prev_);
     dock_pose_ = detected_dock_pose_prev_;
+    dock_pose_.header.stamp = node_->now();
+    recordDockPoseHistory(dock_pose_);
     return true;
   }
 
@@ -335,6 +435,7 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     use_external_detection_pose_ = false; // experimental
     dock_pose_pub_->publish(detected_dock_pose_prev_);
     dock_pose_ = detected_dock_pose_prev_;
+    recordDockPoseHistory(dock_pose_);
     return true;
   }
 
@@ -409,6 +510,7 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     tf2::getYaw(dock_pose_.pose.orientation));
   dock_pose_pub_->publish(dock_pose_);
   pose = dock_pose_;
+  recordDockPoseHistory(dock_pose_);
   use_external_detection_pose_ = false;
   detected_dock_pose_prev_ = dock_pose_;  // Update with processed pose
   return true;

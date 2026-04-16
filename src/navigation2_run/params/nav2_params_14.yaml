@@ -587,6 +587,9 @@ docking_server:
       # the threshold for CameraOnBoard to see ArUco
       camera_aruco_max: 0.7
       camera_aruco_min: 0.25
+      # Optional dock pose history CSV logging (empty path disables)
+      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dock_pose_history.csv"
+      dock_pose_history_suffix_datetime: true
 
     docks: ['home_dock']
     home_dock:
