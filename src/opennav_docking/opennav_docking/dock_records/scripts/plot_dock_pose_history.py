@@ -230,12 +230,13 @@ def plot_history(csv_path: Path):
 
     ax_txt.axis("off")
     title = "Goal sets (order)"
+    note = "Darker points = later dock_pose (within each goal set)"
     if max(t) <= 0.0:
         title += "\n(time all zero → segmented by XY jump)"
     ax_txt.text(
         0.0,
         1.0,
-        title + "\n\n" + "\n\n".join(summary_lines),
+        title + "\n" + note + "\n\n" + "\n\n".join(summary_lines),
         va="top",
         ha="left",
         fontsize=9,
