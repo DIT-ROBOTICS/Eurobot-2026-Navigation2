@@ -367,6 +367,9 @@ bool SimpleChargingDock::processMatchedPose(
   const geometry_msgs::msg::PoseStamped & matched_final_pose)
 {
   if (matched_final_pose.header.frame_id.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 2000,
+      "pose_sync: matched final pose has empty frame_id");
     return false;
   }
 
@@ -389,10 +392,22 @@ bool SimpleChargingDock::processMatchedPose(
           target_frame, detected.header.frame_id,
           detected.header.stamp, rclcpp::Duration::from_seconds(0.2)))
       {
+        RCLCPP_WARN_THROTTLE(
+          node_->get_logger(), *node_->get_clock(), 2000,
+          "pose_sync: cannot transform detected pose from %s to %s at stamp=%.3f",
+          detected.header.frame_id.c_str(),
+          target_frame.c_str(),
+          rclcpp::Time(detected.header.stamp).seconds());
         return false;
       }
       tf2_buffer_->transform(detected, detected, target_frame);
-    } catch (const tf2::TransformException &) {
+    } catch (const tf2::TransformException & ex) {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 2000,
+        "pose_sync: TF transform failed from %s to %s: %s",
+        detected.header.frame_id.c_str(),
+        target_frame.c_str(),
+        ex.what());
       return false;
     }
   }
@@ -508,7 +523,13 @@ void SimpleChargingDock::poseSyncTimerCallback()
     }
   }
 
-  processMatchedPose(newest_detected, matched_final);
+  if (!processMatchedPose(newest_detected, matched_final)) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 2000,
+      "pose_sync: matched pair processing failed (detected frame=%s, final frame=%s)",
+      newest_detected.header.frame_id.c_str(),
+      matched_final.header.frame_id.c_str());
+  }
 }
 
 

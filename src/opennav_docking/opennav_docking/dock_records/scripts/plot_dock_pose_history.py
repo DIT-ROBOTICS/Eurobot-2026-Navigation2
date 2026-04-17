@@ -28,7 +28,7 @@ def resolve_csv_path(csv_or_dir: Path | None) -> Path:
         raise ValueError(f"Not a file or directory: {target}")
 
     candidates = sorted(
-        target.glob("dock_pose_history*.csv"),
+        target.glob("dph*.csv"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
