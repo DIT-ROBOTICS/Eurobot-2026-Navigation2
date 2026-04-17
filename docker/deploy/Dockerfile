@@ -81,6 +81,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential \
     cmake \
     gosu \
+    python3-matplotlib \
     python3-colcon-common-extensions \
     && rm -rf /var/lib/apt/lists/*
 
