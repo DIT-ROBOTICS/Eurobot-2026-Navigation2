@@ -13,9 +13,12 @@
 // limitations under the License.
 
 #include <cmath>
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
+#include <limits>
 
 #include "nav2_util/node_utils.hpp"
 #include "opennav_docking/simple_charging_dock.hpp"
@@ -103,6 +106,10 @@ void SimpleChargingDock::configure(
     node_, name + ".dock_pose_history_file_path", rclcpp::ParameterValue(""));
   nav2_util::declare_parameter_if_not_declared(
     node_, name + ".dock_pose_history_suffix_datetime", rclcpp::ParameterValue(false));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".pose_match_max_delta_ms", rclcpp::ParameterValue(100));
+  nav2_util::declare_parameter_if_not_declared(
+    node_, name + ".pose_sync_timer_period_ms", rclcpp::ParameterValue(20));
 
   node_->get_parameter(name + ".use_battery_status", use_battery_status_);
   // node_->get_parameter(name + ".use_external_detection_pose", use_external_detection_pose_);
@@ -130,6 +137,13 @@ void SimpleChargingDock::configure(
   node_->get_parameter(name + ".base_frame", base_frame_);
   node_->get_parameter(name + ".dock_pose_history_file_path", dock_pose_history_file_path_);
   node_->get_parameter(name + ".dock_pose_history_suffix_datetime", dock_pose_history_suffix_datetime_);
+  node_->get_parameter(name + ".pose_match_max_delta_ms", pose_match_max_delta_ms_);
+  node_->get_parameter(name + ".pose_sync_timer_period_ms", pose_sync_timer_period_ms_);
+
+  pose_sync_timer_period_ms_ = std::clamp(
+    pose_sync_timer_period_ms_,
+    kPoseSyncTimerPeriodMinMs,
+    kPoseSyncTimerPeriodMaxMs);
 
   if (dock_pose_history_file_.is_open()) {
     dock_pose_history_file_.flush();
@@ -226,13 +240,7 @@ void SimpleChargingDock::configure(
   
   dock_pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
     "detected_dock_pose", qos,
-    [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
-      use_external_detection_pose_ = true;
-      if ( dock_w_cam_ ) {
-        detected_dock_pose_ = *pose;
-        detected_dock_pose_prev_ = detected_dock_pose_;
-      }
-  });
+    std::bind(&SimpleChargingDock::detectedDockPoseCallback, this, std::placeholders::_1));
 
   // Subscribe to dock controller selector
   dock_controller_selector_sub_ = node_->create_subscription<std_msgs::msg::String>(
@@ -249,6 +257,10 @@ void SimpleChargingDock::configure(
         else {
           dock_w_cam_ = false;
           use_external_detection_pose_ = false;
+          std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+          detected_dock_pose_queue_.clear();
+          final_pose_queue_.clear();
+          has_processed_dock_pose_cached_ = false;
         }
         RCLCPP_INFO(node_->get_logger(), "Dock controller type changed to: %s, dock_w_cam_: %s",
           msg->data.c_str(), dock_w_cam_ ? "true" : "false");
@@ -275,9 +287,11 @@ void SimpleChargingDock::configure(
   // Subscribe to final_pose_nav topic
   final_pose_nav_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     "/final_pose", 10,
-    [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
-      final_pose_nav_ = *msg;
-  });
+    std::bind(&SimpleChargingDock::finalPoseNavCallback, this, std::placeholders::_1));
+
+  pose_sync_timer_ = node_->create_wall_timer(
+    std::chrono::milliseconds(pose_sync_timer_period_ms_),
+    std::bind(&SimpleChargingDock::poseSyncTimerCallback, this));
 
   // Subscribe to dock_side topic
   dock_side_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
@@ -290,8 +304,207 @@ void SimpleChargingDock::configure(
 }
 
 
+void SimpleChargingDock::detectedDockPoseCallback(
+  const geometry_msgs::msg::PoseStamped::SharedPtr pose)
+{
+  if (!pose) {
+    return;
+  }
+
+  if (!dock_w_cam_) {
+    return;
+  }
+
+  use_external_detection_pose_ = true;
+
+  std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+  if (!detected_dock_pose_queue_.empty()) {
+    const auto last_stamp = rclcpp::Time(detected_dock_pose_queue_.back().header.stamp);
+    const auto curr_stamp = rclcpp::Time(pose->header.stamp);
+    if (curr_stamp <= last_stamp) {
+      return;
+    }
+  }
+
+  detected_dock_pose_ = *pose;
+  detected_dock_pose_queue_.push_back(*pose);
+  while (detected_dock_pose_queue_.size() > kPoseQueueCap) {
+    detected_dock_pose_queue_.pop_front();
+  }
+}
+
+
+void SimpleChargingDock::finalPoseNavCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
+  if (!msg) {
+    return;
+  }
+
+  final_pose_nav_ = *msg;
+
+  geometry_msgs::msg::PoseStamped final_pose;
+  final_pose.header = msg->header;
+  final_pose.pose = msg->pose.pose;
+
+  std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+  if (!final_pose_queue_.empty()) {
+    const auto last_stamp = rclcpp::Time(final_pose_queue_.back().header.stamp);
+    const auto curr_stamp = rclcpp::Time(final_pose.header.stamp);
+    if (curr_stamp <= last_stamp) {
+      return;
+    }
+  }
+
+  final_pose_queue_.push_back(final_pose);
+  while (final_pose_queue_.size() > kPoseQueueCap) {
+    final_pose_queue_.pop_front();
+  }
+}
+
+
+bool SimpleChargingDock::processMatchedPose(
+  const geometry_msgs::msg::PoseStamped & detected_pose,
+  const geometry_msgs::msg::PoseStamped & matched_final_pose)
+{
+  if (matched_final_pose.header.frame_id.empty()) {
+    return false;
+  }
+
+  geometry_msgs::msg::PoseStamped detected = detected_pose;
+
+  if (cam_side_ == 0) {
+    detected.pose.position.y -= fabs(dock_offset_z_);
+  } else if (cam_side_ == 1) {
+    detected.pose.position.x -= fabs(dock_offset_z_);
+  } else if (cam_side_ == 2) {
+    detected.pose.position.y += fabs(dock_offset_z_);
+  } else if (cam_side_ == 3) {
+    detected.pose.position.x += fabs(dock_offset_z_);
+  }
+
+  const auto & target_frame = matched_final_pose.header.frame_id;
+  if (detected.header.frame_id != target_frame) {
+    try {
+      if (!tf2_buffer_->canTransform(
+          target_frame, detected.header.frame_id,
+          detected.header.stamp, rclcpp::Duration::from_seconds(0.2)))
+      {
+        return false;
+      }
+      tf2_buffer_->transform(detected, detected, target_frame);
+    } catch (const tf2::TransformException &) {
+      return false;
+    }
+  }
+
+  detected = filter_->update(detected);
+  filtered_dock_pose_pub_->publish(detected);
+
+  geometry_msgs::msg::PoseStamped processed;
+  processed.header = detected.header;
+  processed.header.stamp = matched_final_pose.header.stamp;
+  processed.pose.position = detected.pose.position;
+
+  if (!ignore_detected_orientation_) {
+    geometry_msgs::msg::PoseStamped just_orientation;
+    just_orientation.pose.orientation = tf2::toMsg(external_detection_rotation_);
+    geometry_msgs::msg::TransformStamped transform;
+    transform.transform.rotation = detected.pose.orientation;
+    tf2::doTransform(just_orientation, just_orientation, transform);
+
+    tf2::Quaternion orientation;
+    orientation.setEuler(0.0, 0.0, tf2::getYaw(just_orientation.pose.orientation));
+    processed.pose.orientation = tf2::toMsg(orientation);
+  } else {
+    processed.pose.orientation = matched_final_pose.pose.orientation;
+  }
+
+  {
+    std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+    processed_dock_pose_cached_ = processed;
+    has_processed_dock_pose_cached_ = true;
+  }
+
+  return true;
+}
+
+
+void SimpleChargingDock::poseSyncTimerCallback()
+{
+  if (!dock_w_cam_) {
+    return;
+  }
+
+  geometry_msgs::msg::PoseStamped newest_detected;
+  geometry_msgs::msg::PoseStamped matched_final;
+
+  {
+    std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+
+    if (detected_dock_pose_queue_.empty() || final_pose_queue_.empty()) {
+      return;
+    }
+
+    const auto now = node_->now();
+    const auto max_age = rclcpp::Duration::from_seconds(kPoseQueueMaxAgeSec);
+    while (!detected_dock_pose_queue_.empty() &&
+      (now - rclcpp::Time(detected_dock_pose_queue_.front().header.stamp)) > max_age)
+    {
+      detected_dock_pose_queue_.pop_front();
+    }
+    while (!final_pose_queue_.empty() &&
+      (now - rclcpp::Time(final_pose_queue_.front().header.stamp)) > max_age)
+    {
+      final_pose_queue_.pop_front();
+    }
+
+    if (detected_dock_pose_queue_.empty() || final_pose_queue_.empty()) {
+      return;
+    }
+
+    newest_detected = detected_dock_pose_queue_.back();
+    const auto detected_stamp_ns = rclcpp::Time(newest_detected.header.stamp).nanoseconds();
+    const int64_t max_delta_ns = static_cast<int64_t>(pose_match_max_delta_ms_) * 1000000LL;
+
+    size_t best_idx = final_pose_queue_.size();
+    int64_t best_delta_ns = std::numeric_limits<int64_t>::max();
+    for (size_t i = 0; i < final_pose_queue_.size(); ++i) {
+      const int64_t final_stamp_ns = rclcpp::Time(final_pose_queue_[i].header.stamp).nanoseconds();
+      const int64_t delta_ns = std::llabs(final_stamp_ns - detected_stamp_ns);
+      if (delta_ns < best_delta_ns) {
+        best_delta_ns = delta_ns;
+        best_idx = i;
+      }
+    }
+
+    if (best_idx == final_pose_queue_.size() || best_delta_ns > max_delta_ns) {
+      return;
+    }
+
+    matched_final = final_pose_queue_[best_idx];
+    for (size_t i = 0; i <= best_idx && !final_pose_queue_.empty(); ++i) {
+      final_pose_queue_.pop_front();
+    }
+  }
+
+  processMatchedPose(newest_detected, matched_final);
+}
+
+
 void SimpleChargingDock::cleanup()
 {
+  if (pose_sync_timer_) {
+    pose_sync_timer_->cancel();
+    pose_sync_timer_.reset();
+  }
+
+  {
+    std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+    detected_dock_pose_queue_.clear();
+    final_pose_queue_.clear();
+    has_processed_dock_pose_cached_ = false;
+  }
+
   if (dock_pose_history_file_.is_open()) {
     dock_pose_history_file_.flush();
     dock_pose_history_file_.close();
@@ -332,9 +545,13 @@ void SimpleChargingDock::recordDockPoseHistory(const geometry_msgs::msg::PoseSta
 geometry_msgs::msg::PoseStamped SimpleChargingDock::getStagingPose(
   const geometry_msgs::msg::Pose & pose, const std::string & frame, const std::string & dock_type)
 {
+  {
+    std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+    detected_dock_pose_queue_.clear();
+    final_pose_queue_.clear();
+    has_processed_dock_pose_cached_ = false;
+  }
 
-  // Keep data durable if docking is interrupted unexpectedly.
-  dock_pose_history_file_.flush();
   // reset_flag_ = false;
   // reset_timer_flag_ = false;
   if (dock_type.find("cam") != std::string::npos) {
@@ -405,6 +622,32 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
   if ( !dock_w_cam_ ) {
     use_external_detection_pose_ = false;
   }
+
+  if (dock_w_cam_) {
+    geometry_msgs::msg::PoseStamped cached_pose;
+    bool has_cached = false;
+    {
+      std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
+      has_cached = has_processed_dock_pose_cached_;
+      if (has_cached) {
+        cached_pose = processed_dock_pose_cached_;
+      }
+    }
+
+    if (has_cached && (node_->now() - cached_pose.header.stamp) <=
+      rclcpp::Duration::from_seconds(external_detection_timeout_))
+    {
+      dock_pose_ = cached_pose;
+      detected_dock_pose_prev_ = cached_pose;
+      dock_pose_pub_->publish(dock_pose_);
+      pose = dock_pose_;
+      recordDockPoseHistory(dock_pose_);
+      return true;
+    }
+
+    use_external_detection_pose_ = false;
+  }
+
   // ** If using not detection, set the dock pose to the static fixed-frame version
   if (!use_external_detection_pose_) {
     if(detected_dock_pose_prev_.header.frame_id.empty()) {
@@ -418,102 +661,7 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     return true;
   }
 
-  // If using detections, get current detections, transform to frame, and apply offsets
-  geometry_msgs::msg::PoseStamped detected = detected_dock_pose_;
-
-  RCLCPP_INFO(node_->get_logger(), "raw Dock pose: frame=%s, pos=(%.3f, %.3f, %.3f), yaw=%.3f",
-    detected.header.frame_id.c_str(),
-    detected.pose.position.x,
-    detected.pose.position.y,
-    detected.pose.position.z,
-    tf2::getYaw(detected.pose.orientation));
-
-  // ** Validate that external pose is new enough
-  auto timeout = rclcpp::Duration::from_seconds(external_detection_timeout_);
-  if (node_->now() - detected.header.stamp > timeout) {
-    RCLCPP_WARN(node_->get_logger(), "Lost detection or did not detect: timeout exceeded");
-    use_external_detection_pose_ = false; // experimental
-    dock_pose_pub_->publish(detected_dock_pose_prev_);
-    dock_pose_ = detected_dock_pose_prev_;
-    recordDockPoseHistory(dock_pose_);
-    return true;
-  }
-
-  // Apply z-offset to move dock_pose away from detected pose before transform
-  // Use stored dock_offset_z_ value from original goal
-  if ( cam_side_ == 0 ) { // dock toward +y
-    detected.pose.position.y -= fabs(dock_offset_z_);
-  }
-  else if ( cam_side_ == 1 ) { // +x
-    detected.pose.position.x -= fabs(dock_offset_z_);
-  }
-  else if ( cam_side_ == 2 ) { // -y
-    detected.pose.position.y += fabs(dock_offset_z_);
-  }
-  else if ( cam_side_ == 3 ) { // -x
-    detected.pose.position.x += fabs(dock_offset_z_);
-  }
-
-  // Transform detected pose into fixed frame. Note that the argument pose
-  // is the output of detection, but also acts as the initial estimate
-  // and contains the frame_id of docking
-  if (detected.header.frame_id != pose.header.frame_id) {
-    try {
-      if (!tf2_buffer_->canTransform(
-          pose.header.frame_id, detected.header.frame_id,
-          detected.header.stamp, rclcpp::Duration::from_seconds(0.2)))
-      {
-        RCLCPP_WARN(node_->get_logger(), "Failed to transform detected dock pose");
-        return false;
-      }
-      tf2_buffer_->transform(detected, detected, pose.header.frame_id);
-    } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN(node_->get_logger(), "Failed to transform detected dock pose");
-      return false;
-    }
-  }
-
-  // Filter the detected pose
-  detected = filter_->update(detected);
-  filtered_dock_pose_pub_->publish(detected);
-
-  // Construct dock_pose_ header and position
-
-  dock_pose_.header = detected.header;
-  dock_pose_.pose.position = detected.pose.position;
-
-  // Process orientation unless flag is set to ignore it
-  if (!ignore_detected_orientation_) {
-    // Rotate the just the orientation, then remove roll/pitch
-    geometry_msgs::msg::PoseStamped just_orientation;
-    just_orientation.pose.orientation = tf2::toMsg(external_detection_rotation_);
-    geometry_msgs::msg::TransformStamped transform;
-    transform.transform.rotation = detected.pose.orientation;
-    tf2::doTransform(just_orientation, just_orientation, transform);
-
-    tf2::Quaternion orientation;
-    orientation.setEuler(0.0, 0.0, tf2::getYaw(just_orientation.pose.orientation));
-    dock_pose_.pose.orientation = tf2::toMsg(orientation);
-  } else {
-    // Keep the original orientation from the initial pose estimate
-    dock_pose_.pose.orientation = pose.pose.orientation;
-  }
-
-
-
-  // Publish & return dock pose for debugging purposes
-  RCLCPP_INFO(node_->get_logger(), "transformed Dock pose: frame=%s, pos=(%.3f, %.3f, %.3f), yaw=%.3f",
-    dock_pose_.header.frame_id.c_str(),
-    dock_pose_.pose.position.x,
-    dock_pose_.pose.position.y,
-    dock_pose_.pose.position.z,
-    tf2::getYaw(dock_pose_.pose.orientation));
-  dock_pose_pub_->publish(dock_pose_);
-  pose = dock_pose_;
-  recordDockPoseHistory(dock_pose_);
-  use_external_detection_pose_ = false;
-  detected_dock_pose_prev_ = dock_pose_;  // Update with processed pose
-  return true;
+  return false;
 }
 
 bool SimpleChargingDock::isDocked()
