@@ -425,6 +425,13 @@ bool SimpleChargingDock::processMatchedPose(
     has_processed_dock_pose_cached_ = true;
   }
 
+  RCLCPP_INFO_THROTTLE(
+    node_->get_logger(), *node_->get_clock(), 1000,
+    "pose_sync: cached refined dock pose (detected stamp=%.3f, matched final stamp=%.3f, frame=%s)",
+    rclcpp::Time(detected_pose.header.stamp).seconds(),
+    rclcpp::Time(matched_final_pose.header.stamp).seconds(),
+    matched_final_pose.header.frame_id.c_str());
+
   return true;
 }
 
@@ -442,6 +449,10 @@ void SimpleChargingDock::poseSyncTimerCallback()
     std::scoped_lock<std::mutex> lock(pose_sync_mutex_);
 
     if (detected_dock_pose_queue_.empty() || final_pose_queue_.empty()) {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 2000,
+        "pose_sync: waiting for data (detected queue=%zu, final queue=%zu)",
+        detected_dock_pose_queue_.size(), final_pose_queue_.size());
       return;
     }
 
@@ -459,6 +470,10 @@ void SimpleChargingDock::poseSyncTimerCallback()
     }
 
     if (detected_dock_pose_queue_.empty() || final_pose_queue_.empty()) {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 2000,
+        "pose_sync: data became stale after pruning (detected queue=%zu, final queue=%zu)",
+        detected_dock_pose_queue_.size(), final_pose_queue_.size());
       return;
     }
 
@@ -478,6 +493,12 @@ void SimpleChargingDock::poseSyncTimerCallback()
     }
 
     if (best_idx == final_pose_queue_.size() || best_delta_ns > max_delta_ns) {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 2000,
+        "pose_sync: no timestamp match within %d ms (best delta=%.1f ms, detected stamp=%.3f)",
+        pose_match_max_delta_ms_,
+        static_cast<double>(best_delta_ns) / 1.0e6,
+        rclcpp::Time(newest_detected.header.stamp).seconds());
       return;
     }
 
@@ -637,6 +658,12 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
     if (has_cached && (node_->now() - cached_pose.header.stamp) <=
       rclcpp::Duration::from_seconds(external_detection_timeout_))
     {
+      RCLCPP_INFO_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "getRefinedPose: using synced detected dock pose (stamp=%.3f, frame=%s)",
+        rclcpp::Time(cached_pose.header.stamp).seconds(),
+        cached_pose.header.frame_id.c_str());
+
       dock_pose_ = cached_pose;
       detected_dock_pose_prev_ = cached_pose;
       dock_pose_pub_->publish(dock_pose_);
@@ -644,6 +671,10 @@ bool SimpleChargingDock::getRefinedPose(geometry_msgs::msg::PoseStamped & pose)
       recordDockPoseHistory(dock_pose_);
       return true;
     }
+
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 2000,
+      "getRefinedPose: no fresh synced detected pose available; fallback to previous/static pose");
 
     use_external_detection_pose_ = false;
   }
