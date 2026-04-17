@@ -33,7 +33,6 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/int16.hpp"
-#include "std_srvs/srv/trigger.hpp"
 
 namespace opennav_docking
 {
@@ -218,12 +217,6 @@ protected:
   rcl_interfaces::msg::SetParametersResult
   dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
 
-  /**
-   * @brief Request SimpleChargingDock service to reset lock/perception state.
-   * Uses a non-blocking async request.
-   */
-  void requestResetDockLockState();
-
   // Dynamic parameters handler
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
   std::mutex dynamic_params_lock_;
@@ -278,7 +271,6 @@ protected:
   std::shared_ptr<tf2_ros::Buffer> tf2_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf2_listener_;
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Int16>::SharedPtr docking_pub_;
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr reset_dock_lock_client_;
 };
 
 }  // namespace opennav_docking
