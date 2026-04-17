@@ -1,5 +1,24 @@
 #include "rival_layer/rival_layer.hpp"
 
+// Set to 1 to enable RivalLayer logs in this translation unit.
+#ifndef RIVAL_LAYER_ENABLE_LOGGING
+#define RIVAL_LAYER_ENABLE_LOGGING 0
+#endif
+
+#if !RIVAL_LAYER_ENABLE_LOGGING
+#undef RCLCPP_INFO
+#undef RCLCPP_WARN
+#undef RCLCPP_ERROR
+#undef RCLCPP_INFO_THROTTLE
+#undef RCLCPP_WARN_THROTTLE
+
+#define RCLCPP_INFO(...) ((void)0)
+#define RCLCPP_WARN(...) ((void)0)
+#define RCLCPP_ERROR(...) ((void)0)
+#define RCLCPP_INFO_THROTTLE(...) ((void)0)
+#define RCLCPP_WARN_THROTTLE(...) ((void)0)
+#endif
+
 namespace custom_path_costmap_plugin { 
     // RivalLayer class
     void RivalLayer::onInitialize() {
@@ -137,12 +156,22 @@ namespace custom_path_costmap_plugin {
         node->get_parameter(name_ + "." + "safe_distance", safe_distance_);
 
         node->get_parameter(name_ + "." + "use_statistic_method", use_statistic_method_);
+        
+        // Create callback group for rival subscriptions
+        rival_sub_callback_group_ =
+            node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        rclcpp::SubscriptionOptions rival_sub_options;
+        rival_sub_options.callback_group = rival_sub_callback_group_;
 
         // Subscribe to the rival's pose
         rival_pose_sub_ = node->create_subscription<nav_msgs::msg::Odometry>(
-            "/rhino_pose", 100, std::bind(&RivalLayer::rivalPoseCallback, this, std::placeholders::_1));
+                "/rhino_pose", 100,
+                std::bind(&RivalLayer::rivalPoseCallback, this, std::placeholders::_1),
+                rival_sub_options);
         rival_distance_sub_ = node->create_subscription<std_msgs::msg::Float64>(
-            "/rival_distance", 100, std::bind(&RivalLayer::rivalDistanceCallback, this, std::placeholders::_1));
+                "/rival_distance", 100,
+                std::bind(&RivalLayer::rivalDistanceCallback, this, std::placeholders::_1),
+                rival_sub_options);
         
         set_mode_service_ = node->create_service<std_srvs::srv::SetBool>(
             "/rival_layer/set_mode", std::bind(&RivalLayer::handleSetMode, this, std::placeholders::_1, std::placeholders::_2));
@@ -154,11 +183,16 @@ namespace custom_path_costmap_plugin {
 
         // Initialize the queue
         rival_path_.init(model_size_);
+        RCLCPP_INFO(rclcpp::get_logger("RivalLayer"), "RivalLayer onInitialize finished");
     }
 
     void RivalLayer::updateBounds(
         double /*robot_x*/, double /*robot_y*/, double /*robot_yaw*/, 
         double *min_x, double *min_y, double *max_x, double *max_y) {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 2000,
+            "updateBounds called");
 
         // Update the bounds of the costmap
         *min_x = std::min(min_x_, *min_x);
@@ -170,6 +204,11 @@ namespace custom_path_costmap_plugin {
     void RivalLayer::updateCosts(
         nav2_costmap_2d::Costmap2D &master_grid, 
         int /*min_i*/, int /*min_j*/, int /*max_i*/, int /*max_j*/) {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "updateCosts start: enabled=%d rival_pose_received=%d reset_timeout=%d",
+            enabled_ ? 1 : 0, rival_pose_received_ ? 1 : 0, reset_timeout_);
 
         // Check if the layer is enabled
         if (!enabled_) {
@@ -194,6 +233,11 @@ namespace custom_path_costmap_plugin {
             else reset_timeout_ = 0;
         }
         updateWithMax(master_grid, 0, 0, getSizeInCellsX(), getSizeInCellsY());
+
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "updateCosts end: rival_state=%d reset_timeout=%d",
+            static_cast<int>(rival_state_), reset_timeout_);
     }
 
     bool RivalLayer::isClearable() {
@@ -203,6 +247,9 @@ namespace custom_path_costmap_plugin {
     void RivalLayer::handleSetMode(
         const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
         const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+        RCLCPP_INFO(
+            rclcpp::get_logger("RivalLayer"),
+            "handleSetMode called with data=%d", request->data ? 1 : 0);
         if(request->data) {
             mode_param = 1;
             response->success = true;
@@ -215,6 +262,7 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::reset() {
+        RCLCPP_INFO(rclcpp::get_logger("RivalLayer"), "reset called");
         current_ = true;
         no_rival_ = false;
 
@@ -241,15 +289,23 @@ namespace custom_path_costmap_plugin {
         SStot_ = 0.0;
         rival_state_ = RivalState::UNKNOWN;
         rival_state_prev_ = RivalState::UNKNOWN;
+        rival_distance_ = 1.0;
+        vel_factor_ = 0.0;
+        position_offset_ = 0.0;
 
         rival_pose_received_ = false;
 
         resetMapToValue(0, 0, getSizeInCellsX(), getSizeInCellsY(), nav2_costmap_2d::FREE_SPACE);
 
         reset_timeout_ = 0;
+        RCLCPP_INFO(rclcpp::get_logger("RivalLayer"), "reset finished");
     }
 
     void RivalLayer::PredictRivalPath() {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "PredictRivalPath start");
         // Debug
         if(debug_mode_ == 1 || debug_mode_ == 2 || debug_mode_ == 3)    PrintRivalState();
 
@@ -285,6 +341,10 @@ namespace custom_path_costmap_plugin {
             //     }
             // }
         }
+
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "PredictRivalPath end: state=%d", static_cast<int>(rival_state_));
     }
 
     double RivalLayer::GetRegressionPrediction(double x) {
@@ -292,8 +352,15 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::UpdateStatistics() {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "UpdateStatistics called (path_full=%d)", rival_path_.isFull() ? 1 : 0);
         // Calculate the rival's statistics
         if(rival_path_.isFull()) {
+            SSres_ = 0.0;
+            SStot_ = 0.0;
+
             // Calculate the CoV
             rival_x_mean_ = rival_x_sum_ / model_size_;
             rival_y_mean_ = rival_y_sum_ / model_size_;
@@ -355,7 +422,11 @@ namespace custom_path_costmap_plugin {
                 SStot_ += pow(rival_path_.get(i).second - rival_y_mean_, 2);
             } 
 
-            R_sq_ = 1 - SSres_ / SStot_;
+            if (fabs(SStot_) < 1e-9) {
+                R_sq_ = 1.0;
+            } else {
+                R_sq_ = 1 - SSres_ / SStot_;
+            }
 
         } else {
             if(debug_mode_ == 3) {
@@ -368,6 +439,10 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::ExpandPointWithCircle(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius) {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "ExpandPointWithCircle called at (%.3f, %.3f), inflation=%.3f", x, y, InflationRadius);
         
         //RCLCPP_INFO(logger_,"vel_factor is [%lf]", vel_factor);
         if(rival_state_ == RivalState::MOVING){
@@ -416,10 +491,20 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::ExpandLine(double x, double y, double MaxCost, double InflationRadius, double CostScalingFactor, double InscribedRadius, double ExtendLength) {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "ExpandLine called at (%.3f, %.3f), extend=%.3f", x, y, ExtendLength);
+
+        if (!std::isfinite(ExtendLength) || ExtendLength < 0.0) {
+            ExtendLength = 0.0;
+        }
+
         double mark_x = 0/*position_offset_ * cos_theta_ * direction_*/;
         double mark_y = 0/*position_offset_ * sin_theta_ * direction_*/;
         unsigned int mx, my;
-        int goal_steps = ExtendLength / resolution_;
+        int goal_steps = static_cast<int>(ExtendLength / std::max(resolution_, 1e-6));
+        goal_steps = std::min(goal_steps, 2000);
         
         
         if(goal_steps == 0 && worldToMap(x, y, mx, my) && rival_distance_ < 0.75) {
@@ -441,6 +526,10 @@ namespace custom_path_costmap_plugin {
     }
 
     void RivalLayer::FieldExpansion(double x, double y) {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "FieldExpansion start at (%.3f, %.3f)", x, y);
         // Update Prediction
         PredictRivalPath();
 
@@ -455,20 +544,23 @@ namespace custom_path_costmap_plugin {
                 break;
 
             case RivalState::MOVING:
+                {
+                const double safe_rival_distance = std::isfinite(rival_distance_) ? rival_distance_ : 1.0;
                 if(use_statistic_method_) {
                     vel_factor_ = std::min(1.0, hypot(rival_x_cov_, rival_y_cov_)/(cov_range_max_-cov_range_min_));
-                    position_offset_ = std::max((rival_distance_ - safe_distance_), 0.0) * vel_factor_ * offset_vel_factor_weight_statistic_;
+                    position_offset_ = std::max((safe_rival_distance - safe_distance_), 0.0) * vel_factor_ * offset_vel_factor_weight_statistic_;
                     ExpandPointWithCircle(x, y, nav2_costmap_2d::MAX_NON_OBSTACLE, halted_inflation_radius_, halted_cost_scaling_factor_, rival_inscribed_radius_);
                     ExpandLine(x, y, nav2_costmap_2d::MAX_NON_OBSTACLE, moving_inflation_radius_, moving_cost_scaling_factor_, 0, 
-                        max_extend_length_* vel_factor_ * expand_vel_factor_weight_statistic_ / std::max(rival_distance_, 1.0));
+                        max_extend_length_* vel_factor_ * expand_vel_factor_weight_statistic_ / std::max(safe_rival_distance, 1.0));
                 } else {
                     vel_factor_ = std::min(1.0, hypot(v_from_localization_x_, v_from_localization_y_)/(vel_range_max_-vel_range_min_));
-                    position_offset_ = std::max((rival_distance_ - safe_distance_), 0.0) * vel_factor_ * offset_vel_factor_weight_localization_;
+                    position_offset_ = std::max((safe_rival_distance - safe_distance_), 0.0) * vel_factor_ * offset_vel_factor_weight_localization_;
                     ExpandPointWithCircle(x, y, nav2_costmap_2d::MAX_NON_OBSTACLE, halted_inflation_radius_, halted_cost_scaling_factor_, rival_inscribed_radius_);
                     ExpandLine(x, y, nav2_costmap_2d::MAX_NON_OBSTACLE, moving_inflation_radius_, moving_cost_scaling_factor_, 0, 
-                        max_extend_length_ * vel_factor_ * expand_vel_factor_weight_localization_ / std::max(rival_distance_, 1.0));
+                        max_extend_length_ * vel_factor_ * expand_vel_factor_weight_localization_ / std::max(safe_rival_distance, 1.0));
                 }
                 break;
+                }
             
             case RivalState::UNKNOWN:
                 ExpandPointWithCircle(x, y, nav2_costmap_2d::MAX_NON_OBSTACLE, unknown_inflation_radius_, unknown_cost_scaling_factor_, rival_inscribed_radius_);
@@ -480,10 +572,23 @@ namespace custom_path_costmap_plugin {
                     "Unknown rival state");
                 break;
         }
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "FieldExpansion end with state=%d", static_cast<int>(rival_state_));
     }
 
     void RivalLayer::updateRadius() {
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "updateRadius called");
         auto node = node_.lock();
+        if (!node) {
+            RCLCPP_WARN(
+                rclcpp::get_logger("RivalLayer"),
+                "updateRadius skipped: failed to lock node");
+            return;
+        }
         // Update the inflation radius of the rival
         if(!external_rival_data_path_.empty()) {
             try {
@@ -518,24 +623,40 @@ namespace custom_path_costmap_plugin {
         wandering_inflation_radius_ += rival_inscribed_radius_;
         moving_inflation_radius_ += rival_inscribed_radius_;
         unknown_inflation_radius_ += rival_inscribed_radius_;
+
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "updateRadius done: rival_inscribed_radius=%.3f", rival_inscribed_radius_);
     }
 
     void RivalLayer::activate() {
         RCLCPP_INFO(
             rclcpp::get_logger("RivalLayer"), 
             "Activating RivalLayer");
+
+        enabled_ = true;
     }
         
     void RivalLayer::deactivate() {
         RCLCPP_INFO(
             rclcpp::get_logger("RivalLayer"), 
             "Deactivating RivalLayer");
+
+        enabled_ = false;
     }
             
     // Subscribe to the rival's pose
     void RivalLayer::rivalPoseCallback(const nav_msgs::msg::Odometry::SharedPtr rival_pose) {
+        if (!enabled_) {
+            return;
+        }
+
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
         if(rival_pose->header.frame_id.empty()) {
             no_rival_ = true;
+            RCLCPP_WARN_THROTTLE(
+                rclcpp::get_logger("RivalLayer"), throttle_clock, 2000,
+                "rivalPoseCallback received empty frame_id");
             return;
         }
         // Store the rival's pose
@@ -567,10 +688,22 @@ namespace custom_path_costmap_plugin {
                 rclcpp::get_logger("RivalLayer"), 
                 "Statistics: x_mean=%f, y_mean=%f, x_cov=%f, y_cov=%f, R_sq=%f", rival_x_mean_, rival_y_mean_, rival_x_cov_, rival_y_cov_, R_sq_);
         }
+
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "rivalPoseCallback updated pose x=%.3f y=%.3f", rival_x_, rival_y_);
     }
     void RivalLayer::rivalDistanceCallback(const std_msgs::msg::Float64::SharedPtr msg)
     {
-        rival_distance_ = msg->data;
+        if (!enabled_) {
+            return;
+        }
+
+        rival_distance_ = std::isfinite(msg->data) ? msg->data : 1.0;
+        static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+        RCLCPP_INFO_THROTTLE(
+            rclcpp::get_logger("RivalLayer"), throttle_clock, 1000,
+            "rivalDistanceCallback distance=%.3f", rival_distance_);
         // RCLCPP_INFO(logger_, "rival_distance is : %f", msg->data);
     }
 
