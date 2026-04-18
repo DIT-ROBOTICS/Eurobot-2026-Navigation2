@@ -110,12 +110,20 @@ def load_csv(csv_path: Path):
             "Expected columns like: time_sec,frame_id,x,y,z,yaw_rad"
         )
 
+    # drop out last row that is usually corrupted
+    if len(t) > 1:
+        t = t[:-1]
+        x = x[:-1]
+        y = y[:-1]
+        z = z[:-1]
+        yaw = yaw[:-1]
+
     t0 = t[0]
     t = [v - t0 for v in t]
     return frame_id or "unknown", t, x, y, z, yaw
 
 
-def segment_goal_sets(t_vals, x_vals, y_vals, gap_threshold_sec=1.0, jump_threshold_m=0.40):
+def segment_goal_sets(t_vals, x_vals, y_vals, gap_threshold_sec=3.0, jump_threshold_m=0.40):
     """
     Split samples into goal sets.
     Primary rule: large timestamp gap.
@@ -133,9 +141,11 @@ def segment_goal_sets(t_vals, x_vals, y_vals, gap_threshold_sec=1.0, jump_thresh
         new_segment = False
 
         if not all_zero_time and (t_vals[i] - t_vals[i - 1] > gap_threshold_sec):
+            print("new cluster by time")
             new_segment = True
         elif all_zero_time:
             jump = math.hypot(x_vals[i] - x_vals[i - 1], y_vals[i] - y_vals[i - 1])
+            print("new cluster by dist")
             if jump > jump_threshold_m:
                 new_segment = True
 
