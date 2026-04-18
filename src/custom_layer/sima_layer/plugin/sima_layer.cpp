@@ -103,9 +103,9 @@ void SimaLayer::onInitialize() {
     std::vector<int64_t> filtered_ids;
 
     if (domain_id == 11) {
-        std::copy_if(sima_ids_.begin(), sima_ids_.end(), std::back_inserter(filtered_ids), [](int64_t id) { return id >= 1 && id <= 4; });
-    } else if (domain_id == 13) {
         std::copy_if(sima_ids_.begin(), sima_ids_.end(), std::back_inserter(filtered_ids), [](int64_t id) { return id >= 11 && id <= 14; });
+    } else if (domain_id == 13) {
+        std::copy_if(sima_ids_.begin(), sima_ids_.end(), std::back_inserter(filtered_ids), [](int64_t id) { return id >= 1 && id <= 4; });
     } else {
         std::copy_if(sima_ids_.begin(), sima_ids_.end(), std::back_inserter(filtered_ids), [](int64_t id) { return (id >= 11 && id <= 14) || (id >= 1 && id <= 4); });
         RCLCPP_INFO (rclcpp::get_logger("SimaLayer"), "ROS_DOMAIN_ID=%d does not match expected values (11 or 13), using all SIMA IDs", domain_id);
