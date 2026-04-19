@@ -25,6 +25,7 @@
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "std_msgs/msg/int16.hpp"
 
 using std::hypot;
 using std::min;
@@ -97,6 +98,18 @@ Controller::Controller(const rclcpp_lifecycle::LifecycleNode::SharedPtr & node) 
         [this](const std_msgs::msg::String::SharedPtr msg) {
             controller_function_ = msg->data;
     });
+
+    // Subscribe to dock side selector: 0:+y, 1:+x, 2:-y, 3:-x
+    dock_side_sub_ = node->create_subscription<std_msgs::msg::Int16>(
+        "/robot/dock_side",
+        rclcpp::QoS(10),
+        [this](const std_msgs::msg::Int16::SharedPtr msg) {
+            if (msg->data >= 0 && msg->data <= 3) {
+                cam_side_ = msg->data;
+            } else {
+                RCLCPP_WARN(logger_, "Invalid /robot/dock_side=%d, keeping previous=%d", msg->data, cam_side_);
+            }
+    });
 }
 
 RobotState::RobotState(double x, double y, double theta) {
@@ -155,28 +168,105 @@ void Controller::velocityInit(const geometry_msgs::msg::Pose & target) {
 }
 
 bool Controller::computeVelocityCommand(
-  const geometry_msgs::msg::Pose & target, geometry_msgs::msg::Twist & cmd, bool /*backward*/) {
-    
-    double global_distance = sqrt(pow(target.position.x, 2) + pow(target.position.y, 2));   // Target is in base_link frame
-    double global_angle = tf2::getYaw(target.orientation);
-    // ? Why
-    // local_goal_ = globalTolocal(robot_pose_, local_goal_);
-    double local_angle = atan2(target.position.y, target.position.x);
+  const geometry_msgs::msg::Pose & target, geometry_msgs::msg::Twist & cmd, bool /*backward*/)
+{
+    // try new method of controller: eliminate perpendicular error first
+    if ( controller_function_ == "Forklift" ) {
+        return computeOmniVelocityCommand(target, cmd);
+    }
+    else {
+        // legacy function down below
+        
+        double global_distance = sqrt(pow(target.position.x, 2) + pow(target.position.y, 2));   // Target is in base_link frame
+        double global_angle = tf2::getYaw(target.orientation);
+        // ? Why
+        // local_goal_ = globalTolocal(robot_pose_, local_goal_);
+        double local_angle = atan2(target.position.y, target.position.x);
 
+        publishLocalGoal();
+        
+        if(controller_function_ == "NonStop") {
+            cmd.linear.x = ExtractVelocity(cmd.linear.x, global_distance, state_x_) * cos(local_angle);
+            cmd.linear.y = ExtractVelocity(cmd.linear.y, global_distance, state_y_) * sin(local_angle);
+            cmd.angular.z = getGoalAngle(global_angle);
+        } else {
+            cmd.linear.x = ExtractVelocity(cmd.linear.x, global_distance, state_x_) * cos(local_angle);
+            cmd.linear.y = ExtractVelocity(cmd.linear.y, global_distance, state_y_) * sin(local_angle);
+            cmd.angular.z = getGoalAngle(global_angle);
+        }
+        
+        return true;
+    }
+}
+
+bool Controller::computeOmniVelocityCommand(
+  const geometry_msgs::msg::Pose & target, geometry_msgs::msg::Twist & cmd) {
+    
+    double x_local = target.position.x;     // Target x in base_link frame
+    double y_local = target.position.y;     // Target y in base_link frame
+    double yaw_target = tf2::getYaw(target.orientation);
+    
+    double distance = sqrt(pow(x_local, 2) + pow(y_local, 2));
+    double target_angle = atan2(y_local, x_local);
+    
     publishLocalGoal();
     
-    if(controller_function_ == "NonStop") {
-        cmd.linear.x = ExtractVelocity(cmd.linear.x, global_distance, state_x_) * cos(local_angle);
-        cmd.linear.y = ExtractVelocity(cmd.linear.y, global_distance, state_y_) * sin(local_angle);
-        cmd.angular.z = getGoalAngle(global_angle);
-    } else {
-        cmd.linear.x = ExtractVelocity(cmd.linear.x, global_distance, state_x_) * cos(local_angle);
-        cmd.linear.y = ExtractVelocity(cmd.linear.y, global_distance, state_y_) * sin(local_angle);
-        cmd.angular.z = getGoalAngle(global_angle);
+    // Docking direction from /robot/dock_side in robot frame:
+    // 0:+y, 1:+x, 2:-y, 3:-x
+    double dock_dir_x = 1.0;
+    double dock_dir_y = 0.0;
+    switch (cam_side_) {
+        case 0: dock_dir_x = 0.0;  dock_dir_y = 1.0;  break;
+        case 1: dock_dir_x = 1.0;  dock_dir_y = 0.0;  break;
+        case 2: dock_dir_x = 0.0;  dock_dir_y = -1.0; break;
+        case 3: dock_dir_x = -1.0; dock_dir_y = 0.0;  break;
+        default: break;
     }
+
+    // Perpendicular unit vector to dock direction (+pi/2 of dock_dir)
+    const double perp_x = -dock_dir_y;
+    const double perp_y = dock_dir_x;
+
+    // Project target into along-dock and perpendicular components
+    const double along_offset = x_local * dock_dir_x + y_local * dock_dir_y;
+    const double perp_offset = x_local * perp_x + y_local * perp_y;
+
+    // Angle between target direction and dock direction
+    const double dock_dir_angle = std::atan2(dock_dir_y, dock_dir_x);
+    const double angle_diff = angles::shortest_angular_distance(dock_dir_angle, target_angle);
+
+    // Calculate angle threshold from parameter (radians)
+    double angle_threshold = omni_docking_angle_threshold_;
+    
+    if (std::abs(angle_diff) < angle_threshold) {
+        // Direct approach: move toward goal while maintaining velocity profile
+        const double current_speed = std::hypot(cmd.linear.x, cmd.linear.y);
+        double v_magnitude = ExtractVelocity(current_speed, distance, state_x_);
+        cmd.linear.x = v_magnitude * cos(target_angle);
+        cmd.linear.y = v_magnitude * sin(target_angle);
+        RCLCPP_DEBUG(logger_, "Omni docking: DIRECT approach, angle_diff=%.3f, v_x=%.3f, v_y=%.3f", 
+                     angle_diff, cmd.linear.x, cmd.linear.y);
+    } else {
+        // Eliminate perpendicular component first, in the correct dock-side frame
+        const double perp_distance = std::fabs(perp_offset);
+        const double current_perp_speed = std::fabs(cmd.linear.x * perp_x + cmd.linear.y * perp_y);
+        const double v_perp = ExtractVelocity(current_perp_speed, perp_distance, state_y_);
+        const double signed_v_perp = (perp_offset >= 0.0) ? v_perp : -v_perp; // a scalar to times into perp vector
+
+        cmd.linear.x = signed_v_perp * perp_x;
+        cmd.linear.y = signed_v_perp * perp_y;
+        RCLCPP_DEBUG(logger_,
+                     "Omni docking: PERP elimination side=%d, along=%.3f, perp=%.3f, v_x=%.3f, v_y=%.3f",
+                     cam_side_, along_offset, perp_offset, cmd.linear.x, cmd.linear.y);
+    }
+    
+    // Angular velocity: align with target orientation
+    cmd.angular.z = getGoalAngle(yaw_target);
+    
     
     return true;
 }
+
 
 bool Controller::computeIfNeedStop(const geometry_msgs::msg::Pose & target) {
     // Calculate the vector from the robot to the target
@@ -338,6 +428,7 @@ void Controller::declareAllControlParams()
         {"stop_degree", rclcpp::ParameterValue(45.0)},
         {"rival_radius", rclcpp::ParameterValue(0.44)},
         {"max_speed_diff", rclcpp::ParameterValue(0.05)},
+        {"omni_docking_angle_threshold", rclcpp::ParameterValue(15.0)},  // in degrees
     };
 
     for (const auto& profile : profiles_)
@@ -368,6 +459,9 @@ void Controller::updateParams() {
     node_->get_parameter(param_name_ + ".stop_degree", stop_degree_);
     node_->get_parameter(param_name_ + ".rival_radius", rival_radius_);
     node_->get_parameter(param_name_ + ".max_speed_diff", max_speed_diff_);
+    double omni_docking_angle_threshold_deg;
+    node_->get_parameter(param_name_ + ".omni_docking_angle_threshold", omni_docking_angle_threshold_deg);
+    omni_docking_angle_threshold_ = angles::from_degrees(omni_docking_angle_threshold_deg);
     std::string external_rival_data_path;
     node_->get_parameter(param_name_ + ".external_rival_data_path", external_rival_data_path);
     if(!external_rival_data_path.empty()) {

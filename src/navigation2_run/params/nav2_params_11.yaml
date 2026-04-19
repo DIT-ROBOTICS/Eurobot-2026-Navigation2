@@ -645,6 +645,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15
 
     Gentle:
       max_linear_vel: 0.15
@@ -659,6 +660,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15
 
     Rush:
       max_linear_vel: 0.1
@@ -673,6 +675,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15
 
     Cam:
       max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
@@ -688,6 +691,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15
 
     CamFront:
       max_linear_vel: 0.23
@@ -702,6 +706,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15
 
 
 final_pose_bridge:
