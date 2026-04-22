@@ -19,6 +19,8 @@
 #include <memory>
 #include <vector>
 #include <fstream>
+#include <deque>
+#include <mutex>
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -110,6 +112,12 @@ public:
 
 protected:
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr state);
+  void detectedDockPoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose);
+  void finalPoseNavCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void poseSyncTimerCallback();
+  bool processMatchedPose(
+    const geometry_msgs::msg::PoseStamped & detected_pose,
+    const geometry_msgs::msg::PoseStamped & matched_final_pose);
   void resetDockPoseSubscription();
   void recordDockPoseHistory(const geometry_msgs::msg::PoseStamped & dock_pose);
   double computeExternalDockingDist(const double z ); 
@@ -134,6 +142,11 @@ protected:
   // If subscribed to a detected pose topic, will contain latest message
   geometry_msgs::msg::PoseStamped detected_dock_pose_;
   geometry_msgs::msg::PoseStamped detected_dock_pose_prev_;
+  std::deque<geometry_msgs::msg::PoseStamped> detected_dock_pose_queue_;
+  std::deque<geometry_msgs::msg::PoseStamped> final_pose_queue_;
+  geometry_msgs::msg::PoseStamped processed_dock_pose_cached_;
+  bool has_processed_dock_pose_cached_{false};
+  std::mutex pose_sync_mutex_;
   // This is the actual dock pose once it has the specified translation/rotation applied
   // If not subscribed to a topic, this is simply the database dock pose
   geometry_msgs::msg::PoseStamped dock_pose_;
@@ -156,6 +169,14 @@ protected:
   tf2::Quaternion external_detection_rotation_;
   double external_detection_translation_x_;
   double external_detection_translation_y_;
+  int pose_match_max_delta_ms_;
+  int pose_sync_timer_period_ms_;
+  rclcpp::TimerBase::SharedPtr pose_sync_timer_;
+
+  static constexpr int kPoseSyncTimerPeriodMinMs = 80; // avoid mis-used param of Timer's period
+  static constexpr int kPoseSyncTimerPeriodMaxMs = 500;
+  static constexpr size_t kPoseQueueCap = 100; // max queue size
+  static constexpr double kPoseQueueMaxAgeSec = 1.0; // stale data retention
 
   // Filtering of detected poses
   std::shared_ptr<PoseFilter> filter_;

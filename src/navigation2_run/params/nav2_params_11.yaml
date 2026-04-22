@@ -615,11 +615,13 @@ docking_server:
       external_detection_rotation_pitch: 0.0
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
+      pose_match_max_delta_ms: 100
+      pose_sync_timer_period_ms: 100
       # the threshold for CameraOnBoard to see ArUco
       camera_aruco_max: 0.42
       camera_aruco_min: 0.19
       # Optional dock pose history CSV logging (empty path disables)
-      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dock_pose_history.csv"
+      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dph.csv"
       dock_pose_history_suffix_datetime: true
 
     docks: ['home_dock']
