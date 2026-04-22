@@ -208,6 +208,11 @@ bool Controller::computeOmniVelocityCommand(
     
     double distance = sqrt(pow(x_local, 2) + pow(y_local, 2));
     double target_angle = atan2(y_local, x_local);
+
+        RCLCPP_INFO_THROTTLE(
+            logger_, *clock_, 1000,
+            "OmniDock input: side=%d, target(x=%.3f,y=%.3f,yaw=%.3f), cmd_in(vx=%.3f,vy=%.3f,w=%.3f), dist=%.3f, target_angle=%.3f",
+            cam_side_, x_local, y_local, yaw_target, cmd.linear.x, cmd.linear.y, cmd.angular.z, distance, target_angle);
     
     publishLocalGoal();
     
@@ -223,6 +228,8 @@ bool Controller::computeOmniVelocityCommand(
         default: break;
     }
 
+    RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "OmniDock basis: dock_dir=(%.1f,%.1f)", dock_dir_x, dock_dir_y);
+
     // Perpendicular unit vector to dock direction (+pi/2 of dock_dir)
     const double perp_x = -dock_dir_y;
     const double perp_y = dock_dir_x;
@@ -237,6 +244,11 @@ bool Controller::computeOmniVelocityCommand(
 
     // Calculate angle threshold from parameter (radians)
     double angle_threshold = omni_docking_angle_threshold_;
+
+        RCLCPP_INFO_THROTTLE(
+            logger_, *clock_, 1000,
+            "OmniDock projection: along=%.3f, perp=%.3f, angle_diff=%.3f, threshold=%.3f",
+            along_offset, perp_offset, angle_diff, angle_threshold);
     
     if (std::abs(angle_diff) < angle_threshold) {
         // Direct approach: move toward goal while maintaining velocity profile
@@ -244,8 +256,9 @@ bool Controller::computeOmniVelocityCommand(
         double v_magnitude = ExtractVelocity(current_speed, distance, state_x_);
         cmd.linear.x = v_magnitude * cos(target_angle);
         cmd.linear.y = v_magnitude * sin(target_angle);
-        RCLCPP_DEBUG(logger_, "Omni docking: DIRECT approach, angle_diff=%.3f, v_x=%.3f, v_y=%.3f", 
-                     angle_diff, cmd.linear.x, cmd.linear.y);
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000,
+                 "Omni docking: DIRECT approach, angle_diff=%.3f, v_x=%.3f, v_y=%.3f", 
+                 angle_diff, cmd.linear.x, cmd.linear.y);
     } else {
         // Eliminate perpendicular component first, in the correct dock-side frame
         const double perp_distance = std::fabs(perp_offset);
@@ -255,9 +268,9 @@ bool Controller::computeOmniVelocityCommand(
 
         cmd.linear.x = signed_v_perp * perp_x;
         cmd.linear.y = signed_v_perp * perp_y;
-        RCLCPP_DEBUG(logger_,
-                     "Omni docking: PERP elimination side=%d, along=%.3f, perp=%.3f, v_x=%.3f, v_y=%.3f",
-                     cam_side_, along_offset, perp_offset, cmd.linear.x, cmd.linear.y);
+        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000,
+                 "Omni docking: PERP elimination side=%d, along=%.3f, perp=%.3f, v_x=%.3f, v_y=%.3f",
+                 cam_side_, along_offset, perp_offset, cmd.linear.x, cmd.linear.y);
     }
     
     // Angular velocity: align with target orientation
