@@ -366,7 +366,7 @@ global_costmap:
       trinary_costmap: false
       lethal_cost_threshold: 10
       unknown_cost_value: 255
-      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer"]
+      plugins: ["static_layer", "inflation_layer", "rival_layer", "object_layer", "keepout_layer", "sima_layer"]
       # plugins: ["static_layer", "inflation_layer", "object_layer", "keepout_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -375,6 +375,40 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
         inflation_radius: 0.21
+      sima_layer:
+        plugin: "Sima_costmap_plugin::SimaLayer"
+        enabled: True
+        auto_reset_with_timeout: true
+        model_size: 16
+        x_cov_threshold: 0.012
+        y_cov_threshold: 0.012
+        R_sq_threshold: 0.88
+        reset_timeout_threshold: 15
+        sima_ids: [1, 2, 3, 4, 11, 12, 13, 14]
+        robot_inscribed_radius: 0.0
+        rival_inscribed_radius: 0.2
+        halted_inflation_radius: 0.2
+        wandering_inflation_radius: 0.2
+        moving_inflation_radius: 0.2
+        unknown_inflation_radius: 0.05
+        halted_cost_scaling_factor: 5.0
+        wandering_cost_scaling_factor: 5.0
+        moving_cost_scaling_factor: 5.0
+        unknown_cost_scaling_factor: 15.0
+        max_extend_length: 0.06
+        cov_range_max: 0.02
+        cov_range_min: 0.006
+        vel_range_max: 0.4
+        vel_range_min: 0.0
+        inscribed_radius_rate: 0.98
+        inflation_radius_rate: 5.0
+        debug_mode: 0
+        use_statistic_method: false
+        offset_vel_factor_weight_statistic: 0.25
+        expand_vel_factor_weight_statistic: 0.25
+        offset_vel_factor_weight_localization: 0.25
+        expand_vel_factor_weight_localization: 0.25
+        safe_distance: 0.12
       rival_layer:
         plugin: "custom_path_costmap_plugin::RivalLayer"
         enabled: True
@@ -647,7 +681,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Gentle:
       max_linear_vel: 0.15
@@ -662,7 +696,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Rush:
       max_linear_vel: 0.1
@@ -677,11 +711,11 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Cam:
-      max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
-      # max_linear_vel: 0.25 # when cam has high update rate ( > 10 )
+      # max_linear_vel: 0.14 # when cam has low update rate ( < 10 )
+      max_linear_vel: 0.2 # when cam has high update rate ( > 10 )
       min_linear_vel: 0.03
       linear_kp_accel_vel: 0.7
       linear_ki_accel_vel: 0.3
@@ -693,7 +727,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     CamFront:
       max_linear_vel: 0.23
@@ -708,7 +742,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
 
 final_pose_bridge:
