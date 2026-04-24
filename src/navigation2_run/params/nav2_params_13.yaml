@@ -226,7 +226,7 @@ controller_server:
       rival_min_speed_scale: 0.55
       rival_close_distance: 0.65
       rival_stop_distance: 0.55
-      rival_stop_timeout: 3.0
+      rival_stop_timeout: 0.0
 
     Slow: # First version
       plugin: "teb_controller::TebController"
@@ -263,7 +263,7 @@ controller_server:
       rival_min_speed_scale: 0.75
       rival_close_distance: 0.6
       rival_stop_distance: 0.48
-      rival_stop_timeout: 3.0
+      rival_stop_timeout: 0.0
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
@@ -675,7 +675,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Gentle:
       max_linear_vel: 0.02
@@ -690,7 +690,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Rush:
       max_linear_vel: 0.3
@@ -705,10 +705,10 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Cam:
-      max_linear_vel: 0.2
+      max_linear_vel: 0.25
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
@@ -720,7 +720,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     CamFront:
       max_linear_vel: 0.15
@@ -735,7 +735,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
 final_pose_bridge:
   ros__parameters:
