@@ -18,11 +18,11 @@
             </RetryUntilSuccessful>
             <ReactiveFallback name="RecoveryFallback">
               <GoalUpdated/>
-              <RoundRobin name="RecoveryActions">
+              <PersistentSequenceWContOnFail current_child_idx="{current_child_idx}">
                 <Shrink shrink_to="0.05"/>
-                <Wait wait_duration="0.5"/>
+                <!-- <Wait wait_duration="0.1"/> -->
                 <Escape run_dist="5" time_allowance="5" is_recovery="1"/>
-              </RoundRobin>
+              </PersistentSequenceWContOnFail>
             </ReactiveFallback>
           </RecoveryNode>
         </ResetRecovery>
