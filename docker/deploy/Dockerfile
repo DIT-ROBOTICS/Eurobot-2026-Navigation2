@@ -154,9 +154,10 @@ USER root
 COPY ./settings/tf2_sensor_msgs.hpp /opt/ros/humble/include/tf2_sensor_msgs/tf2_sensor_msgs.hpp
 
 ##############################################################################
-# Copy tmux config file
+# Copy tmux config file and vimrc
 ##############################################################################
 COPY ./settings/.tmux.conf /home/${USERNAME}/.tmux.conf
+COPY ./settings/.vimrc /home/${USERNAME}/.vimrc
 
 ##############################################################################
 # Copy scripts and set permissions
