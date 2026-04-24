@@ -45,6 +45,8 @@ bt_navigator:
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
+      - nav2_persistent_sequence_bt_node
+      - nav2_persistent_sequence_w_cont_on_fail_bt_node
       - nav2_transform_available_condition_bt_node
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
@@ -649,7 +651,7 @@ docking_server:
       external_detection_rotation_pitch: 0.0
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
-      pose_match_max_delta_ms: 100
+      pose_match_max_delta_ms: 50
       pose_sync_timer_period_ms: 100
       # the threshold for CameraOnBoard to see ArUco
       camera_aruco_max: 0.42

@@ -45,6 +45,8 @@ bt_navigator:
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
+      - nav2_persistent_sequence_bt_node
+      - nav2_persistent_sequence_w_cont_on_fail_bt_node
       - nav2_transform_available_condition_bt_node
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
@@ -496,47 +498,47 @@ planner_server:
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
     # navfn planner setting
-    GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.02
-      use_astar: True
-      allow_unknown: false
-      # ============================
-      # A* / propagation parameters
-      # ============================
-      heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
-      priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
-      # ============================
-      # Obstacle-aware bias
-      # ============================
-      obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
-      obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
-      # ============================
-      # Path extraction / fallback
-      # ============================
-      plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
-      min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
-      potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
-
-    # smac planner setting
     # GridBased:
-    #   plugin: "nav2_smac_planner/SmacPlanner2D"
+    #   plugin: "nav2_navfn_planner/NavfnPlanner"
     #   tolerance: 0.02
     #   use_astar: True
     #   allow_unknown: false
-    #   # useful parameters
-    #   cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
-    #   distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
-    #   cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
-    #   # no need to change
-    #   downsample_costmap: false    # set to true to downsample costmap for planning
-    #   downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
-    #   smooth_path: false     # we prefer doing this by smoother
-    #   max_iterations: 200000
-    #   max_on_approach_iterations: 1000
-    #   straight_line_max_skip_points: 500
-    #   straight_line_resample_points: 500
-    #   straight_line_resample_spacing: 0.01
+    #   # ============================
+    #   # A* / propagation parameters
+    #   # ============================
+    #   heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+    #   priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+    #   # ============================
+    #   # Obstacle-aware bias
+    #   # ============================
+    #   obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+    #   obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+    #   # ============================
+    #   # Path extraction / fallback
+    #   # ============================
+    #   plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+    #   min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+    #   potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+
+    # smac planner setting
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.02
+      use_astar: True
+      allow_unknown: false
+      # useful parameters
+      cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
+      distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
+      cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
+      # no need to change
+      downsample_costmap: false    # set to true to downsample costmap for planning
+      downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
+      smooth_path: false     # we prefer doing this by smoother
+      max_iterations: 200000
+      max_on_approach_iterations: 1000
+      straight_line_max_skip_points: 500
+      straight_line_resample_points: 500
+      straight_line_resample_spacing: 0.01
 
 smoother_server:
   ros__parameters:
@@ -643,10 +645,10 @@ docking_server:
       external_detection_rotation_pitch: 0.0
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
-      pose_match_max_delta_ms: 100
+      pose_match_max_delta_ms: 50
       pose_sync_timer_period_ms: 100
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.42
+      camera_aruco_max: 0.42 # not used
       camera_aruco_min: 0.195
       # Optional dock pose history CSV logging (empty path disables)
       dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dph.csv"
@@ -675,7 +677,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Gentle:
       max_linear_vel: 0.02
@@ -690,7 +692,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Rush:
       max_linear_vel: 0.3
@@ -705,7 +707,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     Cam:
       max_linear_vel: 0.2
@@ -720,7 +722,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
     CamFront:
       max_linear_vel: 0.15
@@ -735,7 +737,7 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
-      omni_docking_angle_threshold: 15
+      omni_docking_angle_threshold: 15.0
 
 final_pose_bridge:
   ros__parameters:
