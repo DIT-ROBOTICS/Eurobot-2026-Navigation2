@@ -244,11 +244,14 @@ bool Controller::computeOmniVelocityCommand(
 
     // Calculate angle threshold from parameter (radians)
     double angle_threshold = omni_docking_angle_threshold_;
+    if (distance < omni_docking_dist_bound_) {
+        angle_threshold *= 2.0;
+    }
 
         RCLCPP_INFO_THROTTLE(
             logger_, *clock_, 1000,
-            "OmniDock projection: along=%.3f, perp=%.3f, angle_diff=%.3f, threshold=%.3f",
-            along_offset, perp_offset, angle_diff, angle_threshold);
+            "OmniDock projection: along=%.3f, perp=%.3f, dist=%.3f, angle_diff=%.3f, threshold=%.3f, dist_bound=%.3f",
+            along_offset, perp_offset, distance, angle_diff, angle_threshold, omni_docking_dist_bound_);
     
     if (std::abs(angle_diff) < angle_threshold) {
         // Direct approach: move toward goal while maintaining velocity profile
@@ -442,6 +445,7 @@ void Controller::declareAllControlParams()
         {"rival_radius", rclcpp::ParameterValue(0.44)},
         {"max_speed_diff", rclcpp::ParameterValue(0.05)},
         {"omni_docking_angle_threshold", rclcpp::ParameterValue(15.0)},  // in degrees
+        {"omni_docking_dist_bound", rclcpp::ParameterValue(0.05)},
     };
 
     for (const auto& profile : profiles_)
@@ -475,6 +479,7 @@ void Controller::updateParams() {
     double omni_docking_angle_threshold_deg;
     node_->get_parameter(param_name_ + ".omni_docking_angle_threshold", omni_docking_angle_threshold_deg);
     omni_docking_angle_threshold_ = angles::from_degrees(omni_docking_angle_threshold_deg);
+    node_->get_parameter(param_name_ + ".omni_docking_dist_bound", omni_docking_dist_bound_);
     std::string external_rival_data_path;
     node_->get_parameter(param_name_ + ".external_rival_data_path", external_rival_data_path);
     if(!external_rival_data_path.empty()) {

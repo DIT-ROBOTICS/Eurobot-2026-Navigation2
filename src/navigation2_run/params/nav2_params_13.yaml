@@ -674,6 +674,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Gentle:
       max_linear_vel: 0.02
@@ -689,6 +690,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Rush:
       max_linear_vel: 0.3
@@ -704,6 +706,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Cam:
       max_linear_vel: 0.25
@@ -719,6 +722,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     CamFront:
       max_linear_vel: 0.15
@@ -734,6 +738,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
 final_pose_bridge:
   ros__parameters:

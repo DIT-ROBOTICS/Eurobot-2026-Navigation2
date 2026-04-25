@@ -137,6 +137,7 @@ class Controller
     double look_ahead_distance_;
     double final_goal_angle_;
     double omni_docking_angle_threshold_;  // Angle threshold for omni-directional docking strategy
+    double omni_docking_dist_bound_;       // Distance bound to relax omni docking angle threshold
 
     // see if need to stop
     double stop_degree_;
