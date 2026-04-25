@@ -169,6 +169,11 @@ void TebController::configure(
     teb_path_pub_ = node->create_publisher<nav_msgs::msg::Path>(name_ + "/teb_path", rclcpp::SystemDefaultsQoS());
     // Mirror the custom_controller topic name for RViz
     global_plan_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 5);
+    goal_reached_pub_ = node->create_publisher<std_msgs::msg::Bool>(
+        "goal_reached",
+        rclcpp::QoS(10).reliable().transient_local());
+    navigate_to_pose_client_ =
+        rclcpp_action::create_client<NavigateToPose>(node, "/navigate_to_pose");
     global_costmap_sub_ = node->create_subscription<nav_msgs::msg::OccupancyGrid>(
         "/global_costmap/costmap",
         rclcpp::QoS(10),
@@ -194,6 +199,8 @@ void TebController::cleanup()
     has_plan_ = false;
     teb_path_pub_.reset();
     global_plan_pub_.reset();
+    goal_reached_pub_.reset();
+    navigate_to_pose_client_.reset();
     rival_pose_sub_.reset();
     global_costmap_sub_.reset();
     has_rival_pose_ = false;
@@ -203,6 +210,7 @@ void TebController::cleanup()
     blocked_since_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
     last_replan_time_ = rclcpp::Time(0, 0, clock_ ? clock_->get_clock_type() : RCL_ROS_TIME);
     last_vx_ = last_vy_ = last_w_ = 0.0;
+    escape_navigation_active_ = false;
     resetRivalEscapeState();
 }
 
@@ -530,6 +538,64 @@ void TebController::publishTebPath()
     }
 }
 
+void TebController::publishGoalReached() const
+{
+    if (!goal_reached_pub_) {
+        return;
+    }
+
+    std_msgs::msg::Bool msg;
+    msg.data = true;
+    goal_reached_pub_->publish(msg);
+}
+
+bool TebController::sendEscapeGoal(
+    const geometry_msgs::msg::PoseStamped & pose,
+    const RivalInfo & rival)
+{
+    if (!navigate_to_pose_client_ || !navigate_to_pose_client_->action_server_is_ready()) {
+        return false;
+    }
+
+    double target_x = 0.0;
+    double target_y = 0.0;
+    if (!findRivalEscapeTarget(pose, rival, target_x, target_y)) {
+        return false;
+    }
+
+    NavigateToPose::Goal goal_msg;
+    goal_msg.pose.header.frame_id = global_plan_.header.frame_id.empty() ? "map" : global_plan_.header.frame_id;
+    goal_msg.pose.header.stamp = clock_->now();
+    goal_msg.pose.pose.position.x = target_x;
+    goal_msg.pose.pose.position.y = target_y;
+    goal_msg.pose.pose.position.z = 0.0;
+    goal_msg.pose.pose.orientation = pose.pose.orientation;
+
+    auto send_goal_options = rclcpp_action::Client<NavigateToPose>::SendGoalOptions();
+    send_goal_options.goal_response_callback =
+        [this](std::shared_ptr<GoalHandleNavigateToPose> goal_handle) {
+            std::scoped_lock lk(mtx_);
+            if (!goal_handle) {
+                escape_navigation_active_ = false;
+                rival_escape_goal_requested_ = false;
+            }
+        };
+    send_goal_options.result_callback =
+        [this](const GoalHandleNavigateToPose::WrappedResult & result) {
+            std::scoped_lock lk(mtx_);
+            escape_navigation_active_ = false;
+            rival_escape_goal_requested_ = false;
+            if (result.code == rclcpp_action::ResultCode::SUCCEEDED) {
+                publishGoalReached();
+            }
+        };
+
+    escape_navigation_active_ = true;
+    rival_escape_goal_requested_ = true;
+    navigate_to_pose_client_->async_send_goal(goal_msg, send_goal_options);
+    return true;
+}
+
 bool TebController::shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now)
 {
     if (!raw_blocked) {
@@ -668,6 +734,8 @@ void TebController::beginRivalEscape(const geometry_msgs::msg::PoseStamped & pos
     motion_mode_ = MotionMode::RivalEscape;
     rival_escape_start_pose_ = pose;
     has_rival_escape_start_ = true;
+    rival_escape_pending_stop_ = true;
+    rival_escape_goal_requested_ = false;
     rival_escape_stall_cycles_ = 0;
     rival_escape_attempt_count_++;
 
@@ -685,6 +753,8 @@ void TebController::resetRivalEscapeState()
     motion_mode_ = MotionMode::FollowPath;
     rival_escape_start_pose_ = geometry_msgs::msg::PoseStamped{};
     has_rival_escape_start_ = false;
+    rival_escape_pending_stop_ = false;
+    rival_escape_goal_requested_ = false;
     rival_escape_stall_cycles_ = 0;
 }
 
@@ -880,16 +950,31 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     const RivalInfo rival = getRivalInfo(pose);
     applyRivalSlowdown(rival, vx, vy, w);
     vmag = std::hypot(vx, vy);
-    if (motion_mode_ == MotionMode::RivalEscape || shouldEnterRivalEscape(rival, vx, vy)) {
+    if (!escape_navigation_active_ &&
+        (motion_mode_ == MotionMode::RivalEscape || shouldEnterRivalEscape(rival, vx, vy))) {
         if (motion_mode_ != MotionMode::RivalEscape) {
             beginRivalEscape(pose);
         }
 
         if (!shouldExitRivalEscape(pose, rival, blocked_and_close, pose_collision)) {
-            if (!buildRivalEscapeCommand(pose, rival, v_cur, cmd)) {
-                resetRivalEscapeState();
-                throw nav2_core::PlannerException("TEB: rival local escape failed");
+            if (rival_escape_pending_stop_) {
+                cmd.twist.linear.x = 0.0;
+                cmd.twist.linear.y = 0.0;
+                cmd.twist.angular.z = 0.0;
+                if (v_cur <= stop_v_eps_) {
+                    rival_escape_pending_stop_ = false;
+                }
+                publishTebPath();
+                return cmd;
             }
+
+            if (!rival_escape_goal_requested_ && !sendEscapeGoal(pose, rival)) {
+                resetRivalEscapeState();
+                throw nav2_core::PlannerException("TEB: rival escape goal dispatch failed");
+            }
+            cmd.twist.linear.x = 0.0;
+            cmd.twist.linear.y = 0.0;
+            cmd.twist.angular.z = 0.0;
             publishTebPath();
             return cmd;
         }

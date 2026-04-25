@@ -19,6 +19,9 @@
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "nav2_msgs/action/navigate_to_pose.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 #include "tf2_ros/buffer.h"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -40,6 +43,8 @@ class TebController : public nav2_core::Controller
 public:
     TebController() = default;
     ~TebController() override = default;
+    using NavigateToPose = nav2_msgs::action::NavigateToPose;
+    using GoalHandleNavigateToPose = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
     void configure(
         const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
@@ -112,6 +117,8 @@ private:
         double & tx, double & ty) const;
 
     void publishTebPath();
+    void publishGoalReached() const;
+    bool sendEscapeGoal(const geometry_msgs::msg::PoseStamped & pose, const RivalInfo & rival);
     bool shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now);
     RivalInfo getRivalInfo(const geometry_msgs::msg::PoseStamped & pose) const;
     bool shouldEnterRivalEscape(const RivalInfo & rival, double cmd_vx, double cmd_vy) const;
@@ -159,6 +166,8 @@ private:
     // pubs
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr teb_path_pub_;
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr goal_reached_pub_;
+    rclcpp_action::Client<NavigateToPose>::SharedPtr navigate_to_pose_client_;
     // parameters (band)
     double dt_ref_{0.1};
     double resample_ds_{0.05};
@@ -221,6 +230,9 @@ private:
     MotionMode motion_mode_{MotionMode::FollowPath};
     geometry_msgs::msg::PoseStamped rival_escape_start_pose_;
     bool has_rival_escape_start_{false};
+    bool rival_escape_pending_stop_{false};
+    bool rival_escape_goal_requested_{false};
+    bool escape_navigation_active_{false};
     int rival_escape_stall_cycles_{0};
     int rival_escape_attempt_count_{0};
 };
