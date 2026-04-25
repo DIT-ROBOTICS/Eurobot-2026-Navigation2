@@ -700,7 +700,15 @@ bool TebController::findRivalEscapeTarget(
     const double px = pose.pose.position.x;
     const double py = pose.pose.position.y;
     const double step = std::max(0.02, rival_escape_distance_ / 10.0);
-    for (double distance = step; distance <= rival_escape_distance_ + 1e-6; distance += step) {
+    const double release_distance =
+        rival_stop_distance_ + std::max(0.05, rival_escape_distance_ * 0.5);
+    const double clearance_margin = std::max(0.03, rival_escape_distance_ * 0.25);
+    const double min_escape_distance =
+        std::max(step, release_distance - rival.distance + clearance_margin);
+    const double search_limit =
+        std::max(rival_escape_distance_, min_escape_distance + clearance_margin);
+
+    for (double distance = min_escape_distance; distance <= search_limit + 1e-6; distance += step) {
         const double candidate_x = px + away_x * distance;
         const double candidate_y = py + away_y * distance;
         const unsigned char cost = costAtGlobal(candidate_x, candidate_y);
@@ -982,6 +990,10 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         resetRivalEscapeState();
     } else {
         resetRivalEscapeState();
+    }
+
+    if (escape_navigation_active_) {
+        w = 0.0;
     }
 
     if (blocked_and_close) {
