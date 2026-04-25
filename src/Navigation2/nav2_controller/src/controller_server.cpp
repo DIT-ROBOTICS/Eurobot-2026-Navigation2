@@ -469,7 +469,6 @@ void ControllerServer::setPlannerPath(const nav_msgs::msg::Path & path)
 
 void ControllerServer::computeAndPublishVelocity()
 {
-  static const std::string kRivalTimeoutSkipGoal = "TEB_RIVAL_STOP_TIMEOUT_SKIP_GOAL";
   geometry_msgs::msg::PoseStamped pose;
 
   if (!getRobotPose(pose)) {
@@ -492,24 +491,6 @@ void ControllerServer::computeAndPublishVelocity()
       goal_checkers_[current_goal_checker_].get());
     last_valid_cmd_time_ = now();
   } catch (nav2_core::PlannerException & e) {
-    if (std::string(e.what()) == kRivalTimeoutSkipGoal) {
-      RCLCPP_WARN(
-        this->get_logger(),
-        "Rival stop timeout exceeded, marking current goal reached and advancing to next goal.");
-      cmd_vel_2d.twist.angular.x = 0;
-      cmd_vel_2d.twist.angular.y = 0;
-      cmd_vel_2d.twist.angular.z = 0;
-      cmd_vel_2d.twist.linear.x = 0;
-      cmd_vel_2d.twist.linear.y = 0;
-      cmd_vel_2d.twist.linear.z = 0;
-      cmd_vel_2d.header.frame_id = costmap_ros_->getBaseFrameID();
-      cmd_vel_2d.header.stamp = now();
-      end_pose_.header = pose.header;
-      end_pose_.pose = pose.pose;
-      current_path_.poses.clear();
-      current_path_.poses.push_back(pose);
-      return;
-    }
     if (failure_tolerance_ > 0 || failure_tolerance_ == -1.0) {
       RCLCPP_WARN(this->get_logger(), "%s", e.what());
       cmd_vel_2d.twist.angular.x = 0;

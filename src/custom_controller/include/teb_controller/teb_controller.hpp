@@ -61,6 +61,22 @@ public:
     void setSpeedLimit(const double & speed_limit, const bool & percentage) override;
 
 private:
+    struct RivalInfo
+    {
+        bool valid{false};
+        double dx_world{0.0};
+        double dy_world{0.0};
+        double dx_body{0.0};
+        double dy_body{0.0};
+        double distance{std::numeric_limits<double>::infinity()};
+    };
+
+    enum class MotionMode
+    {
+        FollowPath,
+        RivalEscape
+    };
+
     // utils
     static double clamp(double v, double lo, double hi)
     {
@@ -97,6 +113,27 @@ private:
 
     void publishTebPath();
     bool shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now);
+    RivalInfo getRivalInfo(const geometry_msgs::msg::PoseStamped & pose) const;
+    bool shouldEnterRivalEscape(const RivalInfo & rival, double cmd_vx, double cmd_vy) const;
+    bool shouldExitRivalEscape(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        bool blocked_and_close,
+        bool pose_collision) const;
+    bool buildRivalEscapeCommand(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        double current_speed,
+        geometry_msgs::msg::TwistStamped & cmd);
+    void applyRivalSlowdown(const RivalInfo & rival, double & vx, double & vy, double & w) const;
+    bool findRivalEscapeTarget(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        double & target_x,
+        double & target_y) const;
+    double distanceFromEscapeStart(const geometry_msgs::msg::PoseStamped & pose) const;
+    void beginRivalEscape(const geometry_msgs::msg::PoseStamped & pose);
+    void resetRivalEscapeState();
 
 private:
     // ros
@@ -136,12 +173,12 @@ private:
     double obstacle_check_lookahead_{0.5};
     double obstacle_check_time_horizon_{1.0};
     double obstacle_cost_threshold_{nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE};
-    bool enable_rival_slowdown_{true};
     double rival_slowdown_dist_{0.4};
     double rival_min_speed_scale_{0.5};
     double rival_close_distance_{0.5};
     double rival_stop_distance_{0.35};
-    double rival_stop_timeout_{0.0};
+    double rival_escape_speed_{0.2};
+    double rival_escape_distance_{0.18};
 
     // tracking (holonomic)
     double lookahead_dist_{0.25};
@@ -180,7 +217,12 @@ private:
     double replan_cooldown_{0.6};
     rclcpp::Time blocked_since_;
     rclcpp::Time last_replan_time_;
-    rclcpp::Time rival_stop_since_;
+
+    MotionMode motion_mode_{MotionMode::FollowPath};
+    geometry_msgs::msg::PoseStamped rival_escape_start_pose_;
+    bool has_rival_escape_start_{false};
+    int rival_escape_stall_cycles_{0};
+    int rival_escape_attempt_count_{0};
 };
 
 }  // namespace teb_controller

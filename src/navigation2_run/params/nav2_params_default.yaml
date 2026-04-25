@@ -215,6 +215,11 @@ controller_server:
       obstacle_check_lookahead: 0.7
       obstacle_check_time_horizon: 0.8
       obstacle_cost_threshold: 240.0
+      obstacle_cost_threshold: 150.0 
+      rival_slowdown_dist: 1.0
+      rival_min_speed_scale: 0.75
+      rival_close_distance: 0.6
+      rival_stop_distance: 0.48
 
     Slow:
       plugin: "teb_controller::TebController"
@@ -247,6 +252,11 @@ controller_server:
       obstacle_check_lookahead: 0.4
       obstacle_check_time_horizon: 0.6
       obstacle_cost_threshold: 252.0
+      obstacle_cost_threshold: 150.0 
+      rival_slowdown_dist: 1.0
+      rival_min_speed_scale: 0.75
+      rival_close_distance: 0.6
+      rival_stop_distance: 0.48
 
     LinearBoost:
       plugin: "teb_controller::TebController"
