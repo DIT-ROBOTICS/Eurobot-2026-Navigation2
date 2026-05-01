@@ -141,6 +141,7 @@ private:
     double distanceFromEscapeStart(const geometry_msgs::msg::PoseStamped & pose) const;
     void beginRivalEscape(const geometry_msgs::msg::PoseStamped & pose);
     void resetRivalEscapeState();
+    void updateRivalStopDistance();
 
 private:
     // ros
@@ -151,6 +152,7 @@ private:
     std::shared_ptr<tf2_ros::Buffer> tf_;
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
     std::string name_;
+    std::string external_rival_data_path_;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr global_costmap_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr rival_pose_sub_;
 
@@ -169,23 +171,24 @@ private:
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr goal_reached_pub_;
     rclcpp_action::Client<NavigateToPose>::SharedPtr navigate_to_pose_client_;
     // parameters (band)
-    double dt_ref_{0.1};
+    double dt_ref_{0.05};
     double resample_ds_{0.05};
-    int iterations_{2};
+    int iterations_{4};
     // obstacle
     double min_obstacle_dist_{0.25};
-    double w_smooth_{1.0};
-    double w_obst_{2.0};
+    double w_smooth_{0.0};
+    double w_obst_{1.0};
     double step_size_{0.05};
-    double slowdown_obstacle_dist_{0.3};
+    double slowdown_obstacle_dist_{0.7};
     double stop_obstacle_dist_{0.15};
     double obstacle_check_lookahead_{0.5};
-    double obstacle_check_time_horizon_{1.0};
-    double obstacle_cost_threshold_{nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE};
+    double obstacle_check_time_horizon_{2.0};
+    double obstacle_cost_threshold_{150.0};
     double rival_slowdown_dist_{0.4};
     double rival_min_speed_scale_{0.5};
     double rival_close_distance_{0.5};
     double rival_stop_distance_{0.35};
+    double rival_stop_distance_prev_{0.35};
     double rival_escape_speed_{0.2};
     double rival_escape_distance_{0.18};
 
@@ -195,8 +198,8 @@ private:
     double k_w_{4.0};
 
     // goal behavior
-    double goal_xy_stop_dist_{0.02};
-    double goal_heading_switch_dist_{0.20};
+    double goal_xy_stop_dist_{0.03};
+    double goal_heading_switch_dist_{5.0};
 
     // limits
     double max_v_{1.1};
@@ -216,14 +219,14 @@ private:
     double last_w_{0.0};
 
     // --- replan trigger params ---
-    double max_cost_threshold_{150.0};     
-    bool treat_no_info_as_obstacle_{false}; 
+    double max_cost_threshold_{95.0};
+    bool treat_no_info_as_obstacle_{true};
     int cost_check_stride_{1};            
 
     double stop_v_eps_{0.05};             
-    double blocked_stop_clearance_{0.5};
-    double replan_min_blocked_time_{0.3};
-    double replan_cooldown_{0.6};
+    double blocked_stop_clearance_{0.3};
+    double replan_min_blocked_time_{0.2};
+    double replan_cooldown_{0.01};
     rclcpp::Time blocked_since_;
     rclcpp::Time last_replan_time_;
 

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <algorithm>
 
+#include "yaml-cpp/yaml.h"
 #include "pluginlib/class_list_macros.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "nav2_core/exceptions.hpp"
@@ -22,6 +23,7 @@ namespace
 {
 
 constexpr int kRivalEscapeStallCycleLimit = 5;
+constexpr double kRivalStopDistanceMargin = 0.27;
 
 }  // namespace
 
@@ -76,6 +78,7 @@ void TebController::configure(
     node->declare_parameter(name_ + ".rival_min_speed_scale", rival_min_speed_scale_);
     node->declare_parameter(name_ + ".rival_close_distance", rival_close_distance_);
     node->declare_parameter(name_ + ".rival_stop_distance", rival_stop_distance_);
+    node->declare_parameter(name_ + ".external_rival_data_path", external_rival_data_path_);
     node->declare_parameter(name_ + ".rival_escape_speed", rival_escape_speed_);
     node->declare_parameter(name_ + ".rival_escape_distance", rival_escape_distance_);
 
@@ -117,6 +120,7 @@ void TebController::configure(
     node->get_parameter(name_ + ".rival_min_speed_scale", rival_min_speed_scale_);
     node->get_parameter(name_ + ".rival_close_distance", rival_close_distance_);
     node->get_parameter(name_ + ".rival_stop_distance", rival_stop_distance_);
+    node->get_parameter(name_ + ".external_rival_data_path", external_rival_data_path_);
     node->get_parameter(name_ + ".rival_escape_speed", rival_escape_speed_);
     node->get_parameter(name_ + ".rival_escape_distance", rival_escape_distance_);
 
@@ -155,6 +159,9 @@ void TebController::configure(
     rival_min_speed_scale_ = clamp(rival_min_speed_scale_, 0.0, 1.0);
     rival_close_distance_ = std::max(0.0, rival_close_distance_);
     rival_stop_distance_ = std::max(0.0, rival_stop_distance_);
+    updateRivalStopDistance();
+    rival_stop_distance_ = std::max(0.0, rival_stop_distance_);
+    rival_stop_distance_prev_ = rival_stop_distance_;
     rival_escape_speed_ = std::max(0.01, rival_escape_speed_);
     rival_escape_distance_ = std::max(0.02, rival_escape_distance_);
 
@@ -766,6 +773,40 @@ void TebController::resetRivalEscapeState()
     rival_escape_stall_cycles_ = 0;
 }
 
+void TebController::updateRivalStopDistance()
+{
+    if (!external_rival_data_path_.empty()) {
+        try {
+            YAML::Node config = YAML::LoadFile(external_rival_data_path_);
+            if (config["nav_rival_parameters"] &&
+                config["nav_rival_parameters"]["rival_inscribed_radius"])
+            {
+                rival_stop_distance_ =
+                    config["nav_rival_parameters"]["rival_inscribed_radius"].as<double>() +
+                    kRivalStopDistanceMargin;
+                rival_stop_distance_ = std::max(0.0, rival_stop_distance_);
+                if (rival_stop_distance_prev_ != rival_stop_distance_) {
+                    RCLCPP_WARN(
+                        logger_,
+                        "[%s] rival_stop_distance updated to %f",
+                        name_.c_str(),
+                        rival_stop_distance_);
+                }
+            } else {
+                RCLCPP_WARN(
+                    logger_,
+                    "rival_inscribed_radius not found in YAML file, using default value");
+            }
+        } catch (const std::exception & e) {
+            RCLCPP_ERROR(
+                logger_,
+                "Failed to load YAML file: %s, using default value",
+                e.what());
+        }
+    }
+    rival_stop_distance_prev_ = rival_stop_distance_;
+}
+
 bool TebController::buildRivalEscapeCommand(
     const geometry_msgs::msg::PoseStamped & pose,
     const RivalInfo & rival,
@@ -858,6 +899,7 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     nav2_core::GoalChecker * goal_checker)
 {
     std::scoped_lock lk(mtx_);
+    updateRivalStopDistance();
 
     geometry_msgs::msg::TwistStamped cmd;
     const rclcpp::Time now = clock_->now();
