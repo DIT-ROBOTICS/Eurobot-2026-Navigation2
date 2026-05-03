@@ -33,6 +33,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "tf2/utils.h"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/int16.hpp"
 
 #include <yaml-cpp/yaml.h>
 
@@ -118,7 +119,9 @@ class Controller
     void updateParams();
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr dock_controller_selector_sub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr controller_function_sub_;
+    rclcpp::Subscription<std_msgs::msg::Int16>::SharedPtr dock_side_sub_;
     std::string controller_function_;
+    int cam_side_{1};  // 0:+y, 1:+x, 2:-y, 3:-x
 
     // Parameters from the config file
     double max_linear_vel_, min_linear_vel_;
@@ -133,6 +136,8 @@ class Controller
     double angular_kp_;
     double look_ahead_distance_;
     double final_goal_angle_;
+    double omni_docking_angle_threshold_;  // Angle threshold for omni-directional docking strategy
+    double omni_docking_dist_bound_;       // Distance bound to relax omni docking angle threshold
 
     // see if need to stop
     double stop_degree_;
@@ -180,6 +185,16 @@ class Controller
     void Acceleration(double & vel, const double & remaining_distance, VelocityState & state);
     void ConstantVelocity(double & vel, const double & remaining_distance, VelocityState & state);
     void Deceleration(double & vel, const double & remaining_distance, VelocityState & state);
+
+    // Omni-directional docking helper functions
+    /**
+     * @brief Compute velocity command for omni-directional robot docking
+     * @param target Target pose in base_link frame
+     * @param cmd Output velocity command
+     * @return true if command is valid
+     */
+    bool computeOmniVelocityCommand(
+      const geometry_msgs::msg::Pose & target, geometry_msgs::msg::Twist & cmd);
 
     VelocityState state_x_;
     VelocityState state_y_;

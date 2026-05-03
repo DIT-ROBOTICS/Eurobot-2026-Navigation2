@@ -19,6 +19,9 @@
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "nav2_msgs/action/navigate_to_pose.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 #include "tf2_ros/buffer.h"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
@@ -40,6 +43,8 @@ class TebController : public nav2_core::Controller
 public:
     TebController() = default;
     ~TebController() override = default;
+    using NavigateToPose = nav2_msgs::action::NavigateToPose;
+    using GoalHandleNavigateToPose = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
     void configure(
         const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
@@ -61,6 +66,22 @@ public:
     void setSpeedLimit(const double & speed_limit, const bool & percentage) override;
 
 private:
+    struct RivalInfo
+    {
+        bool valid{false};
+        double dx_world{0.0};
+        double dy_world{0.0};
+        double dx_body{0.0};
+        double dy_body{0.0};
+        double distance{std::numeric_limits<double>::infinity()};
+    };
+
+    enum class MotionMode
+    {
+        FollowPath,
+        RivalEscape
+    };
+
     // utils
     static double clamp(double v, double lo, double hi)
     {
@@ -96,7 +117,31 @@ private:
         double & tx, double & ty) const;
 
     void publishTebPath();
+    void publishGoalReached() const;
+    bool sendEscapeGoal(const geometry_msgs::msg::PoseStamped & pose, const RivalInfo & rival);
     bool shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & now);
+    RivalInfo getRivalInfo(const geometry_msgs::msg::PoseStamped & pose) const;
+    bool shouldEnterRivalEscape(const RivalInfo & rival, double cmd_vx, double cmd_vy) const;
+    bool shouldExitRivalEscape(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        bool blocked_and_close,
+        bool pose_collision) const;
+    bool buildRivalEscapeCommand(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        double current_speed,
+        geometry_msgs::msg::TwistStamped & cmd);
+    void applyRivalSlowdown(const RivalInfo & rival, double & vx, double & vy, double & w) const;
+    bool findRivalEscapeTarget(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        double & target_x,
+        double & target_y) const;
+    double distanceFromEscapeStart(const geometry_msgs::msg::PoseStamped & pose) const;
+    void beginRivalEscape(const geometry_msgs::msg::PoseStamped & pose);
+    void resetRivalEscapeState();
+    void updateRivalStopDistance();
 
 private:
     // ros
@@ -107,6 +152,7 @@ private:
     std::shared_ptr<tf2_ros::Buffer> tf_;
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
     std::string name_;
+    std::string external_rival_data_path_;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr global_costmap_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr rival_pose_sub_;
 
@@ -122,26 +168,29 @@ private:
     // pubs
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr teb_path_pub_;
     rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr goal_reached_pub_;
+    rclcpp_action::Client<NavigateToPose>::SharedPtr navigate_to_pose_client_;
     // parameters (band)
-    double dt_ref_{0.1};
+    double dt_ref_{0.05};
     double resample_ds_{0.05};
-    int iterations_{2};
+    int iterations_{4};
     // obstacle
     double min_obstacle_dist_{0.25};
-    double w_smooth_{1.0};
-    double w_obst_{2.0};
+    double w_smooth_{0.0};
+    double w_obst_{1.0};
     double step_size_{0.05};
-    double slowdown_obstacle_dist_{0.3};
+    double slowdown_obstacle_dist_{0.7};
     double stop_obstacle_dist_{0.15};
     double obstacle_check_lookahead_{0.5};
-    double obstacle_check_time_horizon_{1.0};
-    double obstacle_cost_threshold_{nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE};
-    bool enable_rival_slowdown_{true};
+    double obstacle_check_time_horizon_{2.0};
+    double obstacle_cost_threshold_{150.0};
     double rival_slowdown_dist_{0.4};
     double rival_min_speed_scale_{0.5};
     double rival_close_distance_{0.5};
     double rival_stop_distance_{0.35};
-    double rival_stop_timeout_{0.0};
+    double rival_stop_distance_prev_{0.35};
+    double rival_escape_speed_{0.2};
+    double rival_escape_distance_{0.18};
 
     // tracking (holonomic)
     double lookahead_dist_{0.25};
@@ -149,8 +198,8 @@ private:
     double k_w_{4.0};
 
     // goal behavior
-    double goal_xy_stop_dist_{0.02};
-    double goal_heading_switch_dist_{0.20};
+    double goal_xy_stop_dist_{0.03};
+    double goal_heading_switch_dist_{5.0};
 
     // limits
     double max_v_{1.1};
@@ -170,17 +219,25 @@ private:
     double last_w_{0.0};
 
     // --- replan trigger params ---
-    double max_cost_threshold_{150.0};     
-    bool treat_no_info_as_obstacle_{false}; 
+    double max_cost_threshold_{95.0};
+    bool treat_no_info_as_obstacle_{true};
     int cost_check_stride_{1};            
 
     double stop_v_eps_{0.05};             
-    double blocked_stop_clearance_{0.5};
-    double replan_min_blocked_time_{0.3};
-    double replan_cooldown_{0.6};
+    double blocked_stop_clearance_{0.3};
+    double replan_min_blocked_time_{0.2};
+    double replan_cooldown_{0.01};
     rclcpp::Time blocked_since_;
     rclcpp::Time last_replan_time_;
-    rclcpp::Time rival_stop_since_;
+
+    MotionMode motion_mode_{MotionMode::FollowPath};
+    geometry_msgs::msg::PoseStamped rival_escape_start_pose_;
+    bool has_rival_escape_start_{false};
+    bool rival_escape_pending_stop_{false};
+    bool rival_escape_goal_requested_{false};
+    bool escape_navigation_active_{false};
+    int rival_escape_stall_cycles_{0};
+    int rival_escape_attempt_count_{0};
 };
 
 }  // namespace teb_controller

@@ -45,6 +45,8 @@ bt_navigator:
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
+      - nav2_persistent_sequence_bt_node
+      - nav2_persistent_sequence_w_cont_on_fail_bt_node
       - nav2_transform_available_condition_bt_node
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
@@ -145,34 +147,23 @@ controller_server:
     # Controller parameters
     DidilongController:  # First version
       plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25
-      lookahead_dist: 0.7
-      w_smooth: 1.0 
-      w_obst: 1.0               
-      k_xy: 0.35                   
-      k_w: 2.0             
-      max_v: 0.4               
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      min_obstacle_dist: 0.25 
+      lookahead_dist: 0.35
+      k_xy: 3.0                   
+      k_w: 2.0            
+      max_v: 0.7              
       min_v: 0.0
-      max_acc_v: 1.2             
-      max_w: 0.75                   
-      max_acc_w: 1.5                                      
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      stop_v_eps: 0.05
-      replan_min_blocked_time: 0.05
-      replan_cooldown: 0.05
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
-      obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 252.0
+      max_acc_v: 1.6             
+      max_w: 2.0                  
+      max_acc_w: 6.0                                     
+      stop_v_eps: 0.05                             
+      stop_obstacle_dist: 0.2
+      obstacle_check_lookahead: 0.4
+      rival_slowdown_dist: 1.2
+      rival_min_speed_scale: 0.75
+      rival_close_distance: 0.8
+      rival_stop_distance: 0.6
 
     # Fast:
     #   plugin: "custom_controller::CustomController"
@@ -193,52 +184,29 @@ controller_server:
 
     Fast: # First version
       plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03  
-      goal_heading_switch_dist: 5.0
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       min_obstacle_dist: 0.25 
       lookahead_dist: 0.4 
-      w_smooth: 0.0
-      w_obst: 1.0               
       k_xy: 5.0                   
       k_w: 3.0            
-      max_v: 1.5               
-      min_v: 0.0
+      max_v: 1.5
+      min_v: 0.0               
       max_acc_v: 4.5             
       max_w: 3.0                   
       max_acc_w: 9.0                                     
       stop_v_eps: 0.1                             
-      max_cost_threshold: 95.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.01
-      slowdown_obstacle_dist: 0.7
       stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 2.0
-      obstacle_cost_threshold: 150.0
-      enable_rival_slowdown: true
       rival_slowdown_dist: 1.0
       rival_min_speed_scale: 0.55
       rival_close_distance: 0.65
       rival_stop_distance: 0.55
-      rival_stop_timeout: 3.0
 
     Slow: # First version
       plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03  
-      goal_heading_switch_dist: 5.0
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
       min_obstacle_dist: 0.25 
-      lookahead_dist: 0.35 
-      w_smooth: 0.0
-      w_obst: 1.0               
+      lookahead_dist: 0.35
       k_xy: 3.0                   
       k_w: 2.0            
       max_v: 1.0               
@@ -247,85 +215,52 @@ controller_server:
       max_w: 2.5                   
       max_acc_w: 7.5                                     
       stop_v_eps: 0.05                             
-      max_cost_threshold: 95.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.01
-      slowdown_obstacle_dist: 0.7
       stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 2.0
-      obstacle_cost_threshold: 150.0 
-      enable_rival_slowdown: true
       rival_slowdown_dist: 1.0
       rival_min_speed_scale: 0.75
       rival_close_distance: 0.6
-      rival_stop_distance: 0.48
-      rival_stop_timeout: 3.0
+      rival_stop_distance: 0.5
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
-      lookahead_dist: 0.8
-      w_smooth: 1.0 
-      w_obst: 1.0               
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      min_obstacle_dist: 0.25
+      lookahead_dist: 0.8 
       k_xy: 0.4                   
       k_w: 2.0             
-      max_v: 0.5               
-      min_v: 0.0
+      max_v: 0.5   
+      min_v: 0.0            
       max_acc_v: 2.5             
       max_w: 1.0                   
-      max_acc_w: 3.0                                      
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: true
-      cost_check_stride: 1
-      stop_v_eps: 0.05
-      replan_min_blocked_time: 0.05
-      replan_cooldown: 0.05
-      slowdown_obstacle_dist: 1.2
-      stop_obstacle_dist: 0.6
+      max_acc_w: 3.0 
+      stop_v_eps: 0.05                                     
+      stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.7
-      obstacle_check_time_horizon: 0.8
-      obstacle_cost_threshold: 240.0 
+      rival_slowdown_dist: 1.0
+      rival_min_speed_scale: 0.55
+      rival_close_distance: 0.65
+      rival_stop_distance: 0.55
 
     AngularBoost:  # First version
       plugin: "teb_controller::TebController"
-      dt_ref: 0.05                
-      resample_ds: 0.05
-      iterations: 4 
-      goal_xy_stop_dist: 0.03   
-      goal_heading_switch_dist: 5.0
-      min_obstacle_dist: 0.25 
+      external_rival_data_path: "/home/share/data/rival_params.yaml"
+      min_obstacle_dist: 0.25
       lookahead_dist: 0.5
-      w_smooth: 1.0 
-      w_obst: 1.0               
       k_xy: 0.6                   
       k_w: 2.0             
-      max_v: 0.2               
-      min_v: 0.0
+      max_v: 0.2
+      min_v: 0.0               
       max_acc_v: 1.0             
       max_w: 4.0                   
       max_acc_w: 15.0                                      
-      stop_v_eps: 0.05                             
-      slowdown_obstacle_dist: 0.6
-      stop_obstacle_dist: 0.25
-      max_cost_threshold: 97.0
-      blocked_stop_clearance: 0.3
-      treat_no_info_as_obstacle: false
-      cost_check_stride: 1
-      replan_min_blocked_time: 0.20
-      replan_cooldown: 0.20
+      stop_v_eps: 0.05
+      stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
-      obstacle_check_time_horizon: 0.6
-      obstacle_cost_threshold: 252.0
+      rival_slowdown_dist: 1.0
+      rival_min_speed_scale: 0.55
+      rival_close_distance: 0.65
+      rival_stop_distance: 0.55
 
 local_costmap:
   local_costmap:
@@ -496,47 +431,47 @@ planner_server:
     use_omnidirectional_robot: true
     planner_plugins: ["GridBased"]
     # navfn planner setting
-    GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.02
-      use_astar: True
-      allow_unknown: false
-      # ============================
-      # A* / propagation parameters
-      # ============================
-      heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
-      priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
-      # ============================
-      # Obstacle-aware bias
-      # ============================
-      obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
-      obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
-      # ============================
-      # Path extraction / fallback
-      # ============================
-      plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
-      min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
-      potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
-
-    # smac planner setting
     # GridBased:
-    #   plugin: "nav2_smac_planner/SmacPlanner2D"
+    #   plugin: "nav2_navfn_planner/NavfnPlanner"
     #   tolerance: 0.02
     #   use_astar: True
     #   allow_unknown: false
-    #   # useful parameters
-    #   cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
-    #   distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
-    #   cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
-    #   # no need to change
-    #   downsample_costmap: false    # set to true to downsample costmap for planning
-    #   downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
-    #   smooth_path: false     # we prefer doing this by smoother
-    #   max_iterations: 200000
-    #   max_on_approach_iterations: 1000
-    #   straight_line_max_skip_points: 500
-    #   straight_line_resample_points: 500
-    #   straight_line_resample_spacing: 0.01
+    #   # ============================
+    #   # A* / propagation parameters
+    #   # ============================
+    #   heuristic_scale: 1.0             # Weight of heuristic term in A* (higher = more greedy toward goal)
+    #   priority_increment_scale: 2.0    # Scale factor for A* priority threshold increment (larger = faster but less optimal)
+    #   # ============================
+    #   # Obstacle-aware bias
+    #   # ============================
+    #   obstacle_bias_scale: 0.4         # Strength of extra cost added for high-cost cells to avoid obstacles/inflation (0.15 ~ 0.5)
+    #   obstacle_bias_offset: 10.0       # Cost offset before obstacle bias is applied (ignore small cost variations) (3.0 ~ 10.0)
+    #   # ============================
+    #   # Path extraction / fallback
+    #   # ============================
+    #   plateau_stagnation_steps: 3      # Number of stagnant steps to trigger plateau handling
+    #   min_gradient_norm: 0.9           # Minimum gradient norm to continue path extraction without fallback
+    #   potential_epsilon: 1.0e-3        # Minimum potential decrease to reset stagnation counter
+
+    # smac planner setting
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.02
+      use_astar: True
+      allow_unknown: false
+      # useful parameters
+      cost_travel_multiplier: 10.0   # larger values -> more obstacle avoidance
+      distance_heuristic_weight: 1.0   # 1.0: normal A*, >1.0: heavily weighted to distance, <1.0: heavily weighted to cost
+      cost_penalty: 1.0      # how much to penalize high cost cells (exponential)
+      # no need to change
+      downsample_costmap: false    # set to true to downsample costmap for planning
+      downsampling_factor: 1     # factor by which to downsample costmap (example 2 -> half size in each dimension)
+      smooth_path: false     # we prefer doing this by smoother
+      max_iterations: 200000
+      max_on_approach_iterations: 1000
+      straight_line_max_skip_points: 500
+      straight_line_resample_points: 500
+      straight_line_resample_spacing: 0.01
 
 smoother_server:
   ros__parameters:
@@ -643,11 +578,13 @@ docking_server:
       external_detection_rotation_pitch: 0.0
       external_detection_rotation_roll: 0.0
       filter_coef: 1.0 # 1.0->no filter. if filer_coef too small, cause dragging since this filter is not very good
+      pose_match_max_delta_ms: 50
+      pose_sync_timer_period_ms: 100
       # the threshold for CameraOnBoard to see ArUco
-      camera_aruco_max: 0.42
+      camera_aruco_max: 0.42 # not used
       camera_aruco_min: 0.195
       # Optional dock pose history CSV logging (empty path disables)
-      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dock_pose_history.csv"
+      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dph.csv"
       dock_pose_history_suffix_datetime: true
 
     docks: ['home_dock']
@@ -673,6 +610,8 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Gentle:
       max_linear_vel: 0.02
@@ -687,6 +626,8 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Rush:
       max_linear_vel: 0.3
@@ -701,9 +642,11 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     Cam:
-      max_linear_vel: 0.2
+      max_linear_vel: 0.25
       min_linear_vel: 0.025
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
@@ -715,6 +658,8 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
     CamFront:
       max_linear_vel: 0.15
@@ -729,6 +674,8 @@ docking_server:
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
       rival_radius: 0.44
+      omni_docking_angle_threshold: 15.0
+      omni_docking_dist_bound: 0.05
 
 final_pose_bridge:
   ros__parameters:
