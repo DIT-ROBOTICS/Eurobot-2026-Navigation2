@@ -584,7 +584,7 @@ docking_server:
       camera_aruco_max: 0.42 # not used
       camera_aruco_min: 0.195
       # Optional dock pose history CSV logging (empty path disables)
-      dock_pose_history_file_path: "/home/user/Eurobot-2026-Navigation2-ws/src/opennav_docking/opennav_docking/dock_records/dph.csv"
+      dock_pose_history_file_path: ""
       dock_pose_history_suffix_datetime: true
 
     docks: ['home_dock']

@@ -823,12 +823,12 @@ double SimpleChargingDock::computeExternalDockingDist(const double z)
   // For simplicity, all dock for 0.2
   // but for side 0(only black), only dock for 0.045 since the camera is down
   if ( cam_side_ == 0 ) {
-    if ( z > 0 ) return 0.045;
-    else return -0.045;
+    if ( z > 0 ) return 0.12;
+    else return -0.12;
   }
   else {
-    if ( z > 0 ) return 0.22;
-    else return -0.22;
+    if ( z > 0 ) return 0.2;
+    else return -0.2;
   }
 }
 
