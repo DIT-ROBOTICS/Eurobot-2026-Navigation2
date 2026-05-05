@@ -718,13 +718,15 @@ bool TebController::findRivalEscapeTarget(
     for (double distance = min_escape_distance; distance <= search_limit + 1e-6; distance += step) {
         const double candidate_x = px + away_x * distance;
         const double candidate_y = py + away_y * distance;
-        const unsigned char cost = costAtGlobal(candidate_x, candidate_y);
-        if (!treat_no_info_as_obstacle_ && cost == nav2_costmap_2d::NO_INFORMATION) {
-            target_x = candidate_x;
-            target_y = candidate_y;
-            return true;
+        auto grid = latest_global_costmap_;
+        unsigned int mx = 0;
+        unsigned int my = 0;
+        if (!grid || !worldToMap(*grid, candidate_x, candidate_y, mx, my)) {
+            continue;
         }
-        if (cost < obstacle_cost_threshold_) {
+
+        const unsigned char cost = costAtGlobal(candidate_x, candidate_y);
+        if (cost == nav2_costmap_2d::FREE_SPACE) {
             target_x = candidate_x;
             target_y = candidate_y;
             return true;
