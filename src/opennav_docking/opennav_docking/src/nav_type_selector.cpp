@@ -65,8 +65,9 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
         controller_function_msg_.data = "DelaySpin";
     } else if(strstr(mode.c_str(), "forklift") != nullptr) { 
         controller_function_msg_.data = "Forklift"; // actually for dock
-    } else if(strstr(mode.c_str(), "cursor") != nullptr || offset >= 0.4 ) {
+    // } else if(strstr(mode.c_str(), "cursor") != nullptr || fabs(offset) >= 0.4 ) {
         // offset dicide is bad coding, just for 2026 [FIX IN FUTURE]
+    } else if(strstr(mode.c_str(), "cursor") != nullptr ) {
         controller_function_msg_.data = "Cursor"; // actually for dock
     } else if(strstr(mode.c_str(), "nonStop") != nullptr) {
         controller_function_msg_.data = "NonStop";
