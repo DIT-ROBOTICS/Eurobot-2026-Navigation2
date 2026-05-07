@@ -199,9 +199,9 @@ controller_server:
       stop_v_eps: 0.1                             
       stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
-      rival_slowdown_dist: 1.0
-      rival_min_speed_scale: 0.5
-      rival_close_distance: 0.65
+      rival_slowdown_dist: 1.2
+      rival_min_speed_scale: 0.3
+      rival_close_distance: 0.8
       rival_stop_distance: 0.5
 
     Slow: # First version
@@ -220,10 +220,10 @@ controller_server:
       stop_v_eps: 0.06                             
       stop_obstacle_dist: 0.2
       obstacle_check_lookahead: 0.4
-      rival_slowdown_dist: 1.0
-      rival_min_speed_scale: 0.8
-      rival_close_distance: 0.6
-      rival_stop_distance: 0.48
+      rival_slowdown_dist: 0.8
+      rival_min_speed_scale: 0.3
+      rival_close_distance: 0.65
+      rival_stop_distance: 0.5
 
     LinearBoost:   # First version
       plugin: "teb_controller::TebController"
@@ -641,9 +641,9 @@ docking_server:
       linear_kp_accel_vel: 0.4
       linear_ki_accel_vel: 0.2
       linear_kp_decel_dis: 0.06
-      max_speed_diff: 0.4
+      max_speed_diff: 0.5
       angular_kp: 0.2
-      deceleration_distance: 0.10
+      deceleration_distance: 0.17
       reserved_distance: 0.0075
       external_rival_data_path: "/home/share/data/rival_params.yaml"
       stop_degree: 120.0
@@ -658,7 +658,7 @@ docking_server:
       linear_kp_accel_vel: 0.7
       linear_ki_accel_vel: 0.3
       linear_kp_decel_dis: 0.12
-      max_speed_diff: 0.6
+      max_speed_diff: 0.47
       angular_kp: 0.6
       deceleration_distance: 0.08
       reserved_distance: 0.008
@@ -666,7 +666,7 @@ docking_server:
       stop_degree: 120.0
       rival_radius: 0.44
       omni_docking_angle_threshold: 15.0
-      omni_docking_dist_bound: 0.05
+      omni_docking_dist_bound: 0.09
 
     CamFront:
       max_linear_vel: 0.23

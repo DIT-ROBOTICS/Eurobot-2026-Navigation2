@@ -8,9 +8,6 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/bool.hpp"
-#include <atomic>
-#include <memory>
-#include <mutex>
 #include <string>
 
 namespace nav2_behaviors
@@ -24,7 +21,6 @@ namespace nav2_behaviors
         ~Shrink();
         Status onRun(const std::shared_ptr<const ShrinkAction::Goal> command) override;
         void onConfigure() override;
-        void onCleanup() override;
         Status onCycleUpdate() override;
         bool noCostInMiddle();
         bool noCostAtGoal();
@@ -40,16 +36,9 @@ namespace nav2_behaviors
         int times;
         int unused_shrink;
         bool shrinkBack;
-        std::atomic<bool> costmap_received{false};
-        std::atomic<bool> goal_received{false};
-        std::atomic<bool> pose_received{false};
         int costmap_tolerance;
         int timer_duration;
-        int shrink_delay_cycles;
         double original_inflation_radius;
-        std::mutex costmap_mutex_;
-        std::mutex goal_mutex_;
-        std::mutex pose_mutex_;
         double getOneGridCost(double x, double y);
         void costmapCallback(const nav_msgs::msg::OccupancyGrid& msg);
         void goalPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
