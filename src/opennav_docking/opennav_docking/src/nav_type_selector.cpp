@@ -64,7 +64,9 @@ void NavTypeSelector::setType(std::string const & mode, char & offset_direction,
     if(strstr(mode.c_str(), "delaySpin") != nullptr) {
         controller_function_msg_.data = "DelaySpin";
     } else if(strstr(mode.c_str(), "forklift") != nullptr) { 
-        controller_function_msg_.data = "Forklift";
+        controller_function_msg_.data = "Forklift"; // actually for dock
+    } else if(strstr(mode.c_str(), "cursor") != nullptr ) {
+        controller_function_msg_.data = "Cursor"; // actually for dock
     } else if(strstr(mode.c_str(), "nonStop") != nullptr) {
         controller_function_msg_.data = "NonStop";
     } else {

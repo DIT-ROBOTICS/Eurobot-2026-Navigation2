@@ -194,6 +194,10 @@ bool Controller::computeVelocityCommand(
             cmd.linear.y = ExtractVelocity(cmd.linear.y, global_distance, state_y_) * sin(local_angle);
             cmd.angular.z = getGoalAngle(global_angle);
         }
+
+        if ( controller_function_ == "Cursor" ) {
+            cmd.linear.y = 0;
+        }
         
         return true;
     }
