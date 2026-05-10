@@ -196,6 +196,10 @@ void SimaLayer::updateCosts(nav2_costmap_2d::Costmap2D &master_grid, int /*min_i
       continue;
     }
 
+    if (isInStartZone(agent.x, agent.y)) {
+      continue;
+    }
+
     updateAgentState(agent);
     fieldExpansion(agent);
     any_active = true;
@@ -443,6 +447,12 @@ void SimaLayer::expandLine(const SimaAgentState &agent, double max_cost, double 
     current_inscribed_radius *= inscribed_radius_rate_;
     current_inflation_radius *= inflation_radius_rate_;
   }
+}
+
+bool SimaLayer::isInStartZone(double x, double y) {
+  const bool in_right_zone = x >= 2.4 && x <= 3.0 && y >= 1.55 && y <= 2.0;
+  const bool in_left_zone = x >= 0.0 && x <= 0.6 && y >= 1.55 && y <= 2.0;
+  return in_right_zone || in_left_zone;
 }
 
 void SimaLayer::logStateChange(std::size_t /*index*/, SimaState /*new_state*/) {}

@@ -64,6 +64,7 @@ private:
   void updateRadius();
   void updateAgentState(SimaAgentState &agent);
   void fieldExpansion(const SimaAgentState &agent);
+  static bool isInStartZone(double x, double y);
   void expandPointWithCircle(double x, double y, double max_cost,
                              double inflation_radius,
                              double cost_scaling_factor,
