@@ -24,6 +24,9 @@ namespace
 
 constexpr int kRivalEscapeStallCycleLimit = 5;
 constexpr double kRivalStopDistanceMargin = 0.27;
+constexpr double kRivalEscapeGoalPeriodSec = 1.0;
+constexpr double kRivalEscapeAngleStepDeg = 2.0;
+constexpr unsigned char kRivalEscapeMaxCost = 230;
 
 }  // namespace
 
@@ -81,6 +84,7 @@ void TebController::configure(
     node->declare_parameter(name_ + ".external_rival_data_path", external_rival_data_path_);
     node->declare_parameter(name_ + ".rival_escape_speed", rival_escape_speed_);
     node->declare_parameter(name_ + ".rival_escape_distance", rival_escape_distance_);
+    node->declare_parameter(name_ + ".rival_escape_arc_angle_deg", rival_escape_arc_angle_deg_);
 
     node->declare_parameter(name_ + ".lookahead_dist", lookahead_dist_);
     node->declare_parameter(name_ + ".k_xy", k_xy_);
@@ -123,6 +127,7 @@ void TebController::configure(
     node->get_parameter(name_ + ".external_rival_data_path", external_rival_data_path_);
     node->get_parameter(name_ + ".rival_escape_speed", rival_escape_speed_);
     node->get_parameter(name_ + ".rival_escape_distance", rival_escape_distance_);
+    node->get_parameter(name_ + ".rival_escape_arc_angle_deg", rival_escape_arc_angle_deg_);
 
     node->get_parameter(name_ + ".lookahead_dist", lookahead_dist_);
     node->get_parameter(name_ + ".k_xy", k_xy_);
@@ -164,6 +169,7 @@ void TebController::configure(
     rival_stop_distance_prev_ = rival_stop_distance_;
     rival_escape_speed_ = std::max(0.01, rival_escape_speed_);
     rival_escape_distance_ = std::max(0.02, rival_escape_distance_);
+    rival_escape_arc_angle_deg_ = clamp(rival_escape_arc_angle_deg_, 0.0, 360.0);
 
     max_cost_threshold_ = clamp(max_cost_threshold_, 0.0, 255.0);
     cost_check_stride_ = std::max(1, cost_check_stride_);
@@ -195,7 +201,6 @@ void TebController::configure(
             latest_rival_pose_ = *msg;
             has_rival_pose_ = true;
         });
-    RCLCPP_INFO(logger_, "[%s] configured", name_.c_str());
 }
 
 void TebController::cleanup()
@@ -239,15 +244,12 @@ void TebController::setPlan(const nav_msgs::msg::Path & path)
     global_plan_ = path;
     rival_escape_attempt_count_ = 0;
     resetRivalEscapeState();
-    RCLCPP_INFO(logger_, "[%s] received global plan with %zu poses", name_.c_str(), path.poses.size());
-
     if (global_plan_pub_ && global_plan_pub_->is_activated()) {
         global_plan_pub_->publish(global_plan_);
     }
 
     initTimedElasticBand(global_plan_);
     has_plan_ = (teb_band_.size() >= 2);
-    RCLCPP_INFO(logger_, "[%s] initialized teb band with %zu states (has_plan=%d)", name_.c_str(), teb_band_.size(), has_plan_);
 }
 
 void TebController::setSpeedLimit(const double & speed_limit, const bool & percentage)
@@ -262,7 +264,6 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
     if (plan.poses.size() < 2) return;
 
     // cumulative arc-length
-    RCLCPP_INFO(logger_, "[TEB Controller]: Cumaltive arc-length started.");
     const auto & poses = plan.poses;
     std::vector<double> s(poses.size(), 0.0);
     for (size_t i = 1; i < poses.size(); ++i) {
@@ -270,8 +271,6 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
         const auto & b = poses[i].pose.position;
         s[i] = s[i - 1] + std::hypot(b.x - a.x, b.y - a.y);
     }
-    RCLCPP_INFO(logger_, "[TEB Controller]: Cumaltive arc-length finished.");
-
     const double total = s.back();
     if (total < 1e-6) return;
 
@@ -281,7 +280,6 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
     size_t j = 0;
     teb_band_.reserve(N);
 
-    RCLCPP_INFO(logger_, "[TEB Controller]: Resampling started.");
     for (size_t k = 0; k < N; ++k) {
         const double sk = ds * k;
         while (j + 1 < s.size() && s[j + 1] < sk) j++;
@@ -301,16 +299,13 @@ void TebController::initTimedElasticBand(const nav_msgs::msg::Path & plan)
         st.dt = dt_ref_;
         teb_band_.push_back(st);
     }
-    RCLCPP_INFO(logger_, "[TEB Controller]: Resampling finished. N = %zu, ds = %f", teb_band_.size(), ds);
     // theta from segment direction
-    RCLCPP_INFO(logger_, "[TEB Controller]: Theta assignment started.");
     for (size_t i = 0; i + 1 < teb_band_.size(); ++i) {
         const double dx = teb_band_[i + 1].x - teb_band_[i].x;
         const double dy = teb_band_[i + 1].y - teb_band_[i].y;
         teb_band_[i].theta = std::atan2(dy, dx);
     }
     teb_band_.back().theta = teb_band_[teb_band_.size() - 2].theta;
-    RCLCPP_INFO(logger_, "[TEB Controller]: Theta assignment finished.");
 }
 
 bool TebController::worldToMap(
@@ -366,7 +361,6 @@ double TebController::minObstacleDistanceGlobal(double x, double y, double searc
     const unsigned int w = grid->info.width;
     const unsigned int h = grid->info.height;
 
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000,"[TEB Controller]: Min obstacle distance calculation started in minObstacleDistanceGlobal.");
     for (int dy = -r; dy <= r; ++dy) {
         for (int dx = -r; dx <= r; ++dx) {
             const int ix = (int)mx_center + dx;
@@ -391,7 +385,6 @@ double TebController::minObstacleDistanceGlobal(double x, double y, double searc
         }
     }
 
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation finished in minObstacleDistanceGlobal.");
     return best;
 }
 
@@ -404,7 +397,6 @@ double TebController::minObstacleDistanceOnBandGlobal(
     double best = std::numeric_limits<double>::infinity();
     double acc = 0.0;
 
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation started in minObstacleDistanceOnBandGlobal.");
     for (size_t i = start_idx; i + 1 < teb_band_.size(); ++i) {
         const auto & a = teb_band_[i];
         const auto & b = teb_band_[i + 1];
@@ -417,8 +409,6 @@ double TebController::minObstacleDistanceOnBandGlobal(
             if (acc >= arc_len) break;
         }
     }
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Min obstacle distance calculation finished in minObstacleDistanceOnBandGlobal.");
-
     return best;
 }
 
@@ -430,7 +420,6 @@ unsigned char TebController::maxCostOnBandGlobal() const
     unsigned char mc = 0;
     unsigned int mx, my;
 
-    RCLCPP_INFO(logger_, "[TEB Controller]: Max cost on band calculation started in maxCostOnBandGlobal.");
     for (size_t i = 0; i < teb_band_.size(); i += (size_t)cost_check_stride_) {
         const double wx = teb_band_[i].x;
         const double wy = teb_band_[i].y;
@@ -453,8 +442,6 @@ unsigned char TebController::maxCostOnBandGlobal() const
         }
         mc = std::max(mc, c);
     }
-    RCLCPP_INFO(logger_, "[TEB Controller]: Max cost on band calculation finished in maxCostOnBandGlobal.");
-
     return mc;
 }
 
@@ -468,7 +455,6 @@ bool TebController::findClosestIndex(const geometry_msgs::msg::PoseStamped & pos
     double best = 1e100;
     size_t bi = 0;
 
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Finding closest index started in findClosestIndex.");
     for (size_t i = 0; i < teb_band_.size(); ++i) {
         const double dx = teb_band_[i].x - px;
         const double dy = teb_band_[i].y - py;
@@ -478,7 +464,6 @@ bool TebController::findClosestIndex(const geometry_msgs::msg::PoseStamped & pos
         bi = i;
         }
     }
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Finding closest index finished in findClosestIndex.");
     out_idx = bi;
     return true;
 }
@@ -492,7 +477,6 @@ bool TebController::sampleLookaheadTargetArc(
     if (start_idx >= teb_band_.size()) start_idx = teb_band_.size() - 1;
 
     double acc = 0.0;
-    RCLCPP_INFO(logger_, "[TEB Controller]: Sampling lookahead target started in sampleLookaheadTargetArc.");
     for (size_t i = start_idx; i + 1 < teb_band_.size(); ++i) {
         const auto & a = teb_band_[i];
         const auto & b = teb_band_[i + 1];
@@ -507,8 +491,6 @@ bool TebController::sampleLookaheadTargetArc(
         }
         acc += seg;
     }
-    RCLCPP_INFO(logger_, "[TEB Controller]: Sampling lookahead target finished in sampleLookaheadTargetArc.");
-
     tx = teb_band_.back().x;
     ty = teb_band_.back().y;
     return true;
@@ -524,7 +506,6 @@ void TebController::publishTebPath()
     p.header = global_plan_.header;
     p.poses.reserve(teb_band_.size());
 
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Publishing TEB path started in publishTebPath.");
     for (const auto & st : teb_band_) {
         geometry_msgs::msg::PoseStamped ps;
         ps.header = p.header;
@@ -538,8 +519,6 @@ void TebController::publishTebPath()
 
         p.poses.push_back(ps);
     }
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "[TEB Controller]: Publishing TEB path finished in publishTebPath.");
-
     if (teb_path_pub_ && teb_path_pub_->is_activated()) {
         teb_path_pub_->publish(p);
     }
@@ -561,12 +540,30 @@ bool TebController::sendEscapeGoal(
     const RivalInfo & rival)
 {
     if (!navigate_to_pose_client_ || !navigate_to_pose_client_->action_server_is_ready()) {
+        RCLCPP_WARN_THROTTLE(
+            logger_,
+            *clock_,
+            1000,
+            "[%s] rival escape cannot send goal: NavigateToPose action server not ready",
+            name_.c_str());
         return false;
     }
 
     double target_x = 0.0;
     double target_y = 0.0;
     if (!findRivalEscapeTarget(pose, rival, target_x, target_y)) {
+        RCLCPP_WARN_THROTTLE(
+            logger_,
+            *clock_,
+            1000,
+            "[%s] rival escape cannot find target: robot=(%.3f, %.3f) rival_dist=%.3f arc=%.1fdeg distance=%.2f max_cost=%u",
+            name_.c_str(),
+            pose.pose.position.x,
+            pose.pose.position.y,
+            rival.distance,
+            rival_escape_arc_angle_deg_,
+            rival_escape_distance_,
+            static_cast<unsigned int>(kRivalEscapeMaxCost));
         return false;
     }
 
@@ -585,6 +582,12 @@ bool TebController::sendEscapeGoal(
             if (!goal_handle) {
                 escape_navigation_active_ = false;
                 rival_escape_goal_requested_ = false;
+                RCLCPP_WARN_THROTTLE(
+                    logger_,
+                    *clock_,
+                    1000,
+                    "[%s] rival escape goal rejected by NavigateToPose server",
+                    name_.c_str());
             }
         };
     send_goal_options.result_callback =
@@ -594,11 +597,31 @@ bool TebController::sendEscapeGoal(
             rival_escape_goal_requested_ = false;
             if (result.code == rclcpp_action::ResultCode::SUCCEEDED) {
                 publishGoalReached();
+            } else {
+                RCLCPP_WARN_THROTTLE(
+                    logger_,
+                    *clock_,
+                    1000,
+                    "[%s] rival escape goal finished unsuccessfully: result_code=%d",
+                    name_.c_str(),
+                    static_cast<int>(result.code));
             }
         };
 
     escape_navigation_active_ = true;
     rival_escape_goal_requested_ = true;
+    last_rival_escape_goal_time_ = clock_->now();
+    RCLCPP_WARN_THROTTLE(
+        logger_,
+        *clock_,
+        1000,
+        "[%s] rival escape sending NavigateToPose target=(%.3f, %.3f) robot=(%.3f, %.3f) rival_dist=%.3f",
+        name_.c_str(),
+        target_x,
+        target_y,
+        pose.pose.position.x,
+        pose.pose.position.y,
+        rival.distance);
     navigate_to_pose_client_->async_send_goal(goal_msg, send_goal_options);
     return true;
 }
@@ -625,7 +648,6 @@ bool TebController::shouldTriggerReplan(bool raw_blocked, const rclcpp::Time & n
     }
 
     last_replan_time_ = now;
-    RCLCPP_INFO(logger_, "[%s] replan allowed after blocked duration %.3fs", name_.c_str(), blocked_sec);
     return true;
 }
 
@@ -656,14 +678,14 @@ bool TebController::shouldEnterRivalEscape(
     double cmd_vx,
     double cmd_vy) const
 {
-    if (!rival.valid || rival.distance > rival_stop_distance_) {
+    (void)cmd_vx;
+    (void)cmd_vy;
+
+    if (!rival.valid) {
         return false;
     }
 
-    const bool rival_in_front_half_plane = rival.dx_body >= -0.05;
-    const double approach_projection = cmd_vx * rival.dx_body + cmd_vy * rival.dy_body;
-    const bool pushing_toward_rival = approach_projection >= -0.01;
-    return rival_in_front_half_plane && pushing_toward_rival;
+    return rival.distance <= rival_stop_distance_;
 }
 
 bool TebController::shouldExitRivalEscape(
@@ -706,32 +728,61 @@ bool TebController::findRivalEscapeTarget(
 
     const double px = pose.pose.position.x;
     const double py = pose.pose.position.y;
-    const double step = std::max(0.02, rival_escape_distance_ / 10.0);
-    const double release_distance =
-        rival_stop_distance_ + std::max(0.05, rival_escape_distance_ * 0.5);
-    const double clearance_margin = std::max(0.03, rival_escape_distance_ * 0.25);
-    const double min_escape_distance =
-        std::max(step, release_distance - rival.distance + clearance_margin);
-    const double search_limit =
-        std::max(rival_escape_distance_, min_escape_distance + clearance_margin);
+    const auto grid = latest_global_costmap_;
+    if (!grid) {
+        return false;
+    }
 
-    for (double distance = min_escape_distance; distance <= search_limit + 1e-6; distance += step) {
-        const double candidate_x = px + away_x * distance;
-        const double candidate_y = py + away_y * distance;
-        auto grid = latest_global_costmap_;
+    const double arc_angle = rival_escape_arc_angle_deg_ * M_PI / 180.0;
+    const double angle_step = kRivalEscapeAngleStepDeg * M_PI / 180.0;
+    const double center_angle = std::atan2(away_y, away_x);
+    const double half_arc = arc_angle * 0.5;
+    const int angle_steps = std::max(0, static_cast<int>(std::ceil(half_arc / angle_step)));
+
+    for (int angle_idx = 0; angle_idx <= angle_steps * 2; angle_idx += 1) {
+        const int offset_idx = (angle_idx + 1) / 2;
+        const double sign = (angle_idx % 2 == 0) ? -1.0 : 1.0;
+        const double offset = angle_idx == 0 ? 0.0 : sign * offset_idx * angle_step;
+        if (std::abs(offset) > half_arc + 1e-6) {
+            continue;
+        }
+
+        const double angle = center_angle + offset;
+        const double candidate_x = px + std::cos(angle) * rival_escape_distance_;
+        const double candidate_y = py + std::sin(angle) * rival_escape_distance_;
         unsigned int mx = 0;
         unsigned int my = 0;
-        if (!grid || !worldToMap(*grid, candidate_x, candidate_y, mx, my)) {
+        if (!worldToMap(*grid, candidate_x, candidate_y, mx, my)) {
             continue;
         }
 
         const unsigned char cost = costAtGlobal(candidate_x, candidate_y);
-        if (cost == nav2_costmap_2d::FREE_SPACE) {
+        if (cost <= kRivalEscapeMaxCost) {
             target_x = candidate_x;
             target_y = candidate_y;
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *clock_,
+                1000,
+                "[%s] rival escape target selected: target=(%.3f, %.3f) distance=%.3f angle_offset=%.1fdeg cost=%u",
+                name_.c_str(),
+                target_x,
+                target_y,
+                rival_escape_distance_,
+                offset * 180.0 / M_PI,
+                static_cast<unsigned int>(cost));
             return true;
         }
     }
+    RCLCPP_WARN_THROTTLE(
+        logger_,
+        *clock_,
+        1000,
+        "[%s] rival escape target search failed: arc=%.1fdeg distance=%.2f max_cost=%u",
+        name_.c_str(),
+        rival_escape_arc_angle_deg_,
+        rival_escape_distance_,
+        static_cast<unsigned int>(kRivalEscapeMaxCost));
     return false;
 }
 
@@ -753,6 +804,7 @@ void TebController::beginRivalEscape(const geometry_msgs::msg::PoseStamped & pos
     has_rival_escape_start_ = true;
     rival_escape_pending_stop_ = true;
     rival_escape_goal_requested_ = false;
+    last_rival_escape_goal_time_ = rclcpp::Time(0, 0, clock_->get_clock_type());
     rival_escape_stall_cycles_ = 0;
     rival_escape_attempt_count_++;
 
@@ -772,6 +824,7 @@ void TebController::resetRivalEscapeState()
     has_rival_escape_start_ = false;
     rival_escape_pending_stop_ = false;
     rival_escape_goal_requested_ = false;
+    last_rival_escape_goal_time_ = rclcpp::Time(0, 0, clock_->get_clock_type());
     rival_escape_stall_cycles_ = 0;
 }
 
@@ -788,22 +841,13 @@ void TebController::updateRivalStopDistance()
                     kRivalStopDistanceMargin;
                 rival_stop_distance_ = std::max(0.0, rival_stop_distance_);
                 if (rival_stop_distance_prev_ != rival_stop_distance_) {
-                    RCLCPP_WARN(
-                        logger_,
-                        "[%s] rival_stop_distance updated to %f",
-                        name_.c_str(),
-                        rival_stop_distance_);
+                    RCLCPP_WARN(logger_, "[%s] rival_stop_distance updated to %f", name_.c_str(), rival_stop_distance_);
                 }
             } else {
-                RCLCPP_WARN(
-                    logger_,
-                    "rival_inscribed_radius not found in YAML file, using default value");
+                RCLCPP_WARN(logger_, "rival_inscribed_radius not found in YAML file, using default value");
             }
         } catch (const std::exception & e) {
-            RCLCPP_ERROR(
-                logger_,
-                "Failed to load YAML file: %s, using default value",
-                e.what());
+            RCLCPP_ERROR(logger_, "Failed to load rival YAML file: %s, using default value", e.what());
         }
     }
     rival_stop_distance_prev_ = rival_stop_distance_;
@@ -864,6 +908,115 @@ bool TebController::buildRivalEscapeCommand(
     return true;
 }
 
+void TebController::setStoppedCommand(geometry_msgs::msg::TwistStamped & cmd) const
+{
+    cmd.twist.linear.x = 0.0;
+    cmd.twist.linear.y = 0.0;
+    cmd.twist.angular.z = 0.0;
+}
+
+void TebController::resetVelocityMemory(const rclcpp::Time & stamp)
+{
+    last_stamp_ = stamp;
+    last_vx_ = 0.0;
+    last_vy_ = 0.0;
+    last_w_ = 0.0;
+}
+
+TebController::RivalInfo TebController::applyRivalSlowdownStage(
+    const geometry_msgs::msg::PoseStamped & pose,
+    double & vx,
+    double & vy,
+    double & w) const
+{
+    const RivalInfo rival = getRivalInfo(pose);
+    applyRivalSlowdown(rival, vx, vy, w);
+    return rival;
+}
+
+bool TebController::handleRivalEscapeStage(
+    const geometry_msgs::msg::PoseStamped & pose,
+    const RivalInfo & rival,
+    double cmd_vx,
+    double cmd_vy,
+    bool blocked_and_close,
+    bool pose_collision,
+    double current_speed,
+    geometry_msgs::msg::TwistStamped & cmd)
+{
+    if (escape_navigation_active_) {
+        return false;
+    }
+
+    const bool should_continue_escape = motion_mode_ == MotionMode::RivalEscape;
+    const bool should_start_escape = shouldEnterRivalEscape(rival, cmd_vx, cmd_vy);
+    if (!should_continue_escape && !should_start_escape) {
+        resetRivalEscapeState();
+        return false;
+    }
+
+    if (!should_continue_escape) {
+        beginRivalEscape(pose);
+        resetVelocityMemory(cmd.header.stamp);
+    }
+
+    if (shouldExitRivalEscape(pose, rival, blocked_and_close, pose_collision)) {
+        resetRivalEscapeState();
+        return false;
+    }
+
+    setStoppedCommand(cmd);
+    resetVelocityMemory(cmd.header.stamp);
+
+    if (rival_escape_pending_stop_) {
+        if (current_speed <= stop_v_eps_) {
+            rival_escape_pending_stop_ = false;
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *clock_,
+                1000,
+                "[%s] rival escape robot stopped, ready to send escape goal",
+                name_.c_str());
+        } else {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *clock_,
+                1000,
+                "[%s] rival escape waiting for stop: current_speed=%.3f stop_v_eps=%.3f",
+                name_.c_str(),
+                current_speed,
+                stop_v_eps_);
+        }
+        publishTebPath();
+        return true;
+    }
+
+    if (!rival_escape_goal_requested_ && last_rival_escape_goal_time_.nanoseconds() != 0) {
+        const double elapsed_since_goal =
+            (clock_->now() - last_rival_escape_goal_time_).seconds();
+        if (elapsed_since_goal < kRivalEscapeGoalPeriodSec) {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *clock_,
+                1000,
+                "[%s] rival escape goal throttled: elapsed=%.3fs period=%.3fs",
+                name_.c_str(),
+                elapsed_since_goal,
+                kRivalEscapeGoalPeriodSec);
+            publishTebPath();
+            return true;
+        }
+    }
+
+    if (!rival_escape_goal_requested_ && !sendEscapeGoal(pose, rival)) {
+        resetRivalEscapeState();
+        throw nav2_core::PlannerException("TEB: rival escape goal dispatch failed");
+    }
+
+    publishTebPath();
+    return true;
+}
+
 void TebController::applyRivalSlowdown(
     const RivalInfo & rival,
     double & vx,
@@ -909,7 +1062,6 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     cmd.header.frame_id = costmap_ros_->getBaseFrameID();
 
     if (!has_plan_ || teb_band_.size() < 2) {
-        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] no valid teb plan, publishing zero velocity", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
@@ -919,7 +1071,6 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
     // Correct GoalChecker signature
     if (goal_checker && goal_checker->isGoalReached(pose.pose, global_plan_.poses.back().pose, velocity))
     {
-        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] goal checker reported goal reached", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
@@ -928,7 +1079,6 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
 
     auto global_grid = latest_global_costmap_;
     if (!global_grid) {
-        RCLCPP_INFO_THROTTLE(logger_, *clock_, 1000, "[%s] global costmap is unavailable, publishing zero velocity", name_.c_str());
         cmd.twist.linear.x = 0.0;
         cmd.twist.linear.y = 0.0;
         cmd.twist.angular.z = 0.0;
@@ -999,41 +1149,19 @@ geometry_msgs::msg::TwistStamped TebController::computeVelocityCommands(
         w *= r;
     }
 
-    const RivalInfo rival = getRivalInfo(pose);
-    applyRivalSlowdown(rival, vx, vy, w);
+    const RivalInfo rival = applyRivalSlowdownStage(pose, vx, vy, w);
     vmag = std::hypot(vx, vy);
-    if (!escape_navigation_active_ &&
-        (motion_mode_ == MotionMode::RivalEscape || shouldEnterRivalEscape(rival, vx, vy))) {
-        if (motion_mode_ != MotionMode::RivalEscape) {
-            beginRivalEscape(pose);
-        }
-
-        if (!shouldExitRivalEscape(pose, rival, blocked_and_close, pose_collision)) {
-            if (rival_escape_pending_stop_) {
-                cmd.twist.linear.x = 0.0;
-                cmd.twist.linear.y = 0.0;
-                cmd.twist.angular.z = 0.0;
-                if (v_cur <= stop_v_eps_) {
-                    rival_escape_pending_stop_ = false;
-                }
-                publishTebPath();
-                return cmd;
-            }
-
-            if (!rival_escape_goal_requested_ && !sendEscapeGoal(pose, rival)) {
-                resetRivalEscapeState();
-                throw nav2_core::PlannerException("TEB: rival escape goal dispatch failed");
-            }
-            cmd.twist.linear.x = 0.0;
-            cmd.twist.linear.y = 0.0;
-            cmd.twist.angular.z = 0.0;
-            publishTebPath();
-            return cmd;
-        }
-
-        resetRivalEscapeState();
-    } else {
-        resetRivalEscapeState();
+    if (handleRivalEscapeStage(
+            pose,
+            rival,
+            vx,
+            vy,
+            blocked_and_close,
+            pose_collision,
+            v_cur,
+            cmd))
+    {
+        return cmd;
     }
 
     if (escape_navigation_active_) {

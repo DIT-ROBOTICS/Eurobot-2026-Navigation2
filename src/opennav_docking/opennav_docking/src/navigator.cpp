@@ -82,10 +82,11 @@ void Navigator::goToPose(
   }
 
   // Attempt to retry once using single iteration recursion
-  if (!recursed) {
-    goToPose(pose, max_staging_duration, true);
-    return;
-  }
+  (void) recursed;
+  // if (!recursed) {
+  //   goToPose(pose, max_staging_duration, true);
+  //   return;
+  // }
 
   throw opennav_docking_core::FailedToStage("Navigation request to staging pose failed.");
 }

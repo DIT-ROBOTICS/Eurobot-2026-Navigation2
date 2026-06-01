@@ -132,6 +132,22 @@ private:
         const RivalInfo & rival,
         double current_speed,
         geometry_msgs::msg::TwistStamped & cmd);
+    void setStoppedCommand(geometry_msgs::msg::TwistStamped & cmd) const;
+    void resetVelocityMemory(const rclcpp::Time & stamp);
+    RivalInfo applyRivalSlowdownStage(
+        const geometry_msgs::msg::PoseStamped & pose,
+        double & vx,
+        double & vy,
+        double & w) const;
+    bool handleRivalEscapeStage(
+        const geometry_msgs::msg::PoseStamped & pose,
+        const RivalInfo & rival,
+        double cmd_vx,
+        double cmd_vy,
+        bool blocked_and_close,
+        bool pose_collision,
+        double current_speed,
+        geometry_msgs::msg::TwistStamped & cmd);
     void applyRivalSlowdown(const RivalInfo & rival, double & vx, double & vy, double & w) const;
     bool findRivalEscapeTarget(
         const geometry_msgs::msg::PoseStamped & pose,
@@ -191,6 +207,7 @@ private:
     double rival_stop_distance_prev_{0.35};
     double rival_escape_speed_{0.2};
     double rival_escape_distance_{0.18};
+    double rival_escape_arc_angle_deg_{90.0};
 
     // tracking (holonomic)
     double lookahead_dist_{0.25};
@@ -236,6 +253,7 @@ private:
     bool rival_escape_pending_stop_{false};
     bool rival_escape_goal_requested_{false};
     bool escape_navigation_active_{false};
+    rclcpp::Time last_rival_escape_goal_time_;
     int rival_escape_stall_cycles_{0};
     int rival_escape_attempt_count_{0};
 };
